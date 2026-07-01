@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>超軽量 X(Twitter) 検索ランチャー</title>
+  <meta name="description" content="X APIやOAuth認証を一切使用せず、高度な検索コマンドを素早く生成してX公式検索を開く超軽量ランチャー。">
+  <link rel="stylesheet" href="style.css">
+  <link rel="alternate" type="application/json" href="agent-use.json" title="HyperXosist Agent Use">
+  <link rel="payment" type="application/json" href="x402-payment.json">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>X Search Launcher</h1>
+      <p class="subtitle">API-free X search query builder for Japanese and global research</p>
+    </header>
+
+    <main>
+      <form id="searchForm" onsubmit="return false;">
+        <div class="form-grid">
+          <!-- キーワード -->
+          <div class="form-group">
+            <label for="keywords">キーワード</label>
+            <input type="text" id="keywords" placeholder="例: 猫 癒やし">
+          </div>
+
+          <!-- 完全一致フレーズ -->
+          <div class="form-group">
+            <label for="exactPhrase">完全一致フレーズ</label>
+            <input type="text" id="exactPhrase" placeholder="例: 美味しいラーメン">
+          </div>
+
+          <!-- from:ユーザー -->
+          <div class="form-group">
+            <label for="fromUser">from: ユーザー</label>
+            <input type="text" id="fromUser" placeholder="例: twitter (ユーザー名のみ)">
+          </div>
+
+          <!-- 除外ワード -->
+          <div class="form-group">
+            <label for="excludeWords">除外ワード</label>
+            <input type="text" id="excludeWords" placeholder="例: PR 広告">
+          </div>
+
+          <!-- since: 日付 -->
+          <div class="form-group">
+            <label for="sinceDate">since: 開始日</label>
+            <input type="date" id="sinceDate">
+          </div>
+
+          <!-- until: 日付 -->
+          <div class="form-group">
+            <label for="untilDate">until: 終了日</label>
+            <input type="date" id="untilDate">
+          </div>
+
+          <!-- 最小いいね数 -->
+          <div class="form-group">
+            <label for="minFaves">min_faves: 最小いいね数</label>
+            <input type="number" id="minFaves" min="0" placeholder="例: 100">
+          </div>
+
+          <!-- 言語 -->
+          <div class="form-group">
+            <label for="lang">lang: 言語 / Language</label>
+            <select id="lang">
+              <option value="" selected>Global / 指定なし</option>
+              <option value="en">English (en)</option>
+              <option value="ja">日本語 (ja)</option>
+              <option value="es">Español (es)</option>
+              <option value="fr">Français (fr)</option>
+              <option value="de">Deutsch (de)</option>
+              <option value="ko">한국어 (ko)</option>
+              <option value="zh">中文 (zh)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- フィルターチェックボックス群 -->
+        <div class="filter-group">
+          <label class="checkbox-container">
+            <input type="checkbox" id="hasImages">
+            <span class="checkmark"></span>
+            画像あり (filter:images)
+          </label>
+          <label class="checkbox-container">
+            <input type="checkbox" id="hasVideos">
+            <span class="checkmark"></span>
+            動画あり (filter:videos)
+          </label>
+          <label class="checkbox-container">
+            <input type="checkbox" id="excludeLinks">
+            <span class="checkmark"></span>
+            リンク除外 (-filter:links)
+          </label>
+        </div>
+
+        <!-- Noise Reduction -->
+        <section class="noise-section" aria-labelledby="noiseTitle">
+          <div class="noise-header">
+            <div>
+              <h2 id="noiseTitle">Noise Reduction</h2>
+              <p>Filters obvious spam, engagement bait, and promo noise before search. / 明らかなスパム・釣り・宣伝ノイズを検索前に除外します。</p>
+            </div>
+            <label class="toggle-container">
+              <input type="checkbox" id="noiseEnabled">
+              <span class="toggle-track"></span>
+              Enable noise filter
+            </label>
+          </div>
+
+          <div class="noise-controls">
+            <div class="form-group noise-preset">
+              <label for="noisePreset">Preset</label>
+              <select id="noisePreset">
+                <option value="low">Low: obvious spam only</option>
+                <option value="medium" selected>Medium: spam + engagement bait</option>
+                <option value="high">High: aggressive noise reduction</option>
+              </select>
+            </div>
+            <button type="button" id="btnResetNoise" class="btn btn-secondary btn-compact">Reset noise rules</button>
+          </div>
+
+          <div id="noiseChips" class="noise-chips" aria-live="polite"></div>
+        </section>
+        <!-- Agent Access -->
+        <section class="agent-section" aria-labelledby="agentTitle">
+          <h2 id="agentTitle">Agent Access</h2>
+          <p>AI agents should read <code>agent-use.json</code> and <code>x402-payment.json</code>, then POST to the paid <code>/hyperxosist-query</code> endpoint before automated use.</p>
+        </section>
+
+        <!-- クエリプレビューエリア -->
+        <div class="preview-area">
+          <label>生成されたクエリ</label>
+          <textarea id="queryPreview" readonly placeholder="入力に基づいてクエリが自動生成されます..."></textarea>
+          <div class="preview-actions">
+            <button type="button" id="btnCopy" class="btn btn-secondary">コピー</button>
+            <button type="button" id="btnReset" class="btn btn-danger">リセット</button>
+          </div>
+        </div>
+
+        <!-- アクションボタン -->
+        <div class="action-buttons">
+          <button type="button" id="btnSearchLive" class="btn btn-primary btn-large">最新で検索</button>
+          <button type="button" id="btnSearchTop" class="btn btn-accent btn-large">話題で検索</button>
+        </div>
+      </form>
+
+      <!-- 履歴セクション -->
+      <section class="history-section">
+        <h2>最近使ったクエリ</h2>
+        <ul id="historyList" class="history-list">
+          <li class="empty-message">履歴はありません</li>
+        </ul>
+      </section>
+    </main>
+
+    <footer>
+      <p>© 2026 X Search Launcher. This tool is not affiliated with X Corp.</p>
+    </footer>
+  </div>
+
+  <script src="agent-api.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
+
+
+
+
+

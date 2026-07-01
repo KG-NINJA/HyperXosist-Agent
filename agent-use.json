@@ -1,0 +1,51 @@
+{
+  "name": "HyperXosist Agent Use",
+  "version": "1.0.0",
+  "description": "Machine-readable entrypoint for AI agents that generate X search URLs with HyperXosist noise reduction.",
+  "requiresPaymentForAgentUse": true,
+  "payment": {
+    "scheme": "x402",
+    "manifest": "x402-payment.json",
+    "endpoint": "https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/hyperxosist-query",
+    "method": "POST",
+    "expectedUnpaidStatus": 402,
+    "instruction": "AI agents must complete the configured x402 payment before using generated search URLs commercially or at scale. Human browser use remains available through index.html."
+  },
+  "entrypoints": {
+    "humanUi": "index.html",
+    "agentApiScript": "agent-api.js",
+    "paymentManifest": "x402-payment.json"
+  },
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "keywords": { "type": "string" },
+      "exactPhrase": { "type": "string" },
+      "fromUser": { "type": "string" },
+      "excludeWords": { "type": ["string", "array"] },
+      "sinceDate": { "type": "string", "format": "date" },
+      "untilDate": { "type": "string", "format": "date" },
+      "minFaves": { "type": ["string", "number"] },
+      "minRetweets": { "type": ["string", "number"] },
+      "lang": { "type": "string", "description": "Use empty string for global search, or X language codes such as en, ja, es, fr, de, ko, zh." },
+      "hasImages": { "type": "boolean" },
+      "hasVideos": { "type": "boolean" },
+      "excludeLinks": { "type": "boolean" },
+      "mode": { "type": "string", "enum": ["live", "top"] },
+      "noise": {
+        "type": "object",
+        "properties": {
+          "enabled": { "type": "boolean" },
+          "preset": { "type": "string", "enum": ["low", "medium", "high"] },
+          "removed": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  },
+  "example": {
+    "keywords": "frontier AI",
+    "lang": "en",
+    "mode": "live",
+    "noise": { "enabled": true, "preset": "medium", "removed": [] }
+  }
+}
