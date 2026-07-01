@@ -1,4 +1,69 @@
 (function (root) {
+  const repostBlacklistTerms = [
+    "what do you think",
+    "do you agree",
+    "agree or disagree",
+    "thoughts on this",
+    "your thoughts",
+    "thoughts?",
+    "comment below",
+    "drop a comment",
+    "tag someone who",
+    "tag your friends",
+    "tag a friend",
+    "rt if you agree",
+    "retweet if you agree",
+    "retweet if",
+    "save this post",
+    "save for later",
+    "share this with",
+    "share if you agree",
+    "this is insane",
+    "this is crazy",
+    "you won't believe",
+    "wait for it",
+    "wait till the end",
+    "the ending is",
+    "mind blown",
+    "mind-blowing",
+    "unbelievable",
+    "shocking",
+    "insane video",
+    "crazy video",
+    "going viral",
+    "viral video",
+    "internet is losing it",
+    "people are losing it",
+    "everyone needs to see this",
+    "you need to see this",
+    "breaking:",
+    "just in:",
+    "update:",
+    "live update",
+    "developing",
+    "developing story",
+    "exclusive:",
+    "pov:",
+    "me when",
+    "when the",
+    "the way he",
+    "the way she",
+    "no words",
+    "speechless",
+    "hits different",
+    "this hits hard",
+    "double tap if",
+    "like if you agree",
+    "follow for more",
+    "meanwhile...",
+    "writer:",
+    "sources:",
+    "this is why",
+    "the reason is",
+    "this video is",
+    "wait until you see"
+  ];
+
   const noiseRules = {
     low: [
       'giveaway', 'airdrop', 'claim', 'reward', 'referral', 'free money', 'limited offer', 'click here', 'sign up',
@@ -31,8 +96,8 @@
   }
 
   function getPresetTerms(preset) {
-    if (preset === 'high') return [...noiseRules.low, ...noiseRules.medium, ...noiseRules.high];
-    if (preset === 'medium') return [...noiseRules.low, ...noiseRules.medium];
+    if (preset === 'high') return [...noiseRules.low, ...noiseRules.medium, ...repostBlacklistTerms, ...noiseRules.high];
+    if (preset === 'medium') return [...noiseRules.low, ...noiseRules.medium, ...repostBlacklistTerms];
     return [...noiseRules.low];
   }
 
@@ -92,6 +157,7 @@
     paymentOptionsEndpoint: 'https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/payment-options.json',
     buildQuery,
     buildSearchUrl,
-    noiseRules
+    noiseRules,
+    repostBlacklistTerms
   };
 })(typeof window !== 'undefined' ? window : globalThis);
