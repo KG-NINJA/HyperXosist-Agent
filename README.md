@@ -6,7 +6,7 @@ X (旧Twitter) の高度な検索演算子を視覚的に組み立てて、公�
 - **X API不要・OAuth不要**: APIキー、Bearer Token、CLIENT_SECRET等は一切不要です。
 - **超軽量・高速起動**: HTML/CSS/JavaScriptのみの静的ファイル構成で、ビルドやライブラリのインストールも必要ありません。
 - **プライバシー配慮**: すべての処理はブラウザ上で完結し、最近のクエリ履歴もローカルストレージ（localStorage）のみに保存されます。外部サーバーへの通信は発生しません。
-- **Noise Reduction**: Low / Medium / High のプリセットで明らかなスパム・釣り・宣伝ノイズの除外語を検索クエリへ自動追加できます。英語圏の engagement bait / promo spam にも対応し、手入力の除外ワードは保持されます。
+- **Noise Reduction**: Low / Medium / High のプリセットで明らかなスパム・釣り・宣伝ノイズの除外語を検索クエリへ自動追加できます。英語圏の engagement bait / promo spam にも対応し、手入力の除外ワードは保持されます。`top30_repost_blacklist.json` の高頻度リポスト系フレーズもMedium以上で除外します。
 - **AIエージェント対応**: `agent-use.json` と `agent-api.js` を公開し、AIエージェントが機械可読にクエリ生成仕様を使えます。エージェント利用は `x402-payment.json` の既存x402エンドポイントで課金する前提です。
 - **国際検索対応**: 既定は `lang:` を付けない Global 検索です。English / Japanese / Spanish / French / German / Korean / Chinese を選択できます。
 - **レスポンシブデザイン**: スマートフォンとPCの双方に最適化されたダークモード基調のUI。
