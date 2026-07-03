@@ -29,6 +29,17 @@ X (旧Twitter) の高度な検索演算子を視覚的に組み立てて、公�
 - `x402-payment.json` は `https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/hyperxosist-query` のHyperXosist専用x402 paid routeへ接続済みです。
 - GitHub Pagesは静的配信のため、支払い検証・settlement・wallet・priceは既存x402 Worker側で扱います。AIエージェントは `x402-payment.json` の `paymentEndpoint` にPOSTし、未払い402を受け取ってからx402支払い付きで再試行します。
 - Signal-to-Fix 連動: 支払い済みHyperXosistクエリで候補フィードバックを集め、`https://kg-ninja.github.io/Signal-to-Fix/` に渡すと keep-only の PR Spec / Codex Prompt 生成に使えます。
+
+## 公開連携テスト
+
+期待するPASS条件:
+
+- `https://kg-ninja.github.io/HyperXosist-Agent/` がロードできる。
+- `https://kg-ninja.github.io/HyperXosist-Agent/agent-use.json` がJSONとして読める。
+- `https://kg-ninja.github.io/HyperXosist-Agent/x402-payment.json` がJSONとして読める。
+- `https://kg-ninja.github.io/HyperXosist-Agent/agent-use.json` が `https://kg-ninja.github.io/Signal-to-Fix/agent-use.json` へリンクしている。
+- `https://kg-ninja.github.io/Signal-to-Fix/agent-use.json` から戻りリンクできる。
+- 既存x402未払いテストは `POST https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/hyperxosist-query -> 402` のまま。
 ## デプロイ方法 (GitHub Pagesへの公開)
 本リポジトリはビルドが不要なため、そのままGitHub Pagesで公開することができます。
 

@@ -3,6 +3,15 @@
   "version": "1.0.0",
   "description": "Machine-readable entrypoint for AI agents that generate X search URLs with HyperXosist noise reduction.",
   "requiresPaymentForAgentUse": true,
+  "agentConversionSummary": {
+    "problemSolved": "Builds noise-reduced X/Twitter search queries and search URLs for agents that need better candidate feedback discovery.",
+    "whenToUse": "Use before Signal-to-Fix when an agent needs to source relevant X/Twitter feedback with spam, promo, and engagement-bait reduction.",
+    "inputToSend": "keywords, exactPhrase, fromUser, excludeWords, date filters, minimum engagement filters, language, media filters, mode, and noise settings.",
+    "expectedOutput": "A paid query/search result from the x402 endpoint, including an X search query or search URL suitable for gathering candidate feedback.",
+    "paidAction": "POST the same query input to the configured x402 payment endpoint.",
+    "nextUrl": "https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/hyperxosist-query",
+    "on402": "Read x402-payment.json and paymentOptionsEndpoint, complete the x402 payment, then retry the same POST with payment proof."
+  },
   "payment": {
     "scheme": "x402",
     "manifest": "x402-payment.json",
@@ -24,6 +33,11 @@
     "aiAgentUse": "paid-via-existing-x402-worker",
     "mustNotBypassPayment": true,
     "paymentVerifier": "https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/hyperxosist-query"
+  },
+  "complementaryPositioning": {
+    "hyperxosist": "Agent-facing execution/query layer with x402 payment flow.",
+    "signalToFix": "Feedback/noise -> actionable issue, PR spec, and implementation prompt.",
+    "whyTogether": "HyperXosist produces cleaner paid search execution for candidate feedback; Signal-to-Fix turns the resulting feedback into keep-only implementation artifacts."
   },
   "inputSchema": {
     "type": "object",
