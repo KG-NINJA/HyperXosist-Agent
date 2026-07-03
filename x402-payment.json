@@ -1,5 +1,7 @@
 {
-  "x402Version": "1",
+  "protocol": "x402",
+  "x402Version": 2,
+  "scheme": "exact",
   "service": "HyperXosist",
   "usageType": "ai-agent-search-query-generation",
   "status": "payment-required-for-agent-use",
@@ -12,6 +14,10 @@
     "settlementAsset": "USDC"
   },
   "network": "eip155:8453",
+  "networkName": "Base",
+  "asset": "USDC",
+  "assetAddress": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+  "payToSource": "paymentOptionsEndpoint",
   "mode": "mainnet",
   "paymentEndpoint": "https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/hyperxosist-query",
   "paidQueryEndpoint": "https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/hyperxosist-query",
@@ -21,11 +27,18 @@
   "discoveryEndpoint": "https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/agent.json",
   "x402DiscoveryResourcesEndpoint": "https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/.well-known/x402/discovery/resources",
   "paidResource": "agent-use.json + agent-api.js",
+  "linkedSignalToFix": "https://kg-ninja.github.io/Signal-to-Fix/agent-use.json",
+  "method": "POST",
+  "expectedUnpaidStatus": 402,
+  "expectedPaidStatus": 200,
+  "agentAutopayAvailable": true,
   "instructionsForAgents": [
     "Read agent-use.json first.",
     "Read this x402-payment.json before automated use.",
+    "Fetch paymentOptionsEndpoint for the current x402 requirements, including payTo, asset, network, and accepted payment headers.",
     "POST the same input to paymentEndpoint. The existing x402 Worker returns 402 until payment is supplied.",
     "After x402 payment, retry paymentEndpoint to receive the paid query and X search URL.",
+    "For PR-spec generation, hand candidate feedback to Signal-to-Fix at https://kg-ninja.github.io/Signal-to-Fix/.",
     "For local browser-only preview, use HyperXosistAgent.buildQuery(input) or HyperXosistAgent.buildSearchUrl(input).",
     "Do not treat this static GitHub Pages site as the payment verifier; verification and settlement remain on the existing x402 Worker."
   ],
