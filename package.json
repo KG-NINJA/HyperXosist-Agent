@@ -1,0 +1,53 @@
+{
+  "name": "hyperxosist-agent",
+  "version": "2.1.0",
+  "description": "API-free advanced X/Twitter search launcher with AI agent missions, noise reduction, x402 payment path, and Signal-to-Fix handoff.",
+  "keywords": [
+    "twitter",
+    "x",
+    "search",
+    "agent",
+    "x402",
+    "noise-reduction",
+    "osint",
+    "signal-to-fix",
+    "query-builder"
+  ],
+  "homepage": "https://kg-ninja.github.io/HyperXosist-Agent/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KG-NINJA/HyperXosist-Agent.git"
+  },
+  "bugs": {
+    "url": "https://github.com/KG-NINJA/HyperXosist-Agent/issues"
+  },
+  "license": "MIT",
+  "author": "KG-NINJA",
+  "main": "agent-api.js",
+  "browser": "agent-api.js",
+  "files": [
+    "agent-api.js",
+    "agent-use.json",
+    "agent-tools.json",
+    "missions.json",
+    "x402-payment.json",
+    "llms.txt",
+    "AGENTS.md",
+    "index.html",
+    "app.js",
+    "style.css",
+    "top30_repost_blacklist.json",
+    "examples/",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node test/agent-api.test.js",
+    "quickstart": "node examples/quickstart.mjs",
+    "serve": "npx --yes serve -l 5173 ."
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "private": false
+}

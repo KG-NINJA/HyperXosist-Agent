@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Agent API tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Run unit tests
+        run: node test/agent-api.test.js
+
+      - name: Validate JSON manifests
+        run: |
+          node -e "
+          const fs = require('fs');
+          const files = [
+            'agent-use.json',
+            'agent-tools.json',
+            'missions.json',
+            'x402-payment.json',
+            'top30_repost_blacklist.json',
+            'package.json',
+            'examples/agent-session.example.json'
+          ];
+          for (const f of files) {
+            JSON.parse(fs.readFileSync(f, 'utf8'));
+            console.log('OK', f);
+          }
+          "
+
+      - name: Smoke agent session
+        run: node examples/quickstart.mjs

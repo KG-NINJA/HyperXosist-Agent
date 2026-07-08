@@ -29,6 +29,8 @@
   "x402DiscoveryResourcesEndpoint": "https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/.well-known/x402/discovery/resources",
   "paidResource": "agent-use.json + agent-api.js",
   "linkedSignalToFix": "https://kg-ninja.github.io/Signal-to-Fix/agent-use.json",
+  "publicSite": "https://kg-ninja.github.io/HyperXosist-Agent/",
+  "repository": "https://github.com/KG-NINJA/HyperXosist-Agent",
   "method": "POST",
   "expectedUnpaidStatus": 402,
   "expectedPaidStatus": 200,

@@ -1,78 +1,104 @@
-# HyperXosist Agent (X Search Launcher) v2.1
+# HyperXosist Agent
 
-X (旧Twitter) の**高度な検索演算子**を視覚的に組み立て、公式の検索結果ページを素早く開く超軽量 Web ツールです。  
-人間のブラウザ利用は無料。**AI エージェント向け**にはミッション計画・スコアゲート・自己修復・Signal-to-Fix ハンドオフ・tool-calling 定義を用意し、繰り返し使いやすい sticky loop を提供します。
+[![CI](https://github.com/KG-NINJA/HyperXosist-Agent/actions/workflows/ci.yml/badge.svg)](https://github.com/KG-NINJA/HyperXosist-Agent/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/version-2.1.0-brightgreen.svg)](CHANGELOG.md)
+[![Live](https://img.shields.io/badge/demo-GitHub%20Pages-black.svg)](https://kg-ninja.github.io/HyperXosist-Agent/)
 
-**Live:** https://kg-ninja.github.io/HyperXosist-Agent/
+**API-free advanced X (Twitter) search launcher** — for humans in the browser, and for AI agents that need multi-angle, noise-reduced search missions with an x402 paid path and Signal-to-Fix handoff.
 
-## エージェントが何度も使う理由
+| | |
+|---|---|
+| **Live demo** | https://kg-ninja.github.io/HyperXosist-Agent/ |
+| **Repository** | https://github.com/KG-NINJA/HyperXosist-Agent |
+| **Agent entry** | https://kg-ninja.github.io/HyperXosist-Agent/llms.txt |
+| **Version** | 2.1.0 |
 
-| 機能 | 効果 |
-|------|------|
-| `planFromIntent` | 自然言語ゴール → マルチアングル任務（当てずっぽう検索を削減） |
-| `scoreQuery` | 支払い前に 0–100 で品質判定（$0.01 の無駄撃ち防止） |
-| `suggestRefinements` | 0 件 / ノイズ過多をエージェントが自己修復 |
-| `buildHandoffPackage` | 収集テキストを Signal-to-Fix の keep-only PR パイプラインへ直結 |
-| `buildRunReceipt` | 監査・週次 cron・状態再利用 (`encodeState`) |
-| `agent-tools.json` | OpenAI/Anthropic tool-calling にそのまま載せられる |
-| `llms.txt` / `AGENTS.md` | 発見から 30 秒でループに入れる |
+> 日本語の要点: X 公式検索用クエリを組み立てる静的ツールです。人間の UI は無料。AI エージェントの本番利用は x402 支払い前提。検索結果の埋め込みや自動投稿はしません。
+
+---
+
+## Why this exists
+
+Raw X advanced search is powerful but easy to get wrong (spam, engagement bait, overlong excludes, one-angle keyword guesses). HyperXosist gives you:
+
+1. **Humans** — a fast dark UI to compose operators, templates, noise filters, and open official search tabs.
+2. **AI agents** — a sticky loop: plan → score → pay → collect → refine → handoff → receipt.
+
+```
+Discover → Plan → Score gate → Pay (x402) → Collect → Self-heal → Handoff → Remember
+```
+
+---
+
+## Features
+
+### For everyone
+- **No X API / OAuth** — opens `x.com/search` with a built query
+- **Zero build** — static HTML/CSS/JS; works on GitHub Pages
+- **Privacy-friendly human path** — form history in `localStorage` only
+- **Noise Reduction** — Low / Medium / High with **priority-capped** excludes (safe query length)
+- **Advanced operators** — `from` / `to` / `@` / OR groups / hashtags / `url:` / engagement floors / media & reply filters / raw fragment
+- **Research templates** & date presets (24h → 1y)
+- **Shareable state** — URL hash `#s=...`
+
+### For AI agents
+- `planFromIntent` / multi-angle **missions**
+- `scoreQuery` before spending **$0.01** per paid call
+- `suggestRefinements` when results are empty or noisy
+- `buildHandoffPackage` → [Signal-to-Fix](https://kg-ninja.github.io/Signal-to-Fix/) keep-only PR pipeline
+- `agent-tools.json` — OpenAI-compatible tool definitions
+- `llms.txt` + `AGENTS.md` discovery docs
+
+---
+
+## Quick start (human)
+
+1. Open the [live demo](https://kg-ninja.github.io/HyperXosist-Agent/).
+2. Enter keywords (and optional OR group, users, dates, engagement).
+3. Optionally enable **Noise Reduction** and pick a research template.
+4. Click **最新で検索** (Latest) or **話題で検索** (Top) — or `Ctrl+Enter` / `Ctrl+Shift+Enter`.
+5. Copy query, search URL, or a shareable state link.
+
+Local UI:
+
+```bash
+git clone https://github.com/KG-NINJA/HyperXosist-Agent.git
+cd HyperXosist-Agent
+npm run serve
+# → http://localhost:5173
+```
+
+---
+
+## Quick start (AI agent)
+
+**Discovery order**
+
+1. [llms.txt](https://kg-ninja.github.io/HyperXosist-Agent/llms.txt)
+2. [AGENTS.md](https://kg-ninja.github.io/HyperXosist-Agent/AGENTS.md)
+3. [agent-use.json](https://kg-ninja.github.io/HyperXosist-Agent/agent-use.json)
+4. [agent-tools.json](https://kg-ninja.github.io/HyperXosist-Agent/agent-tools.json)
+5. [x402-payment.json](https://kg-ninja.github.io/HyperXosist-Agent/x402-payment.json)
+
+**One call**
 
 ```js
+// Node
+const HyperXosistAgent = require('./agent-api.js');
+
 const session = HyperXosistAgent.startAgentSession({
   intent: 'Find product feedback about Acme for PR specs'
 });
-// → plan / tools / playbook / payment hints in one call
-```
 
-## v2.1 の進化点
-
-| 領域 | 内容 |
-|------|------|
-| **Agent sticky layer** | missions, planFromIntent, score, refine, handoff, receipt, session bootstrap |
-| **発見性** | `llms.txt`, `AGENTS.md`, `agent-tools.json`, `missions.json` |
-| **演算子** | `to:`, `@mention`, `min_retweets`, `min_replies`, OR (`anyOf`), ハッシュタグ, `url:`, 各種 filter, 生演算子 |
-| **テンプレート** | Product / Competitor / News / AI / 日本語 / Media / Clean / Signal-to-Fix |
-| **単一ソース** | UI は `agent-api.js` を唯一の実装として利用 |
-| **共有・検証** | `#s=` 状態共有, validate / analyze / explain |
-| **テスト** | `node test/agent-api.test.js` |
-
-## 特徴
-
-- **X API 不要・OAuth 不要**: API キー等は一切不要
-- **超軽量**: HTML / CSS / JS のみ。ビルド・パッケージ不要
-- **プライバシー**: 人間操作と履歴はブラウザ localStorage。エージェント利用時のみ既存 x402 Worker へ支払い付き POST
-- **Noise Reduction**: Low / Medium / High。`top30_repost_blacklist.json` 相当の高頻度リポスト定型句を Medium 以上で除外
-- **AI エージェント対応**: `agent-use.json` + `agent-api.js` + `x402-payment.json`
-- **国際検索**: 既定は Global（`lang:` なし）。en / ja / es / fr / de / ko / zh
-
-## 注意事項
-
-- 本ツールは **X 公式検索ページを開く検索支援ツール**です
-- 画面内に検索結果を埋め込んだり、自動投稿したりする機能はありません
-
-## 使い方（人間）
-
-1. キーワード / OR グループ / ユーザー / 日付 / エンゲージメント等を入力
-2. 必要なら Research template を適用
-3. Noise Reduction を ON にしてスパム・bait を除外
-4. 「最新で検索」または「話題で検索」（`Ctrl+Enter` / `Ctrl+Shift+Enter`）
-5. コピー / 検索 URL コピー / 状態共有リンク / 解説を利用
-
-## AI エージェント利用と x402
-
-**発見順:** [llms.txt](https://kg-ninja.github.io/HyperXosist-Agent/llms.txt) → [AGENTS.md](https://kg-ninja.github.io/HyperXosist-Agent/AGENTS.md) → [agent-use.json](https://kg-ninja.github.io/HyperXosist-Agent/agent-use.json)
-
-```js
-// Sticky loop (Node or browser with agent-api.js)
-const plan = HyperXosistAgent.planFromIntent(
-  'Find product feedback about Acme for PR specs'
-);
-const step = plan.primaryStep;
+const step = session.plan.primaryStep;
 if (step.score.recommendPay) {
   const paid = step.paidRequest;
-  // POST paid.body → paid.endpoint  (402 until x402 payment)
-  // collect post texts from step.searchUrl after authorization
+  // POST paid.body → paid.endpoint
+  // expect HTTP 402 until x402 payment proof, then 200
+  // after authorization, open step.searchUrl and collect post texts
 }
+
 const handoff = HyperXosistAgent.buildHandoffPackage({
   productName: 'Acme',
   feedback: ['...candidate posts...']
@@ -80,73 +106,112 @@ const handoff = HyperXosistAgent.buildHandoffPackage({
 // → handoff.signalToFix.input into Signal-to-Fix (keep-only only)
 ```
 
-- 支払い前の `buildQuery` / `buildSearchUrl` は**計画・プレビューのみ**（本番自動利用は x402）
-- エンドポイント: `.../hyperxosist-query`（詳細は `x402-payment.json`）
-- Signal-to-Fix: https://kg-ninja.github.io/Signal-to-Fix/
+**CLI dry-run (no payment, no network required for planning)**
 
-### 主要 API（v2.1）
+```bash
+npm test
+npm run quickstart
+# or: node examples/quickstart.mjs "Weekly monitor about MyProduct"
+```
 
-| Method | 説明 |
+### Payment policy (agents)
+
+| Use | Cost |
+|-----|------|
+| Human browser UI | Free |
+| Local `buildQuery` / `planFromIntent` / `scoreQuery` (planning) | Free |
+| Automated production use of generated search URLs | **x402 paid** (~$0.01 / query) |
+
+On unpaid POST → **402**. Complete payment using `paymentOptionsEndpoint`, then retry until **200**.  
+Do not treat GitHub Pages as the payment verifier.
+
+---
+
+## Missions agents re-run
+
+| ID | Purpose |
+|----|---------|
+| `product_feedback_radar` | Complaints / feature asks / bugs |
+| `signal_to_fix_pipeline` | Harvest → PR handoff loop |
+| `competitive_intel` | Mentions + switching language |
+| `weekly_monitor` | 7-day cron-friendly window |
+| `launch_pulse` | Launch / incident discourse |
+| `osint_entity` | from / mention / reply-to angles |
+
+Full catalog: [missions.json](https://kg-ninja.github.io/HyperXosist-Agent/missions.json)
+
+---
+
+## API surface (v2.1)
+
+| Method | Role |
 |--------|------|
-| `startAgentSession(opts?)` | playbook + tools + optional plan を一括取得 |
-| `planFromIntent(intent)` | NL → ミッション + paid steps + nextActions |
-| `buildMission(id, ctx)` | 名前付きマルチアングル任務 |
-| `composeCampaign(opts)` | 多言語・多ゴール横断 |
-| `scoreQuery(input)` | 0–100 品質スコア / recommendPay |
-| `suggestRefinements(input, signals)` | 疎・ノイズ時の自己修復候補 |
-| `buildHandoffPackage(opts)` | Signal-to-Fix 向け JSON |
-| `buildRunReceipt(opts)` | 監査・再利用レシート |
-| `getToolDefinitions()` | OpenAI 互換 tools |
-| `buildQuery` / `buildSearchUrl` | 単一クエリ生成 |
-| `buildPaidRequest` / `buildBatch` | x402 ペイロード |
-| `applyTemplate` / `listMissions` / `listTemplates` | カタログ |
-| `encodeState` / `decodeState` | 状態共有 |
+| `startAgentSession(opts?)` | Playbook + tools + optional plan |
+| `planFromIntent(intent)` | NL → mission + scored paid steps |
+| `buildMission(id, ctx)` | Named multi-angle campaign |
+| `composeCampaign(opts)` | Multi-locale / multi-goal |
+| `scoreQuery(input)` | 0–100 + `recommendPay` |
+| `suggestRefinements(input, signals)` | Self-heal variants |
+| `buildQuery` / `buildSearchUrl` | Single query |
+| `buildPaidRequest` / `buildBatch` | x402 payloads |
+| `buildHandoffPackage` / `buildRunReceipt` | Downstream + memory |
+| `getToolDefinitions` / `listMissions` / `listTemplates` | Catalogs |
+| `applyTemplate` / `applyDatePreset` | Defaults |
+| `validateInput` / `analyzeQuery` / `explainQuery` | Quality |
+| `encodeState` / `decodeState` | Shareable state |
 
-## 開発・テスト
+---
 
-```bash
-# 依存なし
-node test/agent-api.test.js
-```
-
-静的サーバで UI 確認:
-
-```bash
-npx --yes serve -l 5173 .
-# open http://localhost:5173
-```
-
-## 公開連携テスト（期待 PASS）
-
-- `https://kg-ninja.github.io/HyperXosist-Agent/` がロードできる
-- `agent-use.json` / `x402-payment.json` が JSON として読める
-- `agent-use.json` が Signal-to-Fix の `agent-use.json` へリンクしている
-- 未払い `POST .../hyperxosist-query` → `402`
-
-## デプロイ (GitHub Pages)
-
-1. `main` にプッシュ
-2. Settings → Pages → Deploy from a branch → `main` / `(root)`
-3. `https://<user>.github.io/HyperXosist-Agent/` で公開
-
-## ファイル構成
+## Repository layout
 
 ```
-index.html              # Human UI
-style.css
-app.js                  # UI（agent-api 利用）
-agent-api.js            # 単一ソース API v2.1
-agent-use.json          # エージェント向けマニフェスト（sticky loop）
-agent-tools.json        # OpenAI 互換 tool definitions
-missions.json           # ミッションカタログ
-llms.txt                # LLM 発見用
-AGENTS.md               # エージェント手順書
-x402-payment.json
-top30_repost_blacklist.json
-test/agent-api.test.js
-README.md
+index.html, app.js, style.css, favicon.svg   # Human UI
+agent-api.js                                # Single-source API (Node + browser)
+agent-use.json                              # Agent manifest (sticky loop)
+agent-tools.json                            # OpenAI-compatible tools
+missions.json                               # Mission catalog
+llms.txt, AGENTS.md                         # Agent discovery / playbook
+x402-payment.json                           # Payment metadata
+top30_repost_blacklist.json                 # Bait phrase reference
+examples/quickstart.mjs                     # CLI demo
+examples/agent-session.example.json         # Session shape
+test/agent-api.test.js                      # Zero-dep tests
+.github/workflows/ci.yml                    # CI
+LICENSE, CHANGELOG.md, SECURITY.md, CONTRIBUTING.md
 ```
 
-## ライセンス / 免責
+---
 
-© 2026 HyperXosist Agent. X Corp. とは無関係です。
+## Deploy (GitHub Pages)
+
+1. Push to `main`.
+2. **Settings → Pages → Deploy from a branch → `main` / `/ (root)`**.
+3. Site: `https://<user>.github.io/HyperXosist-Agent/`
+
+No build step. CI runs tests on every push/PR to `main`.
+
+### Public integration checks
+
+- [ ] UI loads on GitHub Pages  
+- [ ] `agent-use.json` / `x402-payment.json` / `llms.txt` fetchable  
+- [ ] Link to Signal-to-Fix `agent-use.json` works  
+- [ ] Unpaid `POST` to hyperxosist-query endpoint returns **402**
+
+---
+
+## Disclaimer
+
+- Not affiliated with X Corp.
+- This tool **only builds search queries / opens official search**. It does not embed timelines, auto-post, or replace the X API.
+- You are responsible for complying with X’s terms and applicable law when searching or collecting content.
+
+---
+
+## License
+
+[MIT](LICENSE) © 2026 KG-NINJA
+
+## Related
+
+- [Signal-to-Fix](https://kg-ninja.github.io/Signal-to-Fix/) — keep-only PR specs from feedback  
+- [CHANGELOG](CHANGELOG.md) · [CONTRIBUTING](CONTRIBUTING.md) · [SECURITY](SECURITY.md)

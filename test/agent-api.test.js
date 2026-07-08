@@ -213,6 +213,9 @@ test('planFromIntent feedback → mission', () => {
   assert.ok(plan.mission.steps.length >= 2);
   assert.ok(plan.primaryStep.paidRequest.paymentRequired);
   assert.ok(plan.nextActions.length >= 3);
+  assert.strictEqual(plan.subject, 'Acme');
+  assert.ok(plan.primaryStep.query.includes('Acme'));
+  assert.ok(!plan.primaryStep.query.includes('PR specs'));
 });
 
 test('buildMission product_feedback_radar', () => {

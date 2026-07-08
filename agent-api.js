@@ -1090,15 +1090,31 @@
   function extractSubject(intent) {
     const text = String(intent || '').trim();
     if (!text) return '';
-    // "about X", "for X", Japanese 「Xの」
-    const about = text.match(/\b(?:about|for|on|regarding)\s+["']?([A-Za-z0-9_.\-/@]+(?:\s+[A-Za-z0-9_.\-]+){0,3})["']?/i);
-    if (about) return about[1].trim();
+    // Prefer quoted product names
+    const quoted = text.match(/["']([A-Za-z0-9_.\-/@][^"']{0,60})["']/);
+    if (quoted) return quoted[1].trim();
     const jp = text.match(/「([^」]+)」|『([^』]+)」/);
     if (jp) return (jp[1] || jp[2] || '').trim();
+    // "about X" / "regarding X" — stop before for/to/with purpose clauses
+    const about = text.match(
+      /\b(?:about|regarding|on)\s+["']?([A-Za-z0-9_.\-/@]+(?:\s+[A-Za-z0-9_.\-]+){0,2})["']?(?=\s+(?:for|to|with|and|that|so)\b|[?.,]|$)/i
+    );
+    if (about) return about[1].trim();
+    // "for <Product>" only when not "for PR/specs/..."
+    const forProduct = text.match(
+      /\bfor\s+["']?([A-Za-z0-9_.\-/@][A-Za-z0-9_.\-]*)["']?(?=\s|$)/i
+    );
+    if (forProduct && !/^(pr|prs|spec|specs|implementation|codex|feedback|bugs?)$/i.test(forProduct[1])) {
+      return forProduct[1].trim();
+    }
     // @handle
     const at = text.match(/@([A-Za-z0-9_]{1,15})/);
     if (at) return at[1];
-    // fallback: longest token-ish phrase without stopwords
+    // Capitalized token / product-like
+    const cap = text.match(/\b([A-Z][A-Za-z0-9_.\-]{1,40})\b/);
+    if (cap && !/^(Find|Weekly|Product|Signal|PR|AI|OR|AND|HTTP|URL)$/.test(cap[1])) {
+      return cap[1];
+    }
     const cleaned = text
       .replace(/https?:\/\/\S+/g, '')
       .replace(/[?!.]/g, ' ')
