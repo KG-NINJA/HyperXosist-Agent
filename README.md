@@ -1,22 +1,40 @@
-# HyperXosist Agent (X Search Launcher) v2
+# HyperXosist Agent (X Search Launcher) v2.1
 
 X (旧Twitter) の**高度な検索演算子**を視覚的に組み立て、公式の検索結果ページを素早く開く超軽量 Web ツールです。  
-人間のブラウザ利用は無料。AI エージェントは `agent-use.json` + x402 経由の有料パスを利用します。
+人間のブラウザ利用は無料。**AI エージェント向け**にはミッション計画・スコアゲート・自己修復・Signal-to-Fix ハンドオフ・tool-calling 定義を用意し、繰り返し使いやすい sticky loop を提供します。
 
 **Live:** https://kg-ninja.github.io/HyperXosist-Agent/
 
-## v2 の主な進化点
+## エージェントが何度も使う理由
+
+| 機能 | 効果 |
+|------|------|
+| `planFromIntent` | 自然言語ゴール → マルチアングル任務（当てずっぽう検索を削減） |
+| `scoreQuery` | 支払い前に 0–100 で品質判定（$0.01 の無駄撃ち防止） |
+| `suggestRefinements` | 0 件 / ノイズ過多をエージェントが自己修復 |
+| `buildHandoffPackage` | 収集テキストを Signal-to-Fix の keep-only PR パイプラインへ直結 |
+| `buildRunReceipt` | 監査・週次 cron・状態再利用 (`encodeState`) |
+| `agent-tools.json` | OpenAI/Anthropic tool-calling にそのまま載せられる |
+| `llms.txt` / `AGENTS.md` | 発見から 30 秒でループに入れる |
+
+```js
+const session = HyperXosistAgent.startAgentSession({
+  intent: 'Find product feedback about Acme for PR specs'
+});
+// → plan / tools / playbook / payment hints in one call
+```
+
+## v2.1 の進化点
 
 | 領域 | 内容 |
 |------|------|
-| **演算子** | `to:`, `@mention`, `min_retweets`, `min_replies`, OR グループ (`anyOf`), ハッシュタグ, `url:`, 返信/認証/引用/メディア系 filter, 生演算子 |
-| **テンプレート** | Product feedback / Competitor / News / AI discourse / 日本語トレンド / Media / Clean original / Signal-to-Fix 連携 |
-| **単一ソース** | UI (`app.js`) は `agent-api.js` の `HyperXosistAgent` を唯一のクエリ生成実装として利用 |
-| **検証・解説** | `validateInput` / `analyzeQuery` / `explainQuery` / 文字数・除外語数メタ表示 |
-| **共有** | フォーム状態を URL ハッシュ `#s=...` にエンコードして共有・復元 |
-| **バッチ** | `buildBatch(inputs[])` で複数クエリを一括生成 |
-| **日付** | 24h / 7d / 30d / 90d / 1y プリセット |
-| **テスト** | 依存ゼロの Node テスト `node test/agent-api.test.js` |
+| **Agent sticky layer** | missions, planFromIntent, score, refine, handoff, receipt, session bootstrap |
+| **発見性** | `llms.txt`, `AGENTS.md`, `agent-tools.json`, `missions.json` |
+| **演算子** | `to:`, `@mention`, `min_retweets`, `min_replies`, OR (`anyOf`), ハッシュタグ, `url:`, 各種 filter, 生演算子 |
+| **テンプレート** | Product / Competitor / News / AI / 日本語 / Media / Clean / Signal-to-Fix |
+| **単一ソース** | UI は `agent-api.js` を唯一の実装として利用 |
+| **共有・検証** | `#s=` 状態共有, validate / analyze / explain |
+| **テスト** | `node test/agent-api.test.js` |
 
 ## 特徴
 
@@ -42,36 +60,47 @@ X (旧Twitter) の**高度な検索演算子**を視覚的に組み立て、公�
 
 ## AI エージェント利用と x402
 
+**発見順:** [llms.txt](https://kg-ninja.github.io/HyperXosist-Agent/llms.txt) → [AGENTS.md](https://kg-ninja.github.io/HyperXosist-Agent/AGENTS.md) → [agent-use.json](https://kg-ninja.github.io/HyperXosist-Agent/agent-use.json)
+
 ```js
-// Browser or Node (require agent-api.js)
-const input = HyperXosistAgent.applyTemplate('signal_to_fix', {
-  keywords: 'my-product'
+// Sticky loop (Node or browser with agent-api.js)
+const plan = HyperXosistAgent.planFromIntent(
+  'Find product feedback about Acme for PR specs'
+);
+const step = plan.primaryStep;
+if (step.score.recommendPay) {
+  const paid = step.paidRequest;
+  // POST paid.body → paid.endpoint  (402 until x402 payment)
+  // collect post texts from step.searchUrl after authorization
+}
+const handoff = HyperXosistAgent.buildHandoffPackage({
+  productName: 'Acme',
+  feedback: ['...candidate posts...']
 });
-const paid = HyperXosistAgent.buildPaidRequest(input);
-// POST paid.body → paid.endpoint  (expect 402 until x402 payment)
-// After payment, use returned query / search URL
+// → handoff.signalToFix.input into Signal-to-Fix (keep-only only)
 ```
 
-- エージェントは `agent-use.json` と `x402-payment.json` を読む
-- 支払い前に `buildQuery` / `buildSearchUrl` の結果を**自動業務で利用しない**（ローカル検証・プレビューのみ）
-- エンドポイント: `https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/hyperxosist-query`
-- Signal-to-Fix 連動: https://kg-ninja.github.io/Signal-to-Fix/
+- 支払い前の `buildQuery` / `buildSearchUrl` は**計画・プレビューのみ**（本番自動利用は x402）
+- エンドポイント: `.../hyperxosist-query`（詳細は `x402-payment.json`）
+- Signal-to-Fix: https://kg-ninja.github.io/Signal-to-Fix/
 
-### 主要 API（v2）
+### 主要 API（v2.1）
 
 | Method | 説明 |
 |--------|------|
-| `buildQuery(input)` | X 検索クエリ文字列 |
-| `buildSearchUrl(input)` | `https://x.com/search?...` |
-| `buildPaidRequest(input)` | x402 POST 用ペイロード + local preview |
-| `buildBatch(inputs)` | 複数入力の一括生成 |
-| `validateInput(input)` | 矛盾・日付・数値チェック |
-| `analyzeQuery(input\|string)` | 長さ・演算子数・警告 |
-| `explainQuery(input)` | 人間可読な解説 |
-| `applyTemplate(id, overrides?)` | 研究テンプレート適用 |
-| `applyDatePreset(key)` | `24h`/`7d`/`30d`/`90d`/`1y` |
-| `listTemplates()` | テンプレート一覧 |
-| `encodeState` / `decodeState` | 共有用 Base64 状態 |
+| `startAgentSession(opts?)` | playbook + tools + optional plan を一括取得 |
+| `planFromIntent(intent)` | NL → ミッション + paid steps + nextActions |
+| `buildMission(id, ctx)` | 名前付きマルチアングル任務 |
+| `composeCampaign(opts)` | 多言語・多ゴール横断 |
+| `scoreQuery(input)` | 0–100 品質スコア / recommendPay |
+| `suggestRefinements(input, signals)` | 疎・ノイズ時の自己修復候補 |
+| `buildHandoffPackage(opts)` | Signal-to-Fix 向け JSON |
+| `buildRunReceipt(opts)` | 監査・再利用レシート |
+| `getToolDefinitions()` | OpenAI 互換 tools |
+| `buildQuery` / `buildSearchUrl` | 単一クエリ生成 |
+| `buildPaidRequest` / `buildBatch` | x402 ペイロード |
+| `applyTemplate` / `listMissions` / `listTemplates` | カタログ |
+| `encodeState` / `decodeState` | 状態共有 |
 
 ## 開発・テスト
 
@@ -103,12 +132,16 @@ npx --yes serve -l 5173 .
 ## ファイル構成
 
 ```
-index.html          # UI
-style.css           # デザイン
-app.js              # UI ロジック（agent-api を利用）
-agent-api.js        # クエリ生成・テンプレート・検証（単一ソース）
-agent-use.json      # エージェント向けマニフェスト
-x402-payment.json   # x402 支払いメタデータ
+index.html              # Human UI
+style.css
+app.js                  # UI（agent-api 利用）
+agent-api.js            # 単一ソース API v2.1
+agent-use.json          # エージェント向けマニフェスト（sticky loop）
+agent-tools.json        # OpenAI 互換 tool definitions
+missions.json           # ミッションカタログ
+llms.txt                # LLM 発見用
+AGENTS.md               # エージェント手順書
+x402-payment.json
 top30_repost_blacklist.json
 test/agent-api.test.js
 README.md

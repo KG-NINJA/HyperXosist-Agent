@@ -1,0 +1,204 @@
+{
+  "name": "HyperXosist Agent Tools",
+  "version": "2.1.0",
+  "description": "OpenAI-compatible tool definitions for HyperXosist. Prefer hyperxosist_plan_from_intent first. Automated search URL use requires x402 payment.",
+  "paymentRequiredForAutomatedSearchUse": true,
+  "paymentEndpoint": "https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/hyperxosist-query",
+  "stickyTip": "plan → score → pay → collect → refine → handoff → receipt",
+  "format": "openai.tools.v1",
+  "paymentNote": "Automated use of generated search URLs requires x402 payment via paymentEndpoint.",
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "hyperxosist_plan_from_intent",
+        "description": "Turn a natural-language research goal into a multi-query X search mission with scores, paid request bodies, and next actions. Prefer this as the first HyperXosist call.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "intent": {
+              "type": "string",
+              "description": "Natural language goal."
+            },
+            "subject": {
+              "type": "string"
+            },
+            "lang": {
+              "type": "string"
+            },
+            "missionId": {
+              "type": "string",
+              "description": "Optional force mission id from list_missions."
+            }
+          },
+          "required": [
+            "intent"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "hyperxosist_build_mission",
+        "description": "Build a named multi-angle search mission for a product/entity.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "missionId": {
+              "type": "string"
+            },
+            "subject": {
+              "type": "string"
+            },
+            "lang": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "missionId",
+            "subject"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "hyperxosist_build_query",
+        "description": "Build a single advanced X search query string and URL from structured input.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "input": {
+              "type": "object",
+              "description": "HyperXosist inputSchema object."
+            }
+          },
+          "required": [
+            "input"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "hyperxosist_score_query",
+        "description": "Score a query 0-100 for signal quality before paying x402.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "input": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "input"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "hyperxosist_suggest_refinements",
+        "description": "Self-heal sparse or noisy searches with ranked alternative inputs.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "input": {
+              "type": "object"
+            },
+            "tooSparse": {
+              "type": "boolean"
+            },
+            "tooNoisy": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "input"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "hyperxosist_build_paid_request",
+        "description": "Create x402 POST payload for agent-paid query generation. Expect 402 until paid.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "input": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "input"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "hyperxosist_build_handoff",
+        "description": "Package collected feedback texts for Signal-to-Fix keep-only PR pipeline.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "productName": {
+              "type": "string"
+            },
+            "productUrl": {
+              "type": "string"
+            },
+            "targetArea": {
+              "type": "string"
+            },
+            "feedback": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "productName",
+            "feedback"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "hyperxosist_list_missions",
+        "description": "List available multi-query missions and why agents reuse them.",
+        "parameters": {
+          "type": "object",
+          "properties": {}
+        }
+      }
+    }
+  ],
+  "dispatchHints": {
+    "hyperxosist_plan_from_intent": "planFromIntent(intent, options)",
+    "hyperxosist_build_mission": "buildMission(missionId, { subject, lang })",
+    "hyperxosist_build_query": "({ query: buildQuery(input), searchUrl: buildSearchUrl(input) })",
+    "hyperxosist_score_query": "scoreQuery(input)",
+    "hyperxosist_suggest_refinements": "suggestRefinements(input, signals)",
+    "hyperxosist_build_paid_request": "buildPaidRequest(input)",
+    "hyperxosist_build_handoff": "buildHandoffPackage(options)",
+    "hyperxosist_list_missions": "listMissions()"
+  },
+  "entrypoints": {
+    "agentUse": "https://kg-ninja.github.io/HyperXosist-Agent/agent-use.json",
+    "api": "https://kg-ninja.github.io/HyperXosist-Agent/agent-api.js",
+    "playbook": "https://kg-ninja.github.io/HyperXosist-Agent/AGENTS.md",
+    "llms": "https://kg-ninja.github.io/HyperXosist-Agent/llms.txt",
+    "missions": "https://kg-ninja.github.io/HyperXosist-Agent/missions.json"
+  }
+}

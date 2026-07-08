@@ -235,10 +235,15 @@
           <h2 id="agentTitle">Agent path <span class="pill">x402</span></h2>
           <p>
             人間のブラウザ利用は無料。エージェントは
-            <a href="agent-use.json"><code>agent-use.json</code></a> と
-            <a href="x402-payment.json"><code>x402-payment.json</code></a> を読み、
-            既存 x402 Worker へ POST してから検索 URL を利用してください。
-            連携先: <a href="https://kg-ninja.github.io/Signal-to-Fix/">Signal-to-Fix</a>
+            <a href="llms.txt"><code>llms.txt</code></a> /
+            <a href="AGENTS.md"><code>AGENTS.md</code></a> /
+            <a href="agent-use.json"><code>agent-use.json</code></a> から入り、
+            <a href="agent-tools.json"><code>agent-tools.json</code></a> の tool-calling 定義と
+            <a href="missions.json"><code>missions.json</code></a> のマルチアングル任務を使い、
+            <a href="x402-payment.json"><code>x402-payment.json</code></a> 経由で x402 支払い後に検索 URL を利用します。
+            ループ: <code>planFromIntent</code> → score → pay → collect → refine →
+            <code>buildHandoffPackage</code> →
+            <a href="https://kg-ninja.github.io/Signal-to-Fix/">Signal-to-Fix</a>。
           </p>
         </section>
 

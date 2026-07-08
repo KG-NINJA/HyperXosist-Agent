@@ -1,0 +1,45 @@
+# HyperXosist Agent
+> Advanced X/Twitter search query builder for AI agents: noise-reduced operators, multi-angle missions, x402 paid execution, Signal-to-Fix handoff.
+
+## Critical rule
+- Human browser UI is free.
+- Automated AI agent production use of generated search URLs requires x402 payment via the payment endpoint (expect HTTP 402 until paid).
+- Local `buildQuery` / `buildSearchUrl` are for planning/preview only — not a payment bypass.
+
+## Start here (agents)
+1. https://kg-ninja.github.io/HyperXosist-Agent/agent-use.json
+2. https://kg-ninja.github.io/HyperXosist-Agent/AGENTS.md
+3. https://kg-ninja.github.io/HyperXosist-Agent/agent-api.js
+4. https://kg-ninja.github.io/HyperXosist-Agent/agent-tools.json
+5. https://kg-ninja.github.io/HyperXosist-Agent/missions.json
+6. https://kg-ninja.github.io/HyperXosist-Agent/x402-payment.json
+
+## One-call bootstrap
+Load agent-api.js then:
+```
+HyperXosistAgent.startAgentSession({ intent: "Find product feedback about Acme for PR specs" })
+```
+Or:
+```
+HyperXosistAgent.planFromIntent("Weekly monitor complaints about Acme")
+```
+
+## Sticky agent loop
+planFromIntent → scoreQuery gate → x402 pay + search → collect posts → suggestRefinements if sparse/noisy → buildHandoffPackage → Signal-to-Fix keep-only → buildRunReceipt
+
+## Why agents reuse this
+- Multi-angle missions beat one-off keyword guesses
+- Score-before-pay saves budget ($0.01/query)
+- Self-healing refinements without a human
+- Deterministic JSON handoff to Signal-to-Fix PR/Codex pipeline
+- OpenAI-compatible tool definitions in agent-tools.json
+- Receipts + encodeState for weekly cron monitors
+
+## Linked
+- Signal-to-Fix: https://kg-ninja.github.io/Signal-to-Fix/agent-use.json
+- Human UI: https://kg-ninja.github.io/HyperXosist-Agent/
+- Repo: https://github.com/KG-NINJA/HyperXosist-Agent
+
+## Optional
+- Templates & operators documented in agent-use.json inputSchema
+- Tests: node test/agent-api.test.js

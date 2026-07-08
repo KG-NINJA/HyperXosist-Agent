@@ -190,5 +190,104 @@ test('rawOperators appended', () => {
   assert.ok(q.endsWith('list:dev') || q.includes('list:dev'));
 });
 
+// --- v2.1 agent-sticky layer ---
+
+test('scoreQuery rewards noise + engagement', () => {
+  const weak = Agent.scoreQuery({ keywords: 'x' });
+  const strong = Agent.scoreQuery({
+    keywords: 'x',
+    minFaves: 20,
+    excludeReplies: true,
+    noise: { enabled: true, preset: 'medium', removed: [] },
+    sinceDate: '2026-07-01',
+    untilDate: '2026-07-08'
+  });
+  assert.ok(strong.score > weak.score);
+  assert.ok(strong.recommendPay);
+});
+
+test('planFromIntent feedback → mission', () => {
+  const plan = Agent.planFromIntent('Find product feedback about Acme for PR specs');
+  assert.strictEqual(plan.ok, true);
+  assert.ok(plan.missionId);
+  assert.ok(plan.mission.steps.length >= 2);
+  assert.ok(plan.primaryStep.paidRequest.paymentRequired);
+  assert.ok(plan.nextActions.length >= 3);
+});
+
+test('buildMission product_feedback_radar', () => {
+  const m = Agent.buildMission('product_feedback_radar', { subject: 'Acme' });
+  assert.strictEqual(m.stepCount, 3);
+  assert.ok(m.estimatedCostUsd > 0);
+  m.steps.forEach((s) => {
+    assert.ok(s.query.includes('Acme') || s.input.keywords === 'Acme');
+    assert.ok(s.score && typeof s.score.score === 'number');
+  });
+});
+
+test('suggestRefinements sparse widens', () => {
+  const input = {
+    keywords: 'rarething',
+    minFaves: 50,
+    noise: { enabled: true, preset: 'high', removed: [] }
+  };
+  const r = Agent.suggestRefinements(input, { tooSparse: true });
+  assert.ok(r.variants.some((v) => v.id === 'widen'));
+  assert.ok(r.best);
+});
+
+test('buildHandoffPackage ready', () => {
+  const h = Agent.buildHandoffPackage({
+    productName: 'Acme',
+    feedback: ['crash on login', 'please add dark mode']
+  });
+  assert.strictEqual(h.ready, true);
+  assert.strictEqual(h.feedbackCount, 2);
+  assert.ok(h.signalToFix.input.feedback.length === 2);
+  assert.ok(h.policy.downstreamMustUseKeepOnly);
+});
+
+test('buildRunReceipt has reuse state', () => {
+  const rec = Agent.buildRunReceipt({
+    input: { keywords: 'Acme', mode: 'live' },
+    paymentCompleted: true,
+    resultCount: 4
+  });
+  assert.ok(rec.reuse.encodedState);
+  assert.ok(rec.reuse.shareUrl.includes('#s='));
+  assert.strictEqual(rec.payment.completed, true);
+});
+
+test('getToolDefinitions has plan tool', () => {
+  const t = Agent.getToolDefinitions();
+  assert.ok(t.tools.some((x) => x.function.name === 'hyperxosist_plan_from_intent'));
+  assert.ok(t.dispatchHints.hyperxosist_build_handoff);
+});
+
+test('startAgentSession with intent', () => {
+  const s = Agent.startAgentSession({ intent: 'Weekly monitor about NovaApp' });
+  assert.ok(s.playbook.loop.length >= 5);
+  assert.ok(s.plan && s.plan.ok);
+  assert.ok(s.tools.tools.length >= 5);
+});
+
+test('composeCampaign multi goal', () => {
+  const c = Agent.composeCampaign({
+    product: 'Acme',
+    goals: ['feedback', 'competitor'],
+    locales: ['', 'ja']
+  });
+  assert.ok(c.stepCount >= 4);
+  assert.ok(c.estimatedPaidCalls >= 1);
+});
+
+test('listMissions non-empty', () => {
+  assert.ok(Agent.listMissions().length >= 5);
+});
+
+test('version is 2.1+', () => {
+  assert.ok(Agent.version.startsWith('2.1') || Number(Agent.version.split('.')[1]) >= 1);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

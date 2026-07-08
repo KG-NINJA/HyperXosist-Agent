@@ -1,0 +1,75 @@
+{
+  "name": "HyperXosist Missions",
+  "version": "2.1.0",
+  "description": "Multi-angle search campaigns agents re-run. Noise excludes are priority-capped so queries stay under X length limits.",
+  "whySticky": [
+    "Deterministic multi-angle missions beat one-off keyword guesses.",
+    "scoreQuery prevents wasting x402 on weak queries.",
+    "suggestRefinements self-heals empty/noisy runs without human help.",
+    "buildHandoffPackage chains into Signal-to-Fix PR specs in one hop.",
+    "Receipts + encodeState make weekly monitors and audits trivial.",
+    "Tool definitions drop into OpenAI/Anthropic tool-calling with zero inventing."
+  ],
+  "noiseTermLimits": {
+    "low": 14,
+    "medium": 26,
+    "high": 36
+  },
+  "missions": [
+    {
+      "id": "product_feedback_radar",
+      "label": "Product feedback radar",
+      "whyAgentsUseIt": "Multi-angle complaints + feature requests + bugs in one deterministic campaign. Highest reuse rate for shipping loops.",
+      "recommendedNext": "signal_to_fix",
+      "defaultBudgetUsd": 0.03,
+      "angleCount": 3
+    },
+    {
+      "id": "competitive_intel",
+      "label": "Competitive intelligence",
+      "whyAgentsUseIt": "Compare subject vs alternatives with noise cut — good for weekly monitoring jobs.",
+      "recommendedNext": null,
+      "defaultBudgetUsd": 0.03,
+      "angleCount": 3
+    },
+    {
+      "id": "launch_pulse",
+      "label": "Launch / news pulse",
+      "whyAgentsUseIt": "Time-boxed discourse snapshot for launches and incidents.",
+      "recommendedNext": null,
+      "defaultBudgetUsd": 0.02,
+      "angleCount": 2
+    },
+    {
+      "id": "signal_to_fix_pipeline",
+      "label": "Signal-to-Fix pipeline",
+      "whyAgentsUseIt": "End-to-end: clean X candidates → handoff package → keep-only PR specs. The sticky agent habit loop.",
+      "recommendedNext": "signal_to_fix",
+      "defaultBudgetUsd": 0.03,
+      "angleCount": 3
+    },
+    {
+      "id": "osint_entity",
+      "label": "Entity / person OSINT",
+      "whyAgentsUseIt": "Structured from/to/mention angles without engagement-bait noise.",
+      "recommendedNext": null,
+      "defaultBudgetUsd": 0.03,
+      "angleCount": 3
+    },
+    {
+      "id": "weekly_monitor",
+      "label": "Weekly monitor (7d)",
+      "whyAgentsUseIt": "Cron-friendly 7-day window with stable operators — ideal recurring agent jobs.",
+      "recommendedNext": "signal_to_fix",
+      "defaultBudgetUsd": 0.02,
+      "angleCount": 2
+    }
+  ],
+  "usage": {
+    "list": "HyperXosistAgent.listMissions()",
+    "run": "HyperXosistAgent.buildMission('product_feedback_radar', { subject: 'Acme' })",
+    "fromIntent": "HyperXosistAgent.planFromIntent('Find bugs about Acme')",
+    "session": "HyperXosistAgent.startAgentSession({ intent: '...' })"
+  },
+  "costHintUsdPerStep": 0.01
+}

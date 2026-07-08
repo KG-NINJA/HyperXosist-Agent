@@ -3,7 +3,7 @@
   "x402Version": 2,
   "scheme": "exact",
   "service": "HyperXosist",
-  "apiVersion": "2.0.0",
+  "apiVersion": "2.1.0",
   "usageType": "ai-agent-search-query-generation",
   "status": "payment-required-for-agent-use",
   "enforcement": "external-x402-endpoint",
