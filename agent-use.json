@@ -1,12 +1,12 @@
 {
   "name": "HyperXosist Agent Use",
-  "version": "1.0.0",
-  "description": "Machine-readable entrypoint for AI agents that generate X search URLs with HyperXosist noise reduction.",
+  "version": "2.0.0",
+  "description": "Machine-readable entrypoint for AI agents that generate advanced X search URLs with HyperXosist noise reduction, research templates, and validation.",
   "requiresPaymentForAgentUse": true,
   "agentConversionSummary": {
-    "problemSolved": "Builds noise-reduced X/Twitter search queries and search URLs for agents that need better candidate feedback discovery.",
-    "whenToUse": "Use before Signal-to-Fix when an agent needs to source relevant X/Twitter feedback with spam, promo, and engagement-bait reduction.",
-    "inputToSend": "keywords, exactPhrase, fromUser, excludeWords, date filters, minimum engagement filters, language, media filters, mode, and noise settings.",
+    "problemSolved": "Builds noise-reduced, operator-rich X/Twitter search queries and search URLs for agents that need high-signal candidate feedback discovery.",
+    "whenToUse": "Use before Signal-to-Fix when an agent needs to source relevant X/Twitter feedback with spam, promo, and engagement-bait reduction. Prefer applyTemplate('signal_to_fix') or product_feedback for feedback pipelines.",
+    "inputToSend": "keywords, anyOf (OR group), exactPhrase, fromUser, toUser, mentionUser, hashtags, urlDomain, excludeWords, date filters, minFaves/minRetweets/minReplies, language, media/content filters, rawOperators, mode, and noise settings. Optional templateId via client-side applyTemplate before POST.",
     "expectedOutput": "A paid query/search result from the x402 endpoint, including an X search query or search URL suitable for gathering candidate feedback.",
     "paidAction": "POST the same query input to the configured x402 payment endpoint.",
     "nextUrl": "https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/hyperxosist-query",
@@ -20,13 +20,14 @@
     "method": "POST",
     "expectedUnpaidStatus": 402,
     "expectedPaidStatus": 200,
-    "instruction": "AI agents must POST input to the configured x402 endpoint and complete payment before using generated search URLs. Human browser use remains available through index.html."
+    "instruction": "AI agents must POST input to the configured x402 endpoint and complete payment before using generated search URLs. Human browser use remains available through index.html. Local preview via buildQuery/buildSearchUrl is free but must not be used as a payment bypass for automated agent workflows."
   },
   "entrypoints": {
     "humanUi": "index.html",
     "agentApiScript": "agent-api.js",
     "paymentManifest": "x402-payment.json",
-    "linkedSignalToFix": "https://kg-ninja.github.io/Signal-to-Fix/agent-use.json"
+    "linkedSignalToFix": "https://kg-ninja.github.io/Signal-to-Fix/agent-use.json",
+    "testSuite": "test/agent-api.test.js"
   },
   "agentUsePolicy": {
     "humanBrowserUse": "free",
@@ -34,26 +35,80 @@
     "mustNotBypassPayment": true,
     "paymentVerifier": "https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/hyperxosist-query"
   },
+  "apiSurface": {
+    "version": "2.0.0",
+    "methods": [
+      "buildQuery(input)",
+      "buildSearchUrl(input)",
+      "buildPaidRequest(input)",
+      "buildBatch(inputs[])",
+      "validateInput(input)",
+      "analyzeQuery(input|string)",
+      "explainQuery(input)",
+      "applyTemplate(templateId, overrides?)",
+      "applyDatePreset(presetKey)",
+      "listTemplates()",
+      "encodeState(input)",
+      "decodeState(encoded)"
+    ],
+    "templates": [
+      "product_feedback",
+      "competitor_watch",
+      "news_pulse",
+      "ai_discourse",
+      "japanese_trend",
+      "media_only",
+      "clean_original",
+      "signal_to_fix"
+    ]
+  },
   "complementaryPositioning": {
-    "hyperxosist": "Agent-facing execution/query layer with x402 payment flow.",
+    "hyperxosist": "Agent-facing execution/query layer with x402 payment flow and advanced X operators.",
     "signalToFix": "Feedback/noise -> actionable issue, PR spec, and implementation prompt.",
     "whyTogether": "HyperXosist produces cleaner paid search execution for candidate feedback; Signal-to-Fix turns the resulting feedback into keep-only implementation artifacts."
   },
   "inputSchema": {
     "type": "object",
     "properties": {
-      "keywords": { "type": "string" },
+      "keywords": { "type": "string", "description": "AND keywords (free text)." },
+      "anyOf": {
+        "type": ["string", "array"],
+        "description": "OR group. String may use commas or ' OR '. Becomes (a OR b OR c)."
+      },
       "exactPhrase": { "type": "string" },
       "fromUser": { "type": "string" },
+      "toUser": { "type": "string", "description": "to:username replies destination." },
+      "mentionUser": { "type": "string", "description": "@username mentions." },
+      "hashtags": {
+        "type": ["string", "array"],
+        "description": "Hashtags with or without #."
+      },
+      "urlDomain": { "type": "string", "description": "url:domain filter." },
       "excludeWords": { "type": ["string", "array"] },
       "sinceDate": { "type": "string", "format": "date" },
       "untilDate": { "type": "string", "format": "date" },
       "minFaves": { "type": ["string", "number"] },
       "minRetweets": { "type": ["string", "number"] },
-      "lang": { "type": "string", "description": "Use empty string for global search, or X language codes such as en, ja, es, fr, de, ko, zh." },
+      "minReplies": { "type": ["string", "number"] },
+      "lang": {
+        "type": "string",
+        "description": "Use empty string for global search, or X language codes such as en, ja, es, fr, de, ko, zh."
+      },
       "hasImages": { "type": "boolean" },
       "hasVideos": { "type": "boolean" },
+      "hasMedia": { "type": "boolean" },
+      "hasLinks": { "type": "boolean" },
       "excludeLinks": { "type": "boolean" },
+      "onlyReplies": { "type": "boolean" },
+      "excludeReplies": { "type": "boolean" },
+      "verifiedOnly": { "type": "boolean" },
+      "safeOnly": { "type": "boolean" },
+      "quoteOnly": { "type": "boolean" },
+      "nativeVideo": { "type": "boolean" },
+      "rawOperators": {
+        "type": "string",
+        "description": "Raw X operator fragment appended to the query."
+      },
       "mode": { "type": "string", "enum": ["live", "top"] },
       "noise": {
         "type": "object",
@@ -69,7 +124,14 @@
     "keywords": "frontier AI",
     "lang": "en",
     "mode": "live",
+    "minFaves": 20,
+    "excludeReplies": true,
     "noise": { "enabled": true, "preset": "medium", "removed": [] }
+  },
+  "exampleTemplate": {
+    "note": "Client-side: const input = HyperXosistAgent.applyTemplate('signal_to_fix', { keywords: 'my-product' }); then POST buildPaidRequest(input).body",
+    "templateId": "signal_to_fix",
+    "overrides": { "keywords": "HyperXosist" }
   },
   "linkedServices": {
     "signalToFix": "https://kg-ninja.github.io/Signal-to-Fix/",

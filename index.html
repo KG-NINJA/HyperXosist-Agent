@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>超軽量 X(Twitter) 検索ランチャー</title>
-  <meta name="description" content="X APIやOAuth認証を一切使用せず、高度な検索コマンドを素早く生成してX公式検索を開く超軽量ランチャー。">
+  <title>HyperXosist Agent — Advanced X Search Launcher</title>
+  <meta name="description" content="API不要の高度なX検索クエリビルダー。Noise Reduction・研究テンプレート・エージェント向けx402連携・共有URL対応。">
+  <meta name="theme-color" content="#0a0e17">
   <link rel="stylesheet" href="style.css">
   <link rel="alternate" type="application/json" href="agent-use.json" title="HyperXosist Agent Use">
   <link rel="payment" type="application/json" href="x402-payment.json">
@@ -15,58 +16,104 @@
 <body>
   <div class="container">
     <header>
-      <h1>X Search Launcher</h1>
-      <p class="subtitle">API-free X search query builder for Japanese and global research</p>
+      <div class="header-top">
+        <h1>HyperXosist</h1>
+        <span class="version-badge" id="versionBadge">v2</span>
+      </div>
+      <p class="subtitle">Advanced X search launcher — API-free query builder with noise reduction &amp; agent path</p>
     </header>
 
     <main>
+      <!-- Research templates -->
+      <section class="templates-section" aria-labelledby="templatesTitle">
+        <div class="section-head">
+          <h2 id="templatesTitle">Research templates</h2>
+          <p>ワンクリックで調査シナリオを適用。キーワードはあとから上書きできます。</p>
+        </div>
+        <div id="templateGrid" class="template-grid" role="list"></div>
+      </section>
+
       <form id="searchForm" onsubmit="return false;">
         <div class="form-grid">
-          <!-- キーワード -->
-          <div class="form-group">
-            <label for="keywords">キーワード</label>
-            <input type="text" id="keywords" placeholder="例: 猫 癒やし">
+          <div class="form-group span-2">
+            <label for="keywords">キーワード (AND)</label>
+            <input type="text" id="keywords" placeholder="例: open source agent  OR  猫 癒やし" autocomplete="off">
           </div>
 
-          <!-- 完全一致フレーズ -->
+          <div class="form-group span-2">
+            <label for="anyOf">いずれか (OR グループ)</label>
+            <input type="text" id="anyOf" placeholder="例: bug, broken, 不具合  →  (bug OR broken OR 不具合)" autocomplete="off">
+          </div>
+
           <div class="form-group">
             <label for="exactPhrase">完全一致フレーズ</label>
-            <input type="text" id="exactPhrase" placeholder="例: 美味しいラーメン">
+            <input type="text" id="exactPhrase" placeholder="例: delicious ramen" autocomplete="off">
           </div>
 
-          <!-- from:ユーザー -->
           <div class="form-group">
-            <label for="fromUser">from: ユーザー</label>
-            <input type="text" id="fromUser" placeholder="例: twitter (ユーザー名のみ)">
+            <label for="hashtags">ハッシュタグ</label>
+            <input type="text" id="hashtags" placeholder="例: AI agents  または  #AI #agents" autocomplete="off">
           </div>
 
-          <!-- 除外ワード -->
+          <div class="form-group">
+            <label for="fromUser">from: 投稿者</label>
+            <input type="text" id="fromUser" placeholder="username" autocomplete="off">
+          </div>
+
+          <div class="form-group">
+            <label for="toUser">to: 返信先</label>
+            <input type="text" id="toUser" placeholder="username" autocomplete="off">
+          </div>
+
+          <div class="form-group">
+            <label for="mentionUser">@ メンション</label>
+            <input type="text" id="mentionUser" placeholder="username" autocomplete="off">
+          </div>
+
           <div class="form-group">
             <label for="excludeWords">除外ワード</label>
-            <input type="text" id="excludeWords" placeholder="例: PR 広告">
+            <input type="text" id="excludeWords" placeholder='例: PR 広告 "paid partnership"' autocomplete="off">
           </div>
 
-          <!-- since: 日付 -->
           <div class="form-group">
             <label for="sinceDate">since: 開始日</label>
             <input type="date" id="sinceDate">
           </div>
 
-          <!-- until: 日付 -->
           <div class="form-group">
             <label for="untilDate">until: 終了日</label>
             <input type="date" id="untilDate">
           </div>
 
-          <!-- 最小いいね数 -->
+          <div class="form-group span-2">
+            <label>日付プリセット</label>
+            <div class="chip-row" id="datePresets" role="group" aria-label="Date presets">
+              <button type="button" class="chip-btn" data-date-preset="24h">24h</button>
+              <button type="button" class="chip-btn" data-date-preset="7d">7d</button>
+              <button type="button" class="chip-btn" data-date-preset="30d">30d</button>
+              <button type="button" class="chip-btn" data-date-preset="90d">90d</button>
+              <button type="button" class="chip-btn" data-date-preset="1y">1y</button>
+              <button type="button" class="chip-btn chip-btn-muted" id="btnClearDates">Clear dates</button>
+            </div>
+          </div>
+
           <div class="form-group">
-            <label for="minFaves">min_faves: 最小いいね数</label>
+            <label for="minFaves">min_faves</label>
             <input type="number" id="minFaves" min="0" placeholder="例: 100">
           </div>
 
-          <!-- 言語 -->
           <div class="form-group">
-            <label for="lang">lang: 言語 / Language</label>
+            <label for="minRetweets">min_retweets</label>
+            <input type="number" id="minRetweets" min="0" placeholder="例: 10">
+          </div>
+
+          <div class="form-group">
+            <label for="minReplies">min_replies</label>
+            <input type="number" id="minReplies" min="0" placeholder="例: 5">
+          </div>
+
+          <div class="form-group">
+            <label for="lang">lang: 言語</label>
             <select id="lang">
               <option value="" selected>Global / 指定なし</option>
               <option value="en">English (en)</option>
@@ -78,38 +125,93 @@
               <option value="zh">中文 (zh)</option>
             </select>
           </div>
+
+          <div class="form-group">
+            <label for="urlDomain">url: ドメイン</label>
+            <input type="text" id="urlDomain" placeholder="例: github.com" autocomplete="off">
+          </div>
         </div>
 
-        <!-- フィルターチェックボックス群 -->
-        <div class="filter-group">
+        <!-- Filters -->
+        <div class="filter-group" role="group" aria-label="Media and content filters">
           <label class="checkbox-container">
             <input type="checkbox" id="hasImages">
             <span class="checkmark"></span>
-            画像あり (filter:images)
+            画像 (filter:images)
           </label>
           <label class="checkbox-container">
             <input type="checkbox" id="hasVideos">
             <span class="checkmark"></span>
-            動画あり (filter:videos)
+            動画 (filter:videos)
+          </label>
+          <label class="checkbox-container">
+            <input type="checkbox" id="hasMedia">
+            <span class="checkmark"></span>
+            メディア (filter:media)
+          </label>
+          <label class="checkbox-container">
+            <input type="checkbox" id="nativeVideo">
+            <span class="checkmark"></span>
+            ネイティブ動画
           </label>
           <label class="checkbox-container">
             <input type="checkbox" id="excludeLinks">
             <span class="checkmark"></span>
-            リンク除外 (-filter:links)
+            リンク除外
+          </label>
+          <label class="checkbox-container">
+            <input type="checkbox" id="hasLinks">
+            <span class="checkmark"></span>
+            リンクのみ
+          </label>
+          <label class="checkbox-container">
+            <input type="checkbox" id="excludeReplies">
+            <span class="checkmark"></span>
+            返信を除外
+          </label>
+          <label class="checkbox-container">
+            <input type="checkbox" id="onlyReplies">
+            <span class="checkmark"></span>
+            返信のみ
+          </label>
+          <label class="checkbox-container">
+            <input type="checkbox" id="verifiedOnly">
+            <span class="checkmark"></span>
+            認証済みのみ
+          </label>
+          <label class="checkbox-container">
+            <input type="checkbox" id="quoteOnly">
+            <span class="checkmark"></span>
+            引用のみ
+          </label>
+          <label class="checkbox-container">
+            <input type="checkbox" id="safeOnly">
+            <span class="checkmark"></span>
+            Safe only
           </label>
         </div>
+
+        <!-- Advanced raw -->
+        <details class="advanced-panel">
+          <summary>Advanced / 生演算子</summary>
+          <div class="form-group">
+            <label for="rawOperators">追加演算子 (そのまま結合)</label>
+            <input type="text" id="rawOperators" placeholder='例: list:slug  OR  "exact more"  -is:retweet' autocomplete="off">
+            <p class="hint">X の高度な演算子を自由に足せます。生成クエリの末尾に追加されます。</p>
+          </div>
+        </details>
 
         <!-- Noise Reduction -->
         <section class="noise-section" aria-labelledby="noiseTitle">
           <div class="noise-header">
             <div>
               <h2 id="noiseTitle">Noise Reduction</h2>
-              <p>Filters obvious spam, engagement bait, and promo noise before search. / 明らかなスパム・釣り・宣伝ノイズを検索前に除外します。</p>
+              <p>スパム・engagement bait・宣伝ノイズを検索前に除外。英語圏リポスト定型句も Medium 以上で除外。</p>
             </div>
             <label class="toggle-container">
               <input type="checkbox" id="noiseEnabled">
               <span class="toggle-track"></span>
-              Enable noise filter
+              Enable
             </label>
           </div>
 
@@ -117,42 +219,65 @@
             <div class="form-group noise-preset">
               <label for="noisePreset">Preset</label>
               <select id="noisePreset">
-                <option value="low">Low: obvious spam only</option>
-                <option value="medium" selected>Medium: spam + engagement bait</option>
-                <option value="high">High: aggressive noise reduction</option>
+                <option value="low">Low: obvious spam</option>
+                <option value="medium" selected>Medium: spam + bait + repost phrases</option>
+                <option value="high">High: aggressive</option>
               </select>
             </div>
-            <button type="button" id="btnResetNoise" class="btn btn-secondary btn-compact">Reset noise rules</button>
+            <button type="button" id="btnResetNoise" class="btn btn-secondary btn-compact">Reset noise</button>
           </div>
 
           <div id="noiseChips" class="noise-chips" aria-live="polite"></div>
         </section>
+
         <!-- Agent Access -->
         <section class="agent-section" aria-labelledby="agentTitle">
-          <h2 id="agentTitle">Agent path</h2>
-          <p>Humans use this page to build X search queries in the browser. Agents read <a href="agent-use.json"><code>agent-use.json</code></a>, use <a href="x402-payment.json"><code>x402-payment.json</code></a> for paid x402 metadata, then POST to the existing x402 endpoint before using generated search URLs. Related workflow: send gathered feedback to <a href="https://kg-ninja.github.io/Signal-to-Fix/">Signal-to-Fix</a>.</p>
+          <h2 id="agentTitle">Agent path <span class="pill">x402</span></h2>
+          <p>
+            人間のブラウザ利用は無料。エージェントは
+            <a href="agent-use.json"><code>agent-use.json</code></a> と
+            <a href="x402-payment.json"><code>x402-payment.json</code></a> を読み、
+            既存 x402 Worker へ POST してから検索 URL を利用してください。
+            連携先: <a href="https://kg-ninja.github.io/Signal-to-Fix/">Signal-to-Fix</a>
+          </p>
         </section>
 
-        <!-- クエリプレビューエリア -->
+        <!-- Query preview -->
         <div class="preview-area">
-          <label>生成されたクエリ</label>
-          <textarea id="queryPreview" readonly placeholder="入力に基づいてクエリが自動生成されます..."></textarea>
+          <div class="preview-head">
+            <label for="queryPreview">生成されたクエリ</label>
+            <div id="queryMeta" class="query-meta" aria-live="polite"></div>
+          </div>
+          <textarea id="queryPreview" readonly placeholder="入力に基づいてクエリが自動生成されます..." rows="4"></textarea>
+          <pre id="queryExplain" class="query-explain" hidden></pre>
           <div class="preview-actions">
             <button type="button" id="btnCopy" class="btn btn-secondary">コピー</button>
+            <button type="button" id="btnCopyUrl" class="btn btn-secondary">URLコピー</button>
+            <button type="button" id="btnShare" class="btn btn-secondary">状態を共有</button>
+            <button type="button" id="btnExplain" class="btn btn-secondary">解説</button>
             <button type="button" id="btnReset" class="btn btn-danger">リセット</button>
           </div>
         </div>
 
-        <!-- アクションボタン -->
+        <!-- Actions -->
         <div class="action-buttons">
-          <button type="button" id="btnSearchLive" class="btn btn-primary btn-large">最新で検索</button>
-          <button type="button" id="btnSearchTop" class="btn btn-accent btn-large">話題で検索</button>
+          <button type="button" id="btnSearchLive" class="btn btn-primary btn-large" title="Ctrl+Enter">
+            最新で検索
+            <kbd class="kbd">⌃↵</kbd>
+          </button>
+          <button type="button" id="btnSearchTop" class="btn btn-accent btn-large" title="Ctrl+Shift+Enter">
+            話題で検索
+            <kbd class="kbd">⌃⇧↵</kbd>
+          </button>
         </div>
       </form>
 
-      <!-- 履歴セクション -->
+      <!-- History -->
       <section class="history-section">
-        <h2>最近使ったクエリ</h2>
+        <div class="history-head">
+          <h2>最近使ったクエリ</h2>
+          <button type="button" id="btnClearHistory" class="btn btn-secondary btn-tiny">履歴クリア</button>
+        </div>
         <ul id="historyList" class="history-list">
           <li class="empty-message">履歴はありません</li>
         </ul>
@@ -160,16 +285,13 @@
     </main>
 
     <footer>
-      <p>© 2026 X Search Launcher. This tool is not affiliated with X Corp.</p>
+      <p>© 2026 HyperXosist Agent. Not affiliated with X Corp. · <a href="https://github.com/KG-NINJA/HyperXosist-Agent">GitHub</a></p>
     </footer>
   </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
   <script src="agent-api.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
-
-
-
-
-

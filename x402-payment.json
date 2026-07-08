@@ -3,6 +3,7 @@
   "x402Version": 2,
   "scheme": "exact",
   "service": "HyperXosist",
+  "apiVersion": "2.0.0",
   "usageType": "ai-agent-search-query-generation",
   "status": "payment-required-for-agent-use",
   "enforcement": "external-x402-endpoint",
@@ -40,6 +41,8 @@
     "After x402 payment, retry paymentEndpoint to receive the paid query and X search URL.",
     "For PR-spec generation, hand candidate feedback to Signal-to-Fix at https://kg-ninja.github.io/Signal-to-Fix/.",
     "For local browser-only preview, use HyperXosistAgent.buildQuery(input) or HyperXosistAgent.buildSearchUrl(input).",
+    "Prefer applyTemplate('signal_to_fix'|'product_feedback') before POST when gathering implementation feedback.",
+    "Use validateInput(input) and explainQuery(input) for local inspection; paid results still require x402 settlement.",
     "Do not treat this static GitHub Pages site as the payment verifier; verification and settlement remain on the existing x402 Worker."
   ],
   "limits": {
