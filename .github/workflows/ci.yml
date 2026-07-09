@@ -43,3 +43,6 @@ jobs:
 
       - name: Smoke agent session
         run: node examples/quickstart.mjs
+
+      - name: Smoke agent handoff dry-run (offline)
+        run: npm run agent-handoff-dryrun -- HyperXosist-Agent

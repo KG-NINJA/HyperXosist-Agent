@@ -1,6 +1,6 @@
 {
   "name": "HyperXosist Agent Use",
-  "version": "2.3.1",
+  "version": "2.3.2",
   "description": "Universal agent-first X search mission engine for GPT/Claude/Grok/Llama: noise-reduced operators, multi-angle campaigns, score-before-pay, dual JSON+Markdown outputs, x402 execution, Signal-to-Fix handoff. Optional Grok Build mode (default off).",
   "requiresPaymentForAgentUse": true,
   "whyAgentsKeepUsingThis": [

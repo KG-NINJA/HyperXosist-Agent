@@ -10,6 +10,7 @@ All notable changes to this project are documented in this file.
 - No network, no X scrape, no payment; built-in sample feedback only
 - README / AGENTS.md document the dry-run vs real paid search path
 - Test covers dry-run script stdout sections
+- Hardening: `agent-api.js` VERSION aligned to 2.3.2; README dry-run fence fixed; CI runs dry-run smoke
 
 ## [2.3.1] — 2026-07-09
 

@@ -1,5 +1,5 @@
 /**
- * HyperXosist Agent API v2.3.1
+ * HyperXosist Agent API v2.3.2
  * Universal X advanced search toolkit for any AI agent runtime
  * (OpenAI / Anthropic / Grok / Llama / local tool-callers).
  *
@@ -12,7 +12,7 @@
 (function (root) {
   'use strict';
 
-  const VERSION = '2.3.1';
+  const VERSION = '2.3.2';
   const SIGNAL_TO_FIX_URL = 'https://kg-ninja.github.io/Signal-to-Fix/';
   const SIGNAL_TO_FIX_AGENT_USE = 'https://kg-ninja.github.io/Signal-to-Fix/agent-use.json';
   const PUBLIC_BASE = 'https://kg-ninja.github.io/HyperXosist-Agent';

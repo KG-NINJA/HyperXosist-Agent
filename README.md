@@ -132,6 +132,7 @@ const prompt = HyperXosistAgent.buildGrokBuildPrompt({
 npm test
 npm run quickstart
 # or: node examples/quickstart.mjs "Weekly monitor about MyProduct"
+```
 
 ### Agent handoff dry-run (offline — recommended first step)
 
@@ -153,7 +154,6 @@ What it does (all offline):
 7. Prints the coding-agent implementation prompt (Markdown)  
 
 **Important:** this is a **local dry-run**. It does **not** scrape X, collect real posts, open the search URL, post anything, or perform x402 payment. Real agent production search still requires x402 after `scoreQuery`.
-```
 
 ### Payment policy (agents)
 
