@@ -288,6 +288,27 @@ test('listMissions non-empty', () => {
   assert.ok(Agent.listMissions().length >= 5);
 });
 
+
+test('buildSignalToFixPipeline plans and handoffs', () => {
+  const p = Agent.buildSignalToFixPipeline({ productName: 'Acme', lang: 'en' });
+  assert.strictEqual(p.type, 'hyperxosist.signal_to_fix_pipeline.v1');
+  assert.ok(p.humanManual && p.humanManual.steps.length >= 5);
+  assert.ok(p.agentAuto && p.agentAuto.steps.length >= 4);
+  assert.ok(p.links && p.links.signalToFixHumanUi);
+  assert.ok(p.plan && p.plan.primaryStep && p.plan.primaryStep.query);
+  assert.strictEqual(p.readyForHandoff, false);
+
+  const p2 = Agent.buildSignalToFixPipeline({
+    productName: 'Acme',
+    feedback: ['login is broken when I click submit', 'please add dark mode'],
+    targetArea: 'auth'
+  });
+  assert.strictEqual(p2.readyForHandoff, true);
+  assert.ok(p2.handoff && p2.handoff.ready);
+  assert.ok(p2.handoff.signalToFix.input.feedback.length === 2);
+  assert.ok(Agent.getSignalToFixLinks().pipelineManifest.includes('signal-to-fix-pipeline.json'));
+});
+
 test('version is 2.3+', () => {
   assert.ok(Agent.version.startsWith('2.3') || Number(Agent.version.split('.')[1]) >= 3);
 });

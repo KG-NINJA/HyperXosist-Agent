@@ -1,9 +1,10 @@
 {
   "name": "HyperXosist Agent Use",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "description": "Universal agent-first X search mission engine for GPT/Claude/Grok/Llama: noise-reduced operators, multi-angle campaigns, score-before-pay, dual JSON+Markdown outputs, x402 execution, Signal-to-Fix handoff. Optional Grok Build mode (default off).",
   "requiresPaymentForAgentUse": true,
   "whyAgentsKeepUsingThis": [
+    "buildSignalToFixPipeline + signal-to-fix-pipeline.json: one-shot linked harvest → keep-only PR path for any LLM agent.",
     "Works with any major tool-calling LLM — default mode is universal, not Grok-only.",
     "planFromIntent turns vague goals into multi-angle missions — fewer wasted searches.",
     "scoreQuery (0–100) gates weak queries before spending $0.01 x402; dual .markdown output.",
@@ -22,7 +23,7 @@
     "POST buildPaidRequest → x402 pay on 402 → open searchUrl",
     "Collect candidate post texts",
     "suggestRefinements if sparse/noisy",
-    "filterKeepSignals (optional) → buildHandoffPackage / buildAgentPrompt",
+    "filterKeepSignals (optional) → buildSignalToFixPipeline / buildHandoffPackage / buildAgentPrompt",
     "Signal-to-Fix keep-only or any coding LLM; optional mode:grok for Grok Build",
     "buildRunReceipt for memory/cron reuse"
   ],
@@ -49,7 +50,9 @@
     "handoff": "HyperXosistAgent.buildHandoffPackage({ productName: 'Acme', feedback: ['...'] })",
     "toolsFile": "agent-tools.json",
     "playbook": "AGENTS.md",
-    "llms": "llms.txt"
+    "llms": "llms.txt",
+    "signalToFixPipeline": "HyperXosistAgent.buildSignalToFixPipeline({ productName: 'Acme', feedback: ['...'] })",
+    "pipelineManifest": "signal-to-fix-pipeline.json"
   },
   "costModel": {
     "currency": "USD",
@@ -78,7 +81,8 @@
     "tools": "agent-tools.json",
     "missions": "missions.json",
     "linkedSignalToFix": "https://kg-ninja.github.io/Signal-to-Fix/agent-use.json",
-    "testSuite": "test/agent-api.test.js"
+    "testSuite": "test/agent-api.test.js",
+    "signalToFixPipeline": "signal-to-fix-pipeline.json"
   },
   "agentUsePolicy": {
     "humanBrowserUse": "free",
@@ -106,6 +110,8 @@
       "buildPaidRequest(input)",
       "buildBatch(inputs[])",
       "buildHandoffPackage(options)",
+      "buildSignalToFixPipeline(options?)",
+      "getSignalToFixLinks()",
       "buildGrokBuildPrompt(options)",
       "buildRunReceipt(options)",
       "getToolDefinitions()",
@@ -343,6 +349,7 @@
   "linkedServices": {
     "signalToFix": "https://kg-ninja.github.io/Signal-to-Fix/",
     "signalToFixAgentUse": "https://kg-ninja.github.io/Signal-to-Fix/agent-use.json",
-    "handoff": "After paid search, collect feedback strings → buildHandoffPackage → Signal-to-Fix. Downstream outputs must use only decision === \"keep\" items."
+    "handoff": "Call buildSignalToFixPipeline or buildHandoffPackage after paid search; pass signalToFix.input to Signal-to-Fix. Downstream must use only decision === \"keep\". Humans: free browser steps in humanManual / UI section Signal-to-Fix 連携.",
+    "pipelineManifest": "https://kg-ninja.github.io/HyperXosist-Agent/signal-to-fix-pipeline.json"
   }
 }

@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/KG-NINJA/HyperXosist-Agent/actions/workflows/ci.yml/badge.svg)](https://github.com/KG-NINJA/HyperXosist-Agent/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-2.3.0-brightgreen.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-2.3.1-brightgreen.svg)](CHANGELOG.md)
 [![Live](https://img.shields.io/badge/demo-GitHub%20Pages-black.svg)](https://kg-ninja.github.io/HyperXosist-Agent/)
 
 **API-free advanced X (Twitter) search launcher** — for humans in the browser, and for **any** AI agent (GPT, Claude, Grok, Llama…) that needs multi-angle, noise-reduced search missions with an x402 paid path and Signal-to-Fix handoff. Optional **Grok Build** mode (default off).
@@ -12,7 +12,7 @@
 | **Live demo** | https://kg-ninja.github.io/HyperXosist-Agent/ |
 | **Repository** | https://github.com/KG-NINJA/HyperXosist-Agent |
 | **Agent entry** | https://kg-ninja.github.io/HyperXosist-Agent/llms.txt |
-| **Version** | 2.3.0 |
+| **Version** | 2.3.1 |
 
 > 日本語の要点: X 公式検索用クエリを組み立てる静的ツールです。人間の UI は無料。AI エージェントの本番利用は x402 支払い前提。検索結果の埋め込みや自動投稿はしません。
 
@@ -46,7 +46,9 @@ Discover → Plan → Score gate → Pay (x402) → Collect → Self-heal → Ke
 - `planFromIntent` / multi-angle **missions**
 - `scoreQuery` before spending **$0.01** per paid call
 - `suggestRefinements` when results are empty or noisy
-- `buildHandoffPackage` → [Signal-to-Fix](https://kg-ninja.github.io/Signal-to-Fix/) keep-only PR pipeline
+- `buildSignalToFixPipeline` → full linked loop into [Signal-to-Fix](https://kg-ninja.github.io/Signal-to-Fix/) (humans: free UI steps; agents: x402)
+- `buildHandoffPackage` → Signal-to-Fix keep-only PR handoff package
+- Discovery: [`signal-to-fix-pipeline.json`](https://kg-ninja.github.io/HyperXosist-Agent/signal-to-fix-pipeline.json)
 - Dual **JSON + Markdown** outputs on core APIs (any LLM style)
 - `buildAgentPrompt` — model-agnostic one-small-change implementation prompt
 - Transparent noise catalog: `exportNoiseCatalog` / `noise.extraTerms`
@@ -63,6 +65,7 @@ Discover → Plan → Score gate → Pay (x402) → Collect → Self-heal → Ke
 3. Optionally enable **Noise Reduction** and pick a research template.
 4. Click **最新で検索** (Latest) or **話題で検索** (Top) — or `Ctrl+Enter` / `Ctrl+Shift+Enter`.
 5. Copy query, search URL, or a shareable state link.
+6. **Signal-to-Fix 手動連携（無料）**: 投稿を Collected signals に貼る → **Handoff 生成** → **Signal-to-Fix 用をコピー** → [Signal-to-Fix](https://kg-ninja.github.io/Signal-to-Fix/) で Analyze → **keep のみ**使う。
 
 Local UI:
 

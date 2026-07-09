@@ -63,6 +63,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const grokFeedback = document.getElementById('grokFeedback');
   const grokPromptPreview = document.getElementById('grokPromptPreview');
   const grokFocusMeta = document.getElementById('grokFocusMeta');
+  const handoffPreview = document.getElementById('handoffPreview');
+  const s2fPipelineMeta = document.getElementById('s2fPipelineMeta');
+  const btnS2fPipeline = document.getElementById('btnS2fPipeline');
+  const btnBuildHandoff = document.getElementById('btnBuildHandoff');
+  const btnCopyS2fInput = document.getElementById('btnCopyS2fInput');
+  const btnOpenS2f = document.getElementById('btnOpenS2f');
+  const btnCopyHandoffJson = document.getElementById('btnCopyHandoffJson');
 
   const NOISE_STORAGE_KEY = 'hyperxosist_noise_filter';
   const HISTORY_STORAGE_KEY = 'x_search_history';
@@ -70,6 +77,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const GROK_MODE_KEY = 'hyperxosist_grok_mode';
   const MAX_HISTORY = 15;
   let lastGrokMarkdown = '';
+  let lastHandoff = null;
+  let lastPipeline = null;
   let grokModeOn = false;
 
   let noiseState = loadNoiseState();
@@ -447,6 +456,202 @@ document.addEventListener('DOMContentLoaded', () => {
   function buildGrokFromUi() {
     return Agent.buildGrokBuildPrompt(promptContextFromUi());
   }
+
+  function buildHandoffFromUi() {
+    const ctx = promptContextFromUi();
+    const input = captureInput();
+    const query = Agent.buildQuery(input);
+    const searchUrl = Agent.buildSearchUrl(input);
+    return Agent.buildHandoffPackage({
+      productName: ctx.productName,
+      productUrl: 'https://kg-ninja.github.io/HyperXosist-Agent/',
+      targetArea: ctx.targetArea,
+      context: ctx.context,
+      feedback: ctx.feedback,
+      query: query,
+      searchUrl: searchUrl,
+      missionId: 'signal_to_fix_pipeline',
+      mode: grokModeOn ? 'grok' : 'universal'
+    });
+  }
+
+  function buildPipelineFromUi(withFeedback) {
+    const ctx = promptContextFromUi();
+    const opts = {
+      productName: ctx.productName,
+      productUrl: 'https://kg-ninja.github.io/HyperXosist-Agent/',
+      targetArea: ctx.targetArea,
+      context: ctx.context,
+      intent: 'Find product feedback about ' + ctx.productName + ' for PR specs via Signal-to-Fix',
+      missionId: 'signal_to_fix_pipeline',
+      mode: grokModeOn ? 'grok' : 'universal'
+    };
+    if (withFeedback) opts.feedback = ctx.feedback;
+    return Agent.buildSignalToFixPipeline(opts);
+  }
+
+  function formatS2fPasteText(handoff) {
+    if (!handoff || !handoff.signalToFix || !handoff.signalToFix.input) return '';
+    const input = handoff.signalToFix.input;
+    const lines = [
+      '=== Signal-to-Fix 手動貼り付け用（人間向け） ===',
+      '',
+      '【Product name】',
+      input.productName || '',
+      '',
+      '【Product URL】',
+      input.productUrl || 'https://kg-ninja.github.io/HyperXosist-Agent/',
+      '',
+      '【Target area】',
+      input.targetArea || '',
+      '',
+      '【Feedback posts — 1行1投稿。下を Feedback Paste Box にそのまま貼る】',
+      ...(Array.isArray(input.feedback) ? input.feedback : []),
+      '',
+      '【次の操作】',
+      '1. https://kg-ninja.github.io/Signal-to-Fix/ を開く',
+      '2. Product name / URL / Target area を上から転記',
+      '3. Feedback posts を貼る',
+      '4. Analyze Feedback を押す',
+      '5. decision === "keep" の項目だけを Codex / 実装に使う',
+      '6. reduce / discard は実装プロンプトに入れない'
+    ];
+    return lines.join('\n');
+  }
+
+  function renderHandoff(handoff, pipeline) {
+    lastHandoff = handoff || null;
+    lastPipeline = pipeline || null;
+    const parts = [];
+    if (pipeline && pipeline.markdown) {
+      parts.push(pipeline.markdown);
+    }
+    if (handoff && handoff.markdown) {
+      parts.push(handoff.markdown);
+    }
+    if (handoff) {
+      parts.push('', '### Paste pack for Signal-to-Fix', '```', formatS2fPasteText(handoff), '```');
+    }
+    const text = parts.filter(Boolean).join('\n\n');
+    if (handoffPreview) handoffPreview.value = text;
+    if (s2fPipelineMeta) {
+      if (handoff && handoff.ready) {
+        const keepN = (handoff.keepFilter && handoff.keepFilter.keepCount) || 0;
+        s2fPipelineMeta.innerHTML =
+          '<span class="meta-ok">Handoff ready</span> feedback ' +
+          (handoff.feedbackCount || 0) +
+          ' · Keep filter ' +
+          keepN +
+          ' · 次: Signal-to-Fix 用をコピー → 開く';
+      } else if (pipeline && pipeline.plan && pipeline.plan.primaryStep) {
+        const sc = pipeline.plan.primaryStep.score || {};
+        s2fPipelineMeta.innerHTML =
+          '<span class="meta-ok">Pipeline planned</span> mission <code>' +
+          escapeHtml(pipeline.missionId || '') +
+          '</code> · score ' +
+          (sc.score != null ? sc.score : '?') +
+          ' · 投稿を収集して Handoff 生成へ';
+      } else {
+        s2fPipelineMeta.innerHTML =
+          '<span class="meta-warn">未生成</span> Collected signals を貼って Handoff 生成';
+      }
+    }
+    saveGrokFields();
+  }
+
+  if (btnS2fPipeline) {
+    btnS2fPipeline.addEventListener('click', () => {
+      const pipeline = buildPipelineFromUi(false);
+      renderHandoff(null, pipeline);
+      // Apply primary step query to form for convenience
+      const step = pipeline.plan && pipeline.plan.primaryStep;
+      if (step && step.query) {
+        // best-effort: set keywords from product if empty
+        if (fields.keywords && !fields.keywords.value.trim() && pipeline.productName) {
+          fields.keywords.value = pipeline.productName;
+        }
+        refreshPreview();
+      }
+      toast('Signal-to-Fix 連携パイプラインを計画しました（人間手順も表示）');
+    });
+  }
+
+  if (btnBuildHandoff) {
+    btnBuildHandoff.addEventListener('click', () => {
+      const ctx = promptContextFromUi();
+      if (!ctx.feedback.length) {
+        toast('Collected signals に投稿を 1 行 1 本で貼ってください');
+        if (s2fPipelineMeta) {
+          s2fPipelineMeta.innerHTML =
+            '<span class="meta-warn">投稿がありません</span> 検索して Collected signals に貼ってから再実行';
+        }
+        return;
+      }
+      const pipeline = buildPipelineFromUi(true);
+      const handoff = pipeline.handoff || buildHandoffFromUi();
+      renderHandoff(handoff, pipeline);
+      if (!handoff.ready) {
+        toast('Handoff に使える投稿が不足しています');
+      } else {
+        toast('Handoff 生成完了 — Signal-to-Fix 用をコピーできます');
+      }
+    });
+  }
+
+  if (btnCopyS2fInput) {
+    btnCopyS2fInput.addEventListener('click', async () => {
+      let handoff = lastHandoff;
+      if (!handoff || !handoff.ready) {
+        const ctx = promptContextFromUi();
+        if (!ctx.feedback.length) {
+          toast('先に投稿を貼って Handoff 生成してください');
+          return;
+        }
+        handoff = buildHandoffFromUi();
+        renderHandoff(handoff, lastPipeline);
+      }
+      const paste = formatS2fPasteText(handoff);
+      await copyText(paste, 'Signal-to-Fix 手動貼り付け用テキストをコピーしました');
+    });
+  }
+
+  if (btnOpenS2f) {
+    btnOpenS2f.addEventListener('click', async () => {
+      // Copy paste pack first so human can paste immediately
+      let handoff = lastHandoff;
+      if (!handoff || !handoff.ready) {
+        const ctx = promptContextFromUi();
+        if (ctx.feedback.length) {
+          handoff = buildHandoffFromUi();
+          renderHandoff(handoff, lastPipeline);
+        }
+      }
+      if (handoff && handoff.ready) {
+        await copyText(formatS2fPasteText(handoff), '貼り付け用をコピー済み — Signal-to-Fix を開きます');
+      } else {
+        toast('Signal-to-Fix を開きます（投稿があれば先に Handoff 生成を推奨）');
+      }
+      window.open('https://kg-ninja.github.io/Signal-to-Fix/', '_blank', 'noopener,noreferrer');
+    });
+  }
+
+  if (btnCopyHandoffJson) {
+    btnCopyHandoffJson.addEventListener('click', async () => {
+      let handoff = lastHandoff;
+      if (!handoff) {
+        const ctx = promptContextFromUi();
+        if (!ctx.feedback.length) {
+          toast('先に Handoff 生成してください');
+          return;
+        }
+        handoff = buildHandoffFromUi();
+        renderHandoff(handoff, lastPipeline);
+      }
+      const json = JSON.stringify(handoff.asJson ? handoff.asJson() : handoff, null, 2);
+      await copyText(json, 'Handoff JSON をコピーしました（エージェント向け）');
+    });
+  }
+
 
   function renderGrokPrompt(result) {
     if (!result) return;

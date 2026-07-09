@@ -1,5 +1,5 @@
 /**
- * HyperXosist Agent API v2.3
+ * HyperXosist Agent API v2.3.1
  * Universal X advanced search toolkit for any AI agent runtime
  * (OpenAI / Anthropic / Grok / Llama / local tool-callers).
  *
@@ -12,7 +12,7 @@
 (function (root) {
   'use strict';
 
-  const VERSION = '2.3.0';
+  const VERSION = '2.3.1';
   const SIGNAL_TO_FIX_URL = 'https://kg-ninja.github.io/Signal-to-Fix/';
   const SIGNAL_TO_FIX_AGENT_USE = 'https://kg-ninja.github.io/Signal-to-Fix/agent-use.json';
   const PUBLIC_BASE = 'https://kg-ninja.github.io/HyperXosist-Agent';
@@ -1817,11 +1817,13 @@
     });
 
     const agentInstructions = [
-      'Open Signal-to-Fix agent-use.json.',
+      'Preferred: HyperXosistAgent.buildSignalToFixPipeline({ productName, feedback }) then follow agentAuto.steps.',
+      'Or open ' + SIGNAL_TO_FIX_AGENT_USE + ' and pass signalToFix.input.',
       'Pass signalToFix.input (productName, productUrl, targetArea, feedback[]).',
       'Run analysis; export only keep-only clusters / PR specs / implementation prompts.',
       'Optional: use agentPrompt.markdown with any coding LLM (Claude, GPT, Grok, Llama…).',
-      'Do not feed reduce/discard items into implementation artifacts.'
+      'Do not feed reduce/discard items into implementation artifacts.',
+      'Human browser path is free; document humanManual steps when answering humans.'
     ];
 
     const result = {
@@ -1837,8 +1839,14 @@
       signalToFix: {
         humanUi: SIGNAL_TO_FIX_URL,
         agentUse: SIGNAL_TO_FIX_AGENT_USE,
+        pipelineManifest: PUBLIC_BASE + '/signal-to-fix-pipeline.json',
         input: signalToFixInput,
-        required: ['feedback']
+        required: ['feedback'],
+        policy: 'decision === "keep" only for downstream PR/Codex/impl prompts'
+      },
+      linkedPipeline: {
+        method: 'buildSignalToFixPipeline',
+        manifest: PUBLIC_BASE + '/signal-to-fix-pipeline.json'
       },
       agentPrompt: {
         markdown: agentPrompt.markdown,
@@ -2261,6 +2269,249 @@
     return session;
   }
 
+
+  /**
+   * Linked pipeline: HyperXosist → Signal-to-Fix.
+   * Agents call this to get an executable step list + optional handoff.
+   * Humans follow humanManual steps in the UI (free browser path).
+   */
+  function getSignalToFixLinks() {
+    return {
+      signalToFixHumanUi: SIGNAL_TO_FIX_URL,
+      signalToFixAgentUse: SIGNAL_TO_FIX_AGENT_USE,
+      pipelineManifest: PUBLIC_BASE + '/signal-to-fix-pipeline.json',
+      hyperxosistAgentUse: PUBLIC_BASE + '/agent-use.json',
+      hyperxosistAgentsMd: PUBLIC_BASE + '/AGENTS.md',
+      hyperxosistLlms: PUBLIC_BASE + '/llms.txt',
+      paymentManifest: PUBLIC_BASE + '/x402-payment.json',
+      paymentEndpoint: PAYMENT_ENDPOINT,
+      paymentOptionsEndpoint: PAYMENT_OPTIONS_ENDPOINT
+    };
+  }
+
+  function buildSignalToFixPipeline(options) {
+    const opts = options || {};
+    const productName = opts.productName || opts.product || opts.subject || 'product';
+    const productUrl = opts.productUrl || '';
+    const targetArea = opts.targetArea || opts.area || 'general';
+    const contextText = opts.context || opts.productContext || '';
+    const lang = opts.lang != null ? opts.lang : 'en';
+    const missionId = opts.missionId || 'signal_to_fix_pipeline';
+    const intent =
+      opts.intent ||
+      'Find product feedback about ' + productName + ' for PR specs via Signal-to-Fix';
+
+    const plan = planFromIntent(intent, {
+      subject: productName,
+      missionId: missionId,
+      lang: lang,
+      mode: opts.mode
+    });
+    const step = plan.primaryStep || (plan.mission && plan.mission.steps && plan.mission.steps[0]) || null;
+    const score = step && step.input ? scoreQuery(step.input) : null;
+    const paidRequest = step && step.input ? buildPaidRequest(step.input) : null;
+
+    const feedback = Array.isArray(opts.feedback)
+      ? opts.feedback.map(String).map((s) => s.trim()).filter(Boolean)
+      : [];
+
+    let handoff = null;
+    if (feedback.length > 0) {
+      handoff = buildHandoffPackage({
+        productName: productName,
+        productUrl: productUrl,
+        targetArea: targetArea,
+        context: contextText,
+        feedback: feedback,
+        mode: opts.mode,
+        query: step && step.query,
+        searchUrl: step && step.searchUrl,
+        missionId: plan.missionId || missionId,
+        paid: opts.paid === true,
+        searchMeta: opts.searchMeta || null,
+        minTechScore: opts.minTechScore
+      });
+    }
+
+    const links = getSignalToFixLinks();
+
+    const humanManual = {
+      title: '人間向け — 手動で Signal-to-Fix 連携する（ブラウザ無料）',
+      titleEn: 'Humans — manual Signal-to-Fix handoff (browser free)',
+      free: true,
+      steps: [
+        {
+          n: 1,
+          ja: 'このページでキーワード / テンプレート / Noise を設定し、「最新で検索」または「話題で検索」を押す（無料）。',
+          en: 'Set keywords / template / noise, then open Latest or Top search (free).'
+        },
+        {
+          n: 2,
+          ja: 'X の検索結果から有用そうな投稿テキストをコピーし、「Collected signals」に 1 行 1 投稿で貼る。',
+          en: 'Copy useful post texts from X results into Collected signals (one post per line).'
+        },
+        {
+          n: 3,
+          ja: 'Product / Target area を埋め、「Handoff 生成」→「Signal-to-Fix 用をコピー」を押す。',
+          en: 'Fill Product / Target area, click Build Handoff → Copy for Signal-to-Fix.'
+        },
+        {
+          n: 4,
+          ja: '「Signal-to-Fix を開く」で https://kg-ninja.github.io/Signal-to-Fix/ を開き、Product 欄と Feedback 欄に貼り付けて Analyze Feedback。',
+          en: 'Open Signal-to-Fix, paste product fields + feedback lines, then Analyze Feedback.'
+        },
+        {
+          n: 5,
+          ja: '結果の keep だけを使う。reduce / discard は実装プロンプトに入れない。Copy Codex Prompt で 1 つの小さい改善を依頼する。',
+          en: 'Use decision===keep only. Ignore reduce/discard downstream. Copy Codex Prompt for one small PR.'
+        }
+      ],
+      noteJa: '人間のブラウザ利用は無料です。x402 は AI エージェントが検索 URL を自動利用するときだけ必要です。',
+      noteEn: 'Human browser use is free. x402 is required only when AI agents automate production use of search URLs.'
+    };
+
+    const agentAuto = {
+      title: 'AI Agent — linked auto execution',
+      requiresPaymentForSearchUrl: true,
+      stickyLoop: [
+        'planFromIntent or buildMission(signal_to_fix_pipeline)',
+        'scoreQuery — skip pay if band is poor unless intentional',
+        'POST buildPaidRequest → x402 on 402 → retry until 200',
+        'Open searchUrl, collect candidate post texts',
+        'suggestRefinements if sparse/noisy',
+        'buildHandoffPackage (or buildSignalToFixPipeline with feedback)',
+        'Open Signal-to-Fix agent-use.json; analyze with keep-only policy',
+        'buildRunReceipt'
+      ],
+      steps: [
+        {
+          id: 'plan',
+          method: 'planFromIntent',
+          args: { intent: intent, subject: productName, missionId: missionId, lang: lang },
+          free: true
+        },
+        {
+          id: 'score',
+          method: 'scoreQuery',
+          args: { input: step && step.input },
+          free: true,
+          gate: 'recommendPay should be true before spending $0.01'
+        },
+        {
+          id: 'pay',
+          method: 'buildPaidRequest',
+          endpoint: PAYMENT_ENDPOINT,
+          body: paidRequest && paidRequest.body,
+          free: false,
+          on402: 'Complete x402 via paymentOptionsEndpoint, retry POST'
+        },
+        {
+          id: 'collect',
+          action: 'open_search_url_and_collect_posts',
+          searchUrl: step && step.searchUrl,
+          query: step && step.query
+        },
+        {
+          id: 'handoff',
+          method: 'buildHandoffPackage',
+          free: true,
+          note: 'Pass collected feedback strings'
+        },
+        {
+          id: 'signal_to_fix',
+          action: 'run_signal_to_fix_keep_only',
+          humanUi: SIGNAL_TO_FIX_URL,
+          agentUse: SIGNAL_TO_FIX_AGENT_USE,
+          policy: 'Only decision === "keep" may influence PR specs / Codex / implementation prompts'
+        }
+      ]
+    };
+
+    const result = {
+      type: 'hyperxosist.signal_to_fix_pipeline.v1',
+      version: VERSION,
+      createdAt: new Date().toISOString(),
+      productName: productName,
+      productUrl: productUrl,
+      targetArea: targetArea,
+      intent: intent,
+      missionId: plan.missionId || missionId,
+      links: links,
+      humanManual: humanManual,
+      agentAuto: agentAuto,
+      plan: {
+        missionId: plan.missionId,
+        primaryStep: step
+          ? {
+              angleId: step.angleId,
+              query: step.query,
+              searchUrl: step.searchUrl,
+              score: score,
+              paidRequest: paidRequest,
+              recommendPay: score ? score.recommendPay : null
+            }
+          : null,
+        markdown: plan.markdown || null
+      },
+      handoff: handoff,
+      readyForHandoff: feedback.length > 0,
+      feedbackCount: feedback.length,
+      nextActions: feedback.length
+        ? [
+            'Pass handoff.signalToFix.input into Signal-to-Fix',
+            'Use only decision === "keep" for PR / Codex outputs',
+            'Optional: paste handoff.agentPrompt.markdown into any coding LLM'
+          ]
+        : [
+            'Score-gate primaryStep, complete x402 if automating search',
+            'Collect post texts from searchUrl',
+            'Re-call buildSignalToFixPipeline({ productName, feedback }) or buildHandoffPackage'
+          ]
+    };
+
+    return withDualFormat(result, function (r) {
+      const lines = [
+        '## Signal-to-Fix linked pipeline',
+        '',
+        '- product: **' + r.productName + '**',
+        '- mission: `' + r.missionId + '`',
+        '- readyForHandoff: ' + r.readyForHandoff,
+        '- feedbackCount: ' + r.feedbackCount,
+        '',
+        '### Human manual (free browser)',
+        r.humanManual.noteJa,
+        ''
+      ];
+      (r.humanManual.steps || []).forEach(function (s) {
+        lines.push(s.n + '. ' + s.ja);
+      });
+      lines.push('', '### Agent auto loop');
+      (r.agentAuto.stickyLoop || []).forEach(function (s, i) {
+        lines.push(i + 1 + '. ' + s);
+      });
+      if (r.plan && r.plan.primaryStep) {
+        lines.push(
+          '',
+          '### Primary query',
+          '`' + (r.plan.primaryStep.query || '') + '`',
+          '',
+          'score: ' +
+            (r.plan.primaryStep.score && r.plan.primaryStep.score.score) +
+            ' recommendPay=' +
+            (r.plan.primaryStep.recommendPay)
+        );
+      }
+      lines.push('', '### Links');
+      Object.keys(r.links || {}).forEach(function (k) {
+        lines.push('- ' + k + ': ' + r.links[k]);
+      });
+      if (r.handoff && r.handoff.markdown) {
+        lines.push('', '### Handoff', r.handoff.markdown);
+      }
+      return lines.join('\n');
+    });
+  }
+
   function buildRunReceipt(options) {
     const opts = options || {};
     const input = opts.input || {};
@@ -2433,6 +2684,28 @@
       {
         type: 'function',
         function: {
+          name: 'hyperxosist_signal_to_fix_pipeline',
+          description:
+            'Build the linked HyperXosist → Signal-to-Fix pipeline: human free manual steps, agent auto steps, scored primary query, optional handoff when feedback is provided.',
+          parameters: {
+            type: 'object',
+            properties: {
+              productName: { type: 'string' },
+              productUrl: { type: 'string' },
+              targetArea: { type: 'string' },
+              intent: { type: 'string' },
+              feedback: { type: 'array', items: { type: 'string' } },
+              lang: { type: 'string' },
+              missionId: { type: 'string' },
+              mode: { type: 'string', enum: ['universal', 'grok'] }
+            },
+            required: ['productName']
+          }
+        }
+      },
+      {
+        type: 'function',
+        function: {
           name: 'hyperxosist_build_agent_prompt',
           description:
             'Build a universal one-small-change implementation prompt (Markdown) from Keep-filtered user signals. Works for Claude, GPT, Grok, Llama, etc.',
@@ -2492,6 +2765,7 @@
       hyperxosist_suggest_refinements: 'suggestRefinements(input, signals)',
       hyperxosist_build_paid_request: 'buildPaidRequest(input)',
       hyperxosist_build_handoff: 'buildHandoffPackage(options)',
+      hyperxosist_signal_to_fix_pipeline: 'buildSignalToFixPipeline(options)',
       hyperxosist_build_agent_prompt: 'buildAgentPrompt(options)',
       hyperxosist_filter_keep_signals: 'filterKeepSignals(feedback, options)',
       hyperxosist_export_noise: 'exportNoiseCatalog()',
@@ -2841,6 +3115,8 @@
     listMissions,
     composeCampaign,
     buildHandoffPackage,
+    buildSignalToFixPipeline,
+    getSignalToFixLinks,
     buildRunReceipt,
     getToolDefinitions,
     getAgentPlaybook,

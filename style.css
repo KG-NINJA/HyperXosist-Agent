@@ -966,3 +966,129 @@ footer a {
     transition: none !important;
   }
 }
+
+
+/* Signal-to-Fix linked pipeline */
+.s2f-pipeline-section {
+  margin-bottom: 18px;
+  padding: 16px;
+  background:
+    linear-gradient(135deg, rgba(139, 92, 246, 0.12), rgba(0, 229, 255, 0.06)),
+    var(--bg-tertiary);
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  border-radius: 8px;
+}
+
+.s2f-pipeline-section .section-head {
+  margin-bottom: 12px;
+}
+
+.s2f-pipeline-section .section-head h2 {
+  font-size: 1.05rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.s2f-pipeline-section .section-head p {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.pill-s2f {
+  background: linear-gradient(135deg, #8b5cf6, #007bff);
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+
+.audience-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+@media (max-width: 720px) {
+  .audience-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.audience-card {
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: rgba(10, 14, 23, 0.55);
+  border: 1px solid var(--border-color);
+}
+
+.audience-human {
+  border-color: rgba(52, 211, 153, 0.35);
+}
+
+.audience-agent {
+  border-color: rgba(0, 123, 255, 0.4);
+}
+
+.audience-card h3 {
+  font-size: 0.92rem;
+  margin-bottom: 6px;
+  font-weight: 700;
+}
+
+.audience-note {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.manual-steps {
+  margin: 0 0 0 1.1rem;
+  padding: 0;
+  font-size: 0.82rem;
+  color: var(--text-primary);
+  line-height: 1.55;
+}
+
+.manual-steps li {
+  margin-bottom: 6px;
+}
+
+.manual-steps code {
+  color: var(--accent-teal);
+  font-size: 0.78rem;
+}
+
+.agent-code-hint {
+  margin-top: 8px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  word-break: break-all;
+}
+
+.agent-code-hint code {
+  color: var(--accent-teal);
+}
+
+.s2f-actions {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.s2f-meta {
+  margin: 8px 0 4px;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.s2f-meta .meta-ok {
+  color: #34d399;
+  font-weight: 700;
+  margin-right: 6px;
+}
+
+.s2f-meta .meta-warn {
+  color: var(--warn);
+  font-weight: 700;
+  margin-right: 6px;
+}

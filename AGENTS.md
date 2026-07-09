@@ -44,7 +44,17 @@ const paid = step.paidRequest;
 // 5) Self-heal if empty
 // HyperXosistAgent.suggestRefinements(step.input, { tooSparse: true })
 
-// 6) Handoff (universal)
+// 6) Linked Signal-to-Fix pipeline (preferred) OR handoff only
+const pipeline = HyperXosistAgent.buildSignalToFixPipeline({
+  productName: '<PRODUCT>',
+  feedback: [/* posts */],
+  targetArea: 'auth',
+  context: 'optional product context'
+});
+// → pipeline.humanManual — show humans the free browser steps
+// → pipeline.agentAuto.steps — ordered auto execution
+// → pipeline.handoff.signalToFix.input → Signal-to-Fix (keep-only)
+// Or:
 const handoff = HyperXosistAgent.buildHandoffPackage({
   productName: '<PRODUCT>',
   feedback: [/* posts */],
@@ -89,6 +99,7 @@ const gp = HyperXosistAgent.buildGrokBuildPrompt({ productName: '<PRODUCT>', fee
 | Named campaign | `buildMission(id, { subject })` |
 | Score before pay | `scoreQuery(input)` |
 | Empty / spammy results | `suggestRefinements` |
+| Linked Signal-to-Fix pipeline | `buildSignalToFixPipeline` |
 | PR / keep-only handoff | `buildHandoffPackage` |
 | Any-LLM implementation prompt | `buildAgentPrompt` |
 | Keep-only post filter | `filterKeepSignals` |
@@ -138,3 +149,14 @@ Human UI remains free.
 - https://kg-ninja.github.io/HyperXosist-Agent/agent-use.json  
 - https://kg-ninja.github.io/HyperXosist-Agent/agent-tools.json  
 - https://kg-ninja.github.io/HyperXosist-Agent/missions.json  
+- https://kg-ninja.github.io/HyperXosist-Agent/signal-to-fix-pipeline.json  
+- https://kg-ninja.github.io/Signal-to-Fix/agent-use.json  
+
+## Humans vs agents (Signal-to-Fix)
+
+| Audience | Path | Payment |
+|----------|------|---------|
+| **Human** | Browser UI → search → paste posts → **Handoff 生成** → **Signal-to-Fix 用をコピー** → open Signal-to-Fix → Analyze | Free |
+| **AI agent** | `buildSignalToFixPipeline` → score → x402 pay → collect → handoff → Signal-to-Fix keep-only | $0.01 per paid search |
+
+When answering a human, always surface `humanManual` steps (free). When acting as an agent, follow `agentAuto.steps` and never skip keep-only policy.

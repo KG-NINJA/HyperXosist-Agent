@@ -1,6 +1,6 @@
 {
   "name": "HyperXosist Agent Tools",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "description": "OpenAI-compatible tools for any AI agent (GPT/Claude/Grok/Llama). Default universal mode. Pass includeGrok/mode=grok for optional Grok Build tools. Automated search URL use requires x402.",
   "paymentRequiredForAutomatedSearchUse": true,
   "paymentEndpoint": "https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/hyperxosist-query",
@@ -282,6 +282,45 @@
           "properties": {}
         }
       }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "hyperxosist_signal_to_fix_pipeline",
+        "description": "Build the linked HyperXosist → Signal-to-Fix pipeline: human free manual steps, agent auto steps, scored primary query, optional handoff when feedback is provided. Prefer this for end-to-end product improvement loops.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "productName": {
+              "type": "string"
+            },
+            "productUrl": {
+              "type": "string"
+            },
+            "targetArea": {
+              "type": "string"
+            },
+            "intent": {
+              "type": "string"
+            },
+            "feedback": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "lang": {
+              "type": "string"
+            },
+            "missionId": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "productName"
+          ]
+        }
+      }
     }
   ],
   "dispatchHints": {
@@ -295,7 +334,8 @@
     "hyperxosist_build_agent_prompt": "buildAgentPrompt(options)",
     "hyperxosist_filter_keep_signals": "filterKeepSignals(feedback, options)",
     "hyperxosist_export_noise": "exportNoiseCatalog()",
-    "hyperxosist_list_missions": "listMissions()"
+    "hyperxosist_list_missions": "listMissions()",
+    "hyperxosist_signal_to_fix_pipeline": "buildSignalToFixPipeline(options)"
   },
   "optionalGrokTools": "Call getToolDefinitions({ includeGrok: true }) or getToolDefinitions({ mode: \"grok\" }) to enable.",
   "grokTools": [

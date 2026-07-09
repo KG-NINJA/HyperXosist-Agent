@@ -254,11 +254,64 @@
             <a href="missions.json"><code>missions.json</code></a> のマルチアングル任務を使い、
             <a href="x402-payment.json"><code>x402-payment.json</code></a> 経由で x402 支払い後に検索 URL を利用します。
             ループ: <code>planFromIntent</code> → score → pay → collect → refine →
-            <code>buildHandoffPackage</code> /
-            <code>buildAgentPrompt</code> →
+            <code>buildSignalToFixPipeline</code> /
+            <code>buildHandoffPackage</code> →
             <a href="https://kg-ninja.github.io/Signal-to-Fix/">Signal-to-Fix</a>
-            または任意のコーディング LLM。Grok Build はオプション。
+            （keep only）。詳細は
+            <a href="signal-to-fix-pipeline.json"><code>signal-to-fix-pipeline.json</code></a>。
+            Grok Build はオプション。
           </p>
+        </section>
+
+        <!-- Signal-to-Fix linked pipeline (human manual + agent auto) -->
+        <section class="s2f-pipeline-section" aria-labelledby="s2fPipelineTitle">
+          <div class="section-head">
+            <h2 id="s2fPipelineTitle">Signal-to-Fix 連携 <span class="pill pill-s2f">linked</span></h2>
+            <p>
+              X フィードバック → ノイズ除去 handoff →
+              <a href="https://kg-ninja.github.io/Signal-to-Fix/" target="_blank" rel="noopener">Signal-to-Fix</a>
+              の keep-only PR / Codex プロンプトへ。
+            </p>
+          </div>
+
+          <div class="audience-grid">
+            <article class="audience-card audience-human" aria-labelledby="humanManualTitle">
+              <h3 id="humanManualTitle">🧑 人間向け — 手動実行（無料）</h3>
+              <p class="audience-note">ブラウザだけで完結します。支払い不要です。</p>
+              <ol class="manual-steps">
+                <li>上のフォームでキーワード / テンプレート / Noise を設定し、<strong>最新で検索</strong> または <strong>話題で検索</strong> を押す。</li>
+                <li>X の結果から有用な投稿をコピーし、下の <strong>Collected signals</strong> に <strong>1行1投稿</strong> で貼る。</li>
+                <li><strong>Product / Target area</strong> を埋め、<strong>Handoff 生成</strong> → <strong>Signal-to-Fix 用をコピー</strong> を押す。</li>
+                <li><strong>Signal-to-Fix を開く</strong> を押し、Product 欄と Feedback 欄に貼り付けて <strong>Analyze Feedback</strong>。</li>
+                <li>結果の <code>keep</code> だけを使う。<code>reduce</code> / <code>discard</code> は実装に入れない。<strong>Copy Codex Prompt</strong> で 1 つの小さい改善を依頼する。</li>
+              </ol>
+            </article>
+
+            <article class="audience-card audience-agent" aria-labelledby="agentAutoTitle">
+              <h3 id="agentAutoTitle">🤖 AI Agent 向け — 自動連携</h3>
+              <p class="audience-note">本番の検索 URL 自動利用は x402（$0.01）が必要です。計画・スコア・handoff は無料。</p>
+              <ol class="manual-steps">
+                <li>読む: <a href="signal-to-fix-pipeline.json"><code>signal-to-fix-pipeline.json</code></a> + <a href="agent-use.json"><code>agent-use.json</code></a></li>
+                <li>呼ぶ: <code>buildSignalToFixPipeline({ productName, intent? })</code></li>
+                <li><code>scoreQuery</code> → x402 pay → <code>searchUrl</code> で投稿収集</li>
+                <li><code>buildHandoffPackage</code> / pipeline + feedback → Signal-to-Fix</li>
+                <li>下流は <code>decision === "keep"</code> のみ</li>
+              </ol>
+              <p class="agent-code-hint">
+                <code>HyperXosistAgent.buildSignalToFixPipeline({ productName: 'Acme', feedback: ['...'] })</code>
+              </p>
+            </article>
+          </div>
+
+          <div class="preview-actions s2f-actions">
+            <button type="button" id="btnS2fPipeline" class="btn btn-secondary">Pipeline 計画</button>
+            <button type="button" id="btnBuildHandoff" class="btn btn-primary">Handoff 生成</button>
+            <button type="button" id="btnCopyS2fInput" class="btn btn-accent">Signal-to-Fix 用をコピー</button>
+            <button type="button" id="btnOpenS2f" class="btn btn-secondary">Signal-to-Fix を開く</button>
+            <button type="button" id="btnCopyHandoffJson" class="btn btn-secondary">Handoff JSON</button>
+          </div>
+          <div id="s2fPipelineMeta" class="query-meta s2f-meta" aria-live="polite"></div>
+          <textarea id="handoffPreview" class="grok-prompt-preview" readonly rows="8" placeholder="「Handoff 生成」または「Pipeline 計画」で、Signal-to-Fix 向けパッケージ / 手動手順がここに出ます"></textarea>
         </section>
 
         <!-- Universal agent handoff (any LLM) -->
@@ -368,7 +421,8 @@
         © 2026 HyperXosist Agent v2.3 · MIT · Not affiliated with X Corp. ·
         <a href="https://github.com/KG-NINJA/HyperXosist-Agent">GitHub</a> ·
         <a href="llms.txt">llms.txt</a> ·
-        <a href="AGENTS.md">AGENTS.md</a>
+        <a href="AGENTS.md">AGENTS.md</a> ·
+        <a href="signal-to-fix-pipeline.json">Signal-to-Fix pipeline</a>
       </p>
     </footer>
   </div>
