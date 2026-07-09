@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented in this file.
 
+## [2.3.2] — 2026-07-09
+
+### Agent dry-run handoff (offline CLI)
+- New `examples/agent-handoff-dryrun.mjs` — local intent → sample feedback → keep filter → Signal-to-Fix handoff → coding prompt
+- `npm run agent-handoff-dryrun -- <ProductName>`
+- No network, no X scrape, no payment; built-in sample feedback only
+- README / AGENTS.md document the dry-run vs real paid search path
+- Test covers dry-run script stdout sections
+
 ## [2.3.1] — 2026-07-09
 
 ### Signal-to-Fix linked pipeline

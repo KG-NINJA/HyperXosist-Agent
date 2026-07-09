@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/KG-NINJA/HyperXosist-Agent/actions/workflows/ci.yml/badge.svg)](https://github.com/KG-NINJA/HyperXosist-Agent/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-2.3.1-brightgreen.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-2.3.2-brightgreen.svg)](CHANGELOG.md)
 [![Live](https://img.shields.io/badge/demo-GitHub%20Pages-black.svg)](https://kg-ninja.github.io/HyperXosist-Agent/)
 
 **API-free advanced X (Twitter) search launcher** — for humans in the browser, and for **any** AI agent (GPT, Claude, Grok, Llama…) that needs multi-angle, noise-reduced search missions with an x402 paid path and Signal-to-Fix handoff. Optional **Grok Build** mode (default off).
@@ -12,7 +12,7 @@
 | **Live demo** | https://kg-ninja.github.io/HyperXosist-Agent/ |
 | **Repository** | https://github.com/KG-NINJA/HyperXosist-Agent |
 | **Agent entry** | https://kg-ninja.github.io/HyperXosist-Agent/llms.txt |
-| **Version** | 2.3.1 |
+| **Version** | 2.3.2 |
 
 > 日本語の要点: X 公式検索用クエリを組み立てる静的ツールです。人間の UI は無料。AI エージェントの本番利用は x402 支払い前提。検索結果の埋め込みや自動投稿はしません。
 
@@ -132,6 +132,27 @@ const prompt = HyperXosistAgent.buildGrokBuildPrompt({
 npm test
 npm run quickstart
 # or: node examples/quickstart.mjs "Weekly monitor about MyProduct"
+
+### Agent handoff dry-run (offline — recommended first step)
+
+Demonstrates the full **local** path from search intent → keep filter → Signal-to-Fix handoff → coding-agent prompt **without network access**:
+
+```bash
+npm run agent-handoff-dryrun -- HyperXosist-Agent
+# or: node examples/agent-handoff-dryrun.mjs "HyperXosist-Agent"
+```
+
+What it does (all offline):
+
+1. Builds an agent session / mission from intent  
+2. Prints mission ID, subject, primary query, and search URL  
+3. Uses **built-in sample feedback** (not live X data)  
+4. Runs `filterKeepSignals` (keep vs discard)  
+5. Builds `buildHandoffPackage`  
+6. Prints Signal-to-Fix input JSON preview  
+7. Prints the coding-agent implementation prompt (Markdown)  
+
+**Important:** this is a **local dry-run**. It does **not** scrape X, collect real posts, open the search URL, post anything, or perform x402 payment. Real agent production search still requires x402 after `scoreQuery`.
 ```
 
 ### Payment policy (agents)
@@ -197,6 +218,7 @@ llms.txt, AGENTS.md                         # Agent discovery / playbook
 x402-payment.json                           # Payment metadata
 top30_repost_blacklist.json                 # Bait phrase reference
 examples/quickstart.mjs                     # CLI demo
+examples/agent-handoff-dryrun.mjs           # Offline handoff dry-run (intent→keep→S2F)
 examples/agent-session.example.json         # Session shape
 test/agent-api.test.js                      # Zero-dep tests
 .github/workflows/ci.yml                    # CI

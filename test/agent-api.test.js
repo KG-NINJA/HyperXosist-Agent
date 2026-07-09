@@ -504,5 +504,29 @@ test('applyTemplate grok_code_improvement', () => {
   assert.ok(Agent.buildQuery(input).includes('MyApp'));
 });
 
+
+test('agent-handoff-dryrun example prints full offline pipeline', () => {
+  const { spawnSync } = require('child_process');
+  const path = require('path');
+  const script = path.join(__dirname, '..', 'examples', 'agent-handoff-dryrun.mjs');
+  const result = spawnSync(process.execPath, [script, 'DryRunProduct'], {
+    encoding: 'utf8',
+    timeout: 15000,
+    env: { ...process.env, NO_COLOR: '1' }
+  });
+  assert.strictEqual(result.status, 0, result.stderr || result.stdout);
+  const out = (result.stdout || '') + (result.stderr || '');
+  assert.ok(/PLANNING/i.test(out), 'planning section');
+  assert.ok(/GENERATED SEARCH URL/i.test(out), 'search URL section');
+  assert.ok(/SAMPLE FEEDBACK/i.test(out), 'sample feedback section');
+  assert.ok(/KEEP \/ DISCARD|KEEP \(actionable/i.test(out), 'keep/discard section');
+  assert.ok(/SIGNAL-TO-FIX HANDOFF/i.test(out), 'handoff section');
+  assert.ok(/CODING-AGENT PROMPT/i.test(out), 'coding prompt section');
+  assert.ok(/No X scraping occurred/i.test(out), 'no scrape disclaimer');
+  assert.ok(/No x402 payment occurred/i.test(out), 'no payment disclaimer');
+  assert.ok(out.includes('DryRunProduct'), 'product name in output');
+  assert.ok(/https:\/\/x\.com\/search/i.test(out), 'search URL present');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

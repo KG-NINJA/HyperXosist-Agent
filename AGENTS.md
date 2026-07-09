@@ -160,3 +160,25 @@ Human UI remains free.
 | **AI agent** | `buildSignalToFixPipeline` → score → x402 pay → collect → handoff → Signal-to-Fix keep-only | $0.01 per paid search |
 
 When answering a human, always surface `humanManual` steps (free). When acting as an agent, follow `agentAuto.steps` and never skip keep-only policy.
+
+## Local dry-run handoff (no network)
+
+Before paying x402 or collecting real posts, agents and humans can rehearse the full improvement pipeline offline:
+
+```bash
+node examples/agent-handoff-dryrun.mjs "HyperXosist-Agent"
+# npm run agent-handoff-dryrun -- HyperXosist-Agent
+```
+
+This script:
+
+1. `startAgentSession` / plan from intent  
+2. Prints mission ID, subject, primary query, search URL  
+3. Uses **built-in sample feedback** (not live X data)  
+4. `filterKeepSignals`  
+5. `buildHandoffPackage`  
+6. Prints Signal-to-Fix input + coding-agent prompt  
+
+**Guarantees for the dry-run:** no X scraping, no posting, no payment, no HTTP calls.  
+Real production search URL use still requires x402; real feedback must be collected outside this static toolkit.
+
