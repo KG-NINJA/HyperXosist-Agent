@@ -16,6 +16,7 @@
 4. https://kg-ninja.github.io/HyperXosist-Agent/agent-api.js
 5. https://kg-ninja.github.io/HyperXosist-Agent/missions.json
 6. https://kg-ninja.github.io/HyperXosist-Agent/x402-payment.json
+7. https://kg-ninja.github.io/HyperXosist-Agent/signal-to-fix-pipeline.json  ← linked Signal-to-Fix execution
 
 ## Tool-calling (OpenAI-compatible schema)
 Register tools from agent-tools.json (format: openai.tools.v1).
@@ -35,7 +36,16 @@ HyperXosistAgent.startAgentSession({ intent: "...", mode: "grok" })
 ```
 
 ## Sticky agent loop (universal)
-planFromIntent → scoreQuery → x402 pay + search → collect posts → suggestRefinements → filterKeepSignals (optional) → buildHandoffPackage / buildAgentPrompt → Signal-to-Fix or any coding LLM → buildRunReceipt
+planFromIntent → scoreQuery → x402 pay + search → collect posts → suggestRefinements → filterKeepSignals (optional) → buildSignalToFixPipeline / buildHandoffPackage → Signal-to-Fix (keep-only) or any coding LLM → buildRunReceipt
+
+## Linked Signal-to-Fix (agents)
+```
+HyperXosistAgent.buildSignalToFixPipeline({ productName: "Acme", feedback: ["..."] })
+// humanManual = free browser steps for humans
+// agentAuto = ordered paid search → handoff → keep-only PR path
+// handoff.signalToFix.input → https://kg-ninja.github.io/Signal-to-Fix/
+```
+Manifest: signal-to-fix-pipeline.json
 
 ## Noise (transparent + editable)
 ```

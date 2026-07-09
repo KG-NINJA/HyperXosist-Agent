@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented in this file.
 
+## [2.3.1] — 2026-07-09
+
+### Signal-to-Fix linked pipeline
+- New `buildSignalToFixPipeline()` — plan + score + paid request + optional handoff in one call
+- New `getSignalToFixLinks()` and discovery file `signal-to-fix-pipeline.json`
+- UI section **Signal-to-Fix 連携** with explicit **human manual (free)** vs **AI agent auto** steps
+- Buttons: Pipeline 計画 / Handoff 生成 / Signal-to-Fix 用をコピー / Signal-to-Fix を開く / Handoff JSON
+- `buildHandoffPackage` now points at pipeline manifest + keep-only policy for agents
+
 ## [2.3.0] — 2026-07-09
 
 ### Universal agent first
