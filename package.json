@@ -1,6 +1,6 @@
 {
   "name": "hyperxosist-agent",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "description": "Universal API-free X/Twitter search toolkit for any AI agent (GPT/Claude/Grok/Llama): missions, noise reduction, x402, Signal-to-Fix handoff, optional Grok Build mode.",
   "keywords": [
     "twitter",
@@ -30,6 +30,7 @@
     "agent-use.json",
     "agent-tools.json",
     "missions.json",
+    "signal-to-fix-pipeline.json",
     "x402-payment.json",
     "llms.txt",
     "AGENTS.md",
