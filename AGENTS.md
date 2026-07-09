@@ -36,9 +36,26 @@ const paid = step.paidRequest;
 // 6) Handoff to Signal-to-Fix
 const handoff = HyperXosistAgent.buildHandoffPackage({
   productName: '<PRODUCT>',
-  feedback: [/* candidate post texts */]
+  feedback: [/* candidate post texts */],
+  context: 'optional product context for Grok'
 });
 // → handoff.signalToFix.input into https://kg-ninja.github.io/Signal-to-Fix/
+// → handoff.grokBuild.prompt for Grok Build (Keep-filtered)
+
+// 6b) Grok Build path (X voice → one small code change)
+const grok = HyperXosistAgent.createGrokBuildSession(
+  'Grok Build code improvement for <PRODUCT>',
+  { product: '<PRODUCT>', targetArea: 'auth', context: '...' }
+);
+// After collect:
+const keep = HyperXosistAgent.filterKeepSignals(feedback);
+const prompt = HyperXosistAgent.buildGrokBuildPrompt({
+  productName: '<PRODUCT>',
+  targetArea: 'auth',
+  context: '...',
+  feedback
+});
+// → paste prompt.markdown into Grok Build
 
 // 7) Receipt for memory / cron
 HyperXosistAgent.buildRunReceipt({
@@ -60,6 +77,9 @@ HyperXosistAgent.buildRunReceipt({
 | Before spending $0.01 | `scoreQuery(input)` |
 | 0 results or spammy | `suggestRefinements` |
 | Ready for PR specs | `buildHandoffPackage` |
+| Grok Build session (missions + prompt template) | `createGrokBuildSession(intent, productContext)` |
+| Keep-only for code work | `filterKeepSignals(feedback)` / `scoreTechnicalDepth(text)` |
+| Structured Grok Build Markdown | `buildGrokBuildPrompt({ productName, feedback, ... })` |
 | Tool-calling runtime | `getToolDefinitions()` or `agent-tools.json` |
 | Session memory | `buildRunReceipt` + `encodeState` |
 
@@ -71,6 +91,9 @@ HyperXosistAgent.buildRunReceipt({
 - `weekly_monitor` — 7d cron-friendly
 - `launch_pulse` — release / incident
 - `osint_entity` — from / mention / reply-to angles
+- `grok_code_improvement_radar` — Grok Build: bugs + small feature asks + DX
+- `ui_ux_feedback_harvest` — Grok Build frontend / UI friction
+- `performance_complaint_detector` — Grok Build latency / jank
 
 ## Payment policy (non-negotiable for agents)
 
@@ -89,6 +112,8 @@ Human UI at `index.html` remains free.
 - Prefer date windows for monitors (`applyDatePreset('7d')`)
 - Prefer missions over single keywords for product work
 - Downstream Signal-to-Fix: **only `decision === "keep"`** items
+- Grok Build: **only high technical-depth Keep signals** (`filterKeepSignals`)
+- Grok prompts: **one small improvement only** (explicit file/diff/tests/priority)
 
 ## Anti-patterns
 
@@ -97,6 +122,7 @@ Human UI at `index.html` remains free.
 - Skipping self-heal after empty results
 - Dumping unfiltered viral bait into PR pipelines
 - Using Signal-to-Fix reduce/discard items in implementation prompts
+- Pasting empty praise / ragebait into Grok Build without Keep filter
 
 ## Discovery URLs
 

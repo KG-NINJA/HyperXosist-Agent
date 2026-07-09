@@ -48,10 +48,21 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnSearchTop = document.getElementById('btnSearchTop');
   const btnClearHistory = document.getElementById('btnClearHistory');
   const btnClearDates = document.getElementById('btnClearDates');
+  const btnGrokPrompt = document.getElementById('btnGrokPrompt');
+  const btnSendToGrok = document.getElementById('btnSendToGrok');
+  const btnGrokFromKeywords = document.getElementById('btnGrokFromKeywords');
+  const grokProduct = document.getElementById('grokProduct');
+  const grokTargetArea = document.getElementById('grokTargetArea');
+  const grokContext = document.getElementById('grokContext');
+  const grokFeedback = document.getElementById('grokFeedback');
+  const grokPromptPreview = document.getElementById('grokPromptPreview');
+  const grokFocusMeta = document.getElementById('grokFocusMeta');
 
   const NOISE_STORAGE_KEY = 'hyperxosist_noise_filter';
   const HISTORY_STORAGE_KEY = 'x_search_history';
+  const GROK_STORAGE_KEY = 'hyperxosist_grok_build';
   const MAX_HISTORY = 15;
+  let lastGrokMarkdown = '';
 
   let noiseState = loadNoiseState();
   let explainVisible = false;
@@ -354,6 +365,162 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   }
+
+  function parseFeedbackLines(raw) {
+    return String(raw || '')
+      .split(/\n+/)
+      .map((s) => s.replace(/^[-*•]\s*/, '').trim())
+      .filter(Boolean);
+  }
+
+  function saveGrokFields() {
+    try {
+      localStorage.setItem(
+        GROK_STORAGE_KEY,
+        JSON.stringify({
+          product: (grokProduct && grokProduct.value) || '',
+          targetArea: (grokTargetArea && grokTargetArea.value) || '',
+          context: (grokContext && grokContext.value) || '',
+          feedback: (grokFeedback && grokFeedback.value) || ''
+        })
+      );
+    } catch (e) { /* ignore */ }
+  }
+
+  function loadGrokFields() {
+    try {
+      const data = JSON.parse(localStorage.getItem(GROK_STORAGE_KEY) || '{}');
+      if (grokProduct && data.product) grokProduct.value = data.product;
+      if (grokTargetArea && data.targetArea) grokTargetArea.value = data.targetArea;
+      if (grokContext && data.context) grokContext.value = data.context;
+      if (grokFeedback && data.feedback) grokFeedback.value = data.feedback;
+    } catch (e) { /* ignore */ }
+  }
+
+  function buildGrokFromUi() {
+    const product =
+      (grokProduct && grokProduct.value.trim()) ||
+      (fields.keywords && fields.keywords.value.trim()) ||
+      'product';
+    const targetArea = (grokTargetArea && grokTargetArea.value.trim()) || 'general';
+    const context = (grokContext && grokContext.value.trim()) || '';
+    const feedback = parseFeedbackLines(grokFeedback && grokFeedback.value);
+    return Agent.buildGrokBuildPrompt({
+      productName: product,
+      targetArea,
+      context,
+      feedback
+    });
+  }
+
+  function renderGrokPrompt(result) {
+    if (!result) return;
+    lastGrokMarkdown = result.markdown || '';
+    if (grokPromptPreview) grokPromptPreview.value = lastGrokMarkdown;
+    if (grokFocusMeta) {
+      const focus = result.focusSummary || {};
+      const keepN = (result.keepSignals || []).length;
+      grokFocusMeta.innerHTML = focus.headline
+        ? `<span class="meta-ok">Keep ${keepN}</span> ${escapeHtml(focus.headline)}`
+        : keepN
+          ? `<span class="meta-ok">Keep ${keepN}</span>`
+          : '<span class="meta-warn">Keep 0 — 具体的な不満・要望を追加</span>';
+    }
+    saveGrokFields();
+  }
+
+  if (btnGrokPrompt) {
+    btnGrokPrompt.addEventListener('click', () => {
+      const result = buildGrokFromUi();
+      renderGrokPrompt(result);
+      if (!result.ready) {
+        toast('Keep 信号が少ないです。具体的な投稿を追加してください');
+      } else {
+        toast(`Grok Build Prompt 生成 (Keep ${result.keepSignals.length})`);
+      }
+    });
+  }
+
+  if (btnSendToGrok) {
+    btnSendToGrok.addEventListener('click', async () => {
+      let md = lastGrokMarkdown || (grokPromptPreview && grokPromptPreview.value.trim());
+      if (!md) {
+        const result = buildGrokFromUi();
+        renderGrokPrompt(result);
+        md = result.markdown;
+      }
+      await copyText(md, 'Grok 用プロンプトをコピーしました — Grok Build に貼り付けてください');
+    });
+  }
+
+  if (btnGrokFromKeywords) {
+    btnGrokFromKeywords.addEventListener('click', () => {
+      const keywords = (fields.keywords && fields.keywords.value.trim()) || '';
+      const product =
+        (grokProduct && grokProduct.value.trim()) || keywords || 'product';
+      if (grokProduct && !grokProduct.value.trim() && keywords) {
+        grokProduct.value = keywords;
+      }
+      const intent = keywords
+        ? `Grok Build code improvement for ${keywords}`
+        : `Grok Build code improvement for ${product}`;
+      const session = Agent.createGrokBuildSession(intent, {
+        product,
+        targetArea: (grokTargetArea && grokTargetArea.value.trim()) || 'general',
+        context: (grokContext && grokContext.value.trim()) || '',
+        feedback: parseFeedbackLines(grokFeedback && grokFeedback.value)
+      });
+      if (session.grokBuild && session.grokBuild.prompt) {
+        renderGrokPrompt(session.grokBuild.prompt);
+      } else if (session.grokBuild && session.grokBuild.promptTemplate) {
+        lastGrokMarkdown = session.grokBuild.promptTemplate;
+        if (grokPromptPreview) grokPromptPreview.value = lastGrokMarkdown;
+      }
+      // Apply primary mission step into form for human search
+      const step =
+        session.plan &&
+        session.plan.mission &&
+        session.plan.mission.steps &&
+        session.plan.mission.steps[0];
+      if (step && step.input) {
+        applyInputToForm(step.input);
+        toast(`Grok セッション: ${session.plan.missionId || 'ready'} — 検索して投稿を収集`);
+      } else {
+        toast('Grok Build セッションを作成しました');
+      }
+    });
+  }
+
+  function applyInputToForm(input) {
+    if (!input) return;
+    FIELD_KEYS.forEach((key) => {
+      const el = fields[key];
+      if (!el) return;
+      if (CHECKBOX_KEYS.has(key)) {
+        el.checked = !!input[key];
+      } else if (input[key] != null && input[key] !== '') {
+        el.value = Array.isArray(input[key]) ? input[key].join(', ') : input[key];
+      }
+    });
+    if (input.noise) {
+      noiseState = {
+        enabled: !!input.noise.enabled,
+        preset: input.noise.preset || 'medium',
+        removed: Array.isArray(input.noise.removed) ? input.noise.removed.slice() : []
+      };
+      if (noiseFields.enabled) noiseFields.enabled.checked = noiseState.enabled;
+      if (noiseFields.preset) noiseFields.preset.value = noiseState.preset;
+      saveNoiseState();
+      renderNoiseChips();
+    }
+    refreshPreview();
+  }
+
+  [grokProduct, grokTargetArea, grokContext, grokFeedback].forEach((el) => {
+    if (el) el.addEventListener('change', saveGrokFields);
+  });
+
+  loadGrokFields();
 
   btnCopy.addEventListener('click', () => {
     copyText(queryPreview.value.trim(), 'クエリをコピーしました');

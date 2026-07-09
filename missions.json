@@ -1,12 +1,14 @@
 {
   "name": "HyperXosist Missions",
-  "version": "2.1.0",
-  "description": "Multi-angle search campaigns agents re-run. Noise excludes are priority-capped so queries stay under X length limits.",
+  "version": "2.2.0",
+  "description": "Multi-angle search campaigns agents re-run. Includes Grok Build–oriented harvest missions. Noise excludes are priority-capped so queries stay under X length limits.",
   "whySticky": [
     "Deterministic multi-angle missions beat one-off keyword guesses.",
     "scoreQuery prevents wasting x402 on weak queries.",
     "suggestRefinements self-heals empty/noisy runs without human help.",
     "buildHandoffPackage chains into Signal-to-Fix PR specs in one hop.",
+    "buildGrokBuildPrompt turns Keep signals into one-small-change Grok Build tasks.",
+    "filterKeepSignals drops praise/ragebait before coding.",
     "Receipts + encodeState make weekly monitors and audits trivial.",
     "Tool definitions drop into OpenAI/Anthropic tool-calling with zero inventing."
   ],
@@ -63,13 +65,38 @@
       "recommendedNext": "signal_to_fix",
       "defaultBudgetUsd": 0.02,
       "angleCount": 2
+    },
+    {
+      "id": "grok_code_improvement_radar",
+      "label": "Grok Build code improvement radar",
+      "whyAgentsUseIt": "Harvest concrete bugs/feature asks → technical-depth Keep filter → Grok Build Prompt for one small code change.",
+      "recommendedNext": "grok_build",
+      "defaultBudgetUsd": 0.03,
+      "angleCount": 3
+    },
+    {
+      "id": "ui_ux_feedback_harvest",
+      "label": "UI/UX feedback harvest",
+      "whyAgentsUseIt": "Frontend-oriented angles for Grok Build UI patches and layout fixes.",
+      "recommendedNext": "grok_build",
+      "defaultBudgetUsd": 0.02,
+      "angleCount": 2
+    },
+    {
+      "id": "performance_complaint_detector",
+      "label": "Performance complaint detector",
+      "whyAgentsUseIt": "Latency/jank/memory complaints for Grok Build perf-focused micro-improvements.",
+      "recommendedNext": "grok_build",
+      "defaultBudgetUsd": 0.02,
+      "angleCount": 2
     }
   ],
   "usage": {
     "list": "HyperXosistAgent.listMissions()",
-    "run": "HyperXosistAgent.buildMission('product_feedback_radar', { subject: 'Acme' })",
-    "fromIntent": "HyperXosistAgent.planFromIntent('Find bugs about Acme')",
-    "session": "HyperXosistAgent.startAgentSession({ intent: '...' })"
+    "run": "HyperXosistAgent.buildMission('grok_code_improvement_radar', { subject: 'Acme' })",
+    "fromIntent": "HyperXosistAgent.planFromIntent('Grok Build code improvement for Acme')",
+    "session": "HyperXosistAgent.createGrokBuildSession('Find bugs about Acme', { product: 'Acme' })",
+    "prompt": "HyperXosistAgent.buildGrokBuildPrompt({ productName: 'Acme', feedback: ['...'] })"
   },
   "costHintUsdPerStep": 0.01
 }

@@ -288,8 +288,107 @@ test('listMissions non-empty', () => {
   assert.ok(Agent.listMissions().length >= 5);
 });
 
-test('version is 2.1+', () => {
-  assert.ok(Agent.version.startsWith('2.1') || Number(Agent.version.split('.')[1]) >= 1);
+test('version is 2.2+', () => {
+  assert.ok(Agent.version.startsWith('2.2') || Number(Agent.version.split('.')[1]) >= 2);
+});
+
+// --- v2.2 Grok Build layer ---
+
+test('scoreTechnicalDepth rewards bugs over praise', () => {
+  const bug = Agent.scoreTechnicalDepth('App crashes on login with error 500 after upgrade to 2.1');
+  const praise = Agent.scoreTechnicalDepth('so good!!! love this');
+  assert.ok(bug.score > praise.score);
+  assert.ok(bug.tags.includes('bug') || bug.score >= 40);
+  assert.ok(praise.score < 40);
+});
+
+test('filterKeepSignals keeps actionable only', () => {
+  const r = Agent.filterKeepSignals([
+    'love this',
+    'please add dark mode to settings',
+    'crash when I open modal on Safari',
+    'ratio + skill issue'
+  ]);
+  assert.ok(r.keepCount >= 2);
+  assert.ok(r.discardCount >= 1);
+  assert.ok(r.focusSummary.headline);
+  assert.ok(r.keep.every((k) => k.decision === 'keep'));
+});
+
+test('buildGrokBuildPrompt structure', () => {
+  const p = Agent.buildGrokBuildPrompt({
+    productName: 'Acme',
+    targetArea: 'auth',
+    context: 'Next.js app',
+    feedback: [
+      'login button does nothing on Safari',
+      'so good',
+      'session expires too fast after 2 minutes'
+    ]
+  });
+  assert.ok(p.markdown.includes('## Grok Build Task'));
+  assert.ok(p.markdown.includes('**Product**: Acme'));
+  assert.ok(p.markdown.includes('1つだけ小さな改善'));
+  assert.ok(p.ready);
+  assert.ok(p.keepSignals.length >= 1);
+  assert.ok(!p.markdown.includes('so good') || p.keepSignals.every((k) => k.text !== 'so good'));
+});
+
+test('createGrokBuildSession forces grok mission', () => {
+  const s = Agent.createGrokBuildSession('Find issues about NovaApp', {
+    product: 'NovaApp',
+    targetArea: 'search',
+    context: 'static JS search tool'
+  });
+  assert.strictEqual(s.type, 'hyperxosist.grok_build_session.v1');
+  assert.ok(s.grokBuild);
+  assert.ok(s.grokBuild.promptTemplate.includes('Grok Build Task'));
+  assert.ok(s.plan && s.plan.ok);
+  assert.ok(
+    [
+      'grok_code_improvement_radar',
+      'ui_ux_feedback_harvest',
+      'performance_complaint_detector'
+    ].includes(s.plan.missionId)
+  );
+  assert.strictEqual(s.grokBuild.handoffToFix, true);
+});
+
+test('buildMission grok_code_improvement_radar', () => {
+  const m = Agent.buildMission('grok_code_improvement_radar', { subject: 'Acme' });
+  assert.ok(m.stepCount >= 2);
+  assert.strictEqual(m.recommendedNext, 'grok_build');
+  assert.ok(m.steps.every((s) => s.query && s.query.includes('Acme')));
+});
+
+test('planFromIntent grok keywords', () => {
+  const plan = Agent.planFromIntent('Grok Build code improvement for WidgetX');
+  assert.strictEqual(plan.ok, true);
+  assert.strictEqual(plan.missionId, 'grok_code_improvement_radar');
+  assert.ok(plan.nextActions.some((a) => a.action === 'grok_build_prompt'));
+});
+
+test('handoff includes grokBuild prompt', () => {
+  const h = Agent.buildHandoffPackage({
+    productName: 'Acme',
+    targetArea: 'UI',
+    context: 'dark mode missing',
+    feedback: ['button is hard to press on mobile', 'great app!!!']
+  });
+  assert.ok(h.grokBuild);
+  assert.ok(h.grokBuild.prompt.includes('Grok Build Task'));
+  assert.ok(h.grokBuild.keepSignals.length >= 1);
+});
+
+test('noise medium includes grok waste terms', () => {
+  const terms = Agent.getPresetTerms('medium');
+  assert.ok(terms.some((t) => /love this|skill issue|giveaway/i.test(t)));
+});
+
+test('applyTemplate grok_code_improvement', () => {
+  const input = Agent.applyTemplate('grok_code_improvement', { keywords: 'MyApp' });
+  assert.ok(input.noise && input.noise.preset === 'high');
+  assert.ok(Agent.buildQuery(input).includes('MyApp'));
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

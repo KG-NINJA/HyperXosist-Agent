@@ -1,10 +1,10 @@
 {
   "name": "HyperXosist Agent Tools",
-  "version": "2.1.0",
-  "description": "OpenAI-compatible tool definitions for HyperXosist. Prefer hyperxosist_plan_from_intent first. Automated search URL use requires x402 payment.",
+  "version": "2.2.0",
+  "description": "OpenAI-compatible tool definitions for HyperXosist. Prefer plan_from_intent or create_grok_session. Automated search URL use requires x402 payment.",
   "paymentRequiredForAutomatedSearchUse": true,
   "paymentEndpoint": "https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/hyperxosist-query",
-  "stickyTip": "plan → score → pay → collect → refine → handoff → receipt",
+  "stickyTip": "plan → score → pay → collect → refine → keep-filter → grok prompt / handoff → receipt",
   "format": "openai.tools.v1",
   "paymentNote": "Automated use of generated search URLs requires x402 payment via paymentEndpoint.",
   "tools": [
@@ -145,7 +145,7 @@
       "type": "function",
       "function": {
         "name": "hyperxosist_build_handoff",
-        "description": "Package collected feedback texts for Signal-to-Fix keep-only PR pipeline.",
+        "description": "Package collected feedback texts for Signal-to-Fix keep-only PR pipeline (also embeds Grok Build prompt).",
         "parameters": {
           "type": "object",
           "properties": {
@@ -163,11 +163,100 @@
               "items": {
                 "type": "string"
               }
+            },
+            "context": {
+              "type": "string",
+              "description": "Product context for Grok Build prompt."
             }
           },
           "required": [
             "productName",
             "feedback"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "hyperxosist_build_grok_prompt",
+        "description": "Build a structured Grok Build Markdown prompt from Keep-filtered user signals (one small code improvement).",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "productName": {
+              "type": "string"
+            },
+            "targetArea": {
+              "type": "string"
+            },
+            "context": {
+              "type": "string"
+            },
+            "feedback": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "minTechScore": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "productName",
+            "feedback"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "hyperxosist_filter_keep_signals",
+        "description": "Score posts for technical depth and Keep only those useful for Grok Build code changes.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "feedback": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "minScore": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "feedback"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "hyperxosist_create_grok_session",
+        "description": "Start a Grok Build session: grok_code_improvement_radar mission + prompt template + handoff flags.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "intent": {
+              "type": "string"
+            },
+            "product": {
+              "type": "string"
+            },
+            "targetArea": {
+              "type": "string"
+            },
+            "context": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "intent"
           ]
         }
       }
@@ -192,13 +281,9 @@
     "hyperxosist_suggest_refinements": "suggestRefinements(input, signals)",
     "hyperxosist_build_paid_request": "buildPaidRequest(input)",
     "hyperxosist_build_handoff": "buildHandoffPackage(options)",
+    "hyperxosist_build_grok_prompt": "buildGrokBuildPrompt(options)",
+    "hyperxosist_filter_keep_signals": "filterKeepSignals(feedback, options)",
+    "hyperxosist_create_grok_session": "createGrokBuildSession(intent, productContext)",
     "hyperxosist_list_missions": "listMissions()"
-  },
-  "entrypoints": {
-    "agentUse": "https://kg-ninja.github.io/HyperXosist-Agent/agent-use.json",
-    "api": "https://kg-ninja.github.io/HyperXosist-Agent/agent-api.js",
-    "playbook": "https://kg-ninja.github.io/HyperXosist-Agent/AGENTS.md",
-    "llms": "https://kg-ninja.github.io/HyperXosist-Agent/llms.txt",
-    "missions": "https://kg-ninja.github.io/HyperXosist-Agent/missions.json"
   }
 }

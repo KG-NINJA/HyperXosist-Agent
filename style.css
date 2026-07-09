@@ -404,6 +404,72 @@ header h1 {
   color: var(--accent-teal);
 }
 
+/* Grok Build */
+.grok-section {
+  margin-bottom: 18px;
+  padding: 15px;
+  background:
+    linear-gradient(135deg, rgba(139, 92, 246, 0.12), rgba(0, 229, 255, 0.06)),
+    var(--bg-tertiary);
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  border-radius: 8px;
+}
+
+.grok-section .section-head {
+  margin-bottom: 12px;
+}
+
+.grok-section .section-head h2 {
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.grok-section .section-head p {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.pill-grok {
+  background: linear-gradient(135deg, #8b5cf6, #00e5ff);
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+
+.grok-prompt-preview {
+  width: 100%;
+  margin-top: 8px;
+  margin-bottom: 10px;
+  padding: 12px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.grok-focus-meta {
+  margin-top: 6px;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.grok-focus-meta .meta-ok {
+  color: #34d399;
+  font-weight: 700;
+  margin-right: 6px;
+}
+
+.grok-focus-meta .meta-warn {
+  color: var(--warn);
+  font-weight: 700;
+}
+
 /* Noise */
 .noise-section {
   margin-bottom: 18px;

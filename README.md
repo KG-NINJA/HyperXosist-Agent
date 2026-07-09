@@ -2,17 +2,17 @@
 
 [![CI](https://github.com/KG-NINJA/HyperXosist-Agent/actions/workflows/ci.yml/badge.svg)](https://github.com/KG-NINJA/HyperXosist-Agent/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-2.1.0-brightgreen.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-2.2.0-brightgreen.svg)](CHANGELOG.md)
 [![Live](https://img.shields.io/badge/demo-GitHub%20Pages-black.svg)](https://kg-ninja.github.io/HyperXosist-Agent/)
 
-**API-free advanced X (Twitter) search launcher** — for humans in the browser, and for AI agents that need multi-angle, noise-reduced search missions with an x402 paid path and Signal-to-Fix handoff.
+**API-free advanced X (Twitter) search launcher** — for humans in the browser, and for AI agents that need multi-angle, noise-reduced search missions with an x402 paid path, Signal-to-Fix handoff, and **Grok Build** prompts (X voice → one small code change).
 
 | | |
 |---|---|
 | **Live demo** | https://kg-ninja.github.io/HyperXosist-Agent/ |
 | **Repository** | https://github.com/KG-NINJA/HyperXosist-Agent |
 | **Agent entry** | https://kg-ninja.github.io/HyperXosist-Agent/llms.txt |
-| **Version** | 2.1.0 |
+| **Version** | 2.2.0 |
 
 > 日本語の要点: X 公式検索用クエリを組み立てる静的ツールです。人間の UI は無料。AI エージェントの本番利用は x402 支払い前提。検索結果の埋め込みや自動投稿はしません。
 
@@ -23,10 +23,10 @@
 Raw X advanced search is powerful but easy to get wrong (spam, engagement bait, overlong excludes, one-angle keyword guesses). HyperXosist gives you:
 
 1. **Humans** — a fast dark UI to compose operators, templates, noise filters, and open official search tabs.
-2. **AI agents** — a sticky loop: plan → score → pay → collect → refine → handoff → receipt.
+2. **AI agents** — a sticky loop: plan → score → pay → collect → refine → Keep-filter → Grok Build / Signal-to-Fix → receipt.
 
 ```
-Discover → Plan → Score gate → Pay (x402) → Collect → Self-heal → Handoff → Remember
+Discover → Plan → Score gate → Pay (x402) → Collect → Self-heal → Keep-filter → Grok Build / Handoff → Remember
 ```
 
 ---
@@ -47,6 +47,7 @@ Discover → Plan → Score gate → Pay (x402) → Collect → Self-heal → Ha
 - `scoreQuery` before spending **$0.01** per paid call
 - `suggestRefinements` when results are empty or noisy
 - `buildHandoffPackage` → [Signal-to-Fix](https://kg-ninja.github.io/Signal-to-Fix/) keep-only PR pipeline
+- **Grok Build**: `createGrokBuildSession` / `filterKeepSignals` / `buildGrokBuildPrompt`
 - `agent-tools.json` — OpenAI-compatible tool definitions
 - `llms.txt` + `AGENTS.md` discovery docs
 
@@ -104,6 +105,19 @@ const handoff = HyperXosistAgent.buildHandoffPackage({
   feedback: ['...candidate posts...']
 });
 // → handoff.signalToFix.input into Signal-to-Fix (keep-only only)
+// → handoff.grokBuild.prompt for Grok Build
+
+// Grok Build path
+const grok = HyperXosistAgent.createGrokBuildSession(
+  'Grok Build code improvement for Acme',
+  { product: 'Acme', targetArea: 'auth' }
+);
+const prompt = HyperXosistAgent.buildGrokBuildPrompt({
+  productName: 'Acme',
+  targetArea: 'auth',
+  feedback: ['login button does nothing on Safari']
+});
+// → paste prompt.markdown into Grok Build
 ```
 
 **CLI dry-run (no payment, no network required for planning)**
@@ -137,24 +151,31 @@ Do not treat GitHub Pages as the payment verifier.
 | `weekly_monitor` | 7-day cron-friendly window |
 | `launch_pulse` | Launch / incident discourse |
 | `osint_entity` | from / mention / reply-to angles |
+| `grok_code_improvement_radar` | Grok Build: bugs / small asks / DX |
+| `ui_ux_feedback_harvest` | Frontend / UI friction for Grok |
+| `performance_complaint_detector` | Latency / jank for Grok |
 
 Full catalog: [missions.json](https://kg-ninja.github.io/HyperXosist-Agent/missions.json)
 
 ---
 
-## API surface (v2.1)
+## API surface (v2.2)
 
 | Method | Role |
 |--------|------|
 | `startAgentSession(opts?)` | Playbook + tools + optional plan |
+| `createGrokBuildSession(intent, productContext?)` | Grok Build sticky session |
 | `planFromIntent(intent)` | NL → mission + scored paid steps |
 | `buildMission(id, ctx)` | Named multi-angle campaign |
 | `composeCampaign(opts)` | Multi-locale / multi-goal |
 | `scoreQuery(input)` | 0–100 + `recommendPay` |
+| `scoreTechnicalDepth(text)` | Post-level code usefulness |
+| `filterKeepSignals(feedback)` | Keep-only for Grok / PR |
+| `buildGrokBuildPrompt(opts)` | Structured Grok Build Markdown |
 | `suggestRefinements(input, signals)` | Self-heal variants |
 | `buildQuery` / `buildSearchUrl` | Single query |
 | `buildPaidRequest` / `buildBatch` | x402 payloads |
-| `buildHandoffPackage` / `buildRunReceipt` | Downstream + memory |
+| `buildHandoffPackage` / `buildRunReceipt` | Downstream + memory (+ Grok) |
 | `getToolDefinitions` / `listMissions` / `listTemplates` | Catalogs |
 | `applyTemplate` / `applyDatePreset` | Defaults |
 | `validateInput` / `analyzeQuery` / `explainQuery` | Quality |

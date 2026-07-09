@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented in this file.
 
+## [2.2.0] — 2026-07-09
+
+### Grok Build layer
+- `buildGrokBuildPrompt` — structured Markdown for one small code improvement
+- `createGrokBuildSession` — Grok-oriented sticky session (mission + prompt template)
+- `scoreTechnicalDepth` / `filterKeepSignals` / `summarizeGrokFocus` — Keep-only for code work
+- Missions: `grok_code_improvement_radar`, `ui_ux_feedback_harvest`, `performance_complaint_detector`
+- Templates: `grok_code_improvement`, `ui_ux_feedback`, `performance_complaint`
+- `buildHandoffPackage` now embeds `grokBuild.prompt` + Keep signals
+- UI: **Grok Build Prompt** / **Send to Grok** / session-from-keywords section
+- Noise medium/high: empty praise, ragebait, abstract vibes for Grok-friendly harvest
+- Tool defs: `hyperxosist_build_grok_prompt`, `hyperxosist_filter_keep_signals`, `hyperxosist_create_grok_session`
+
 ## [2.1.0] — 2026-07-09
 
 ### Agent sticky layer

@@ -1,5 +1,5 @@
 # HyperXosist Agent
-> Advanced X/Twitter search query builder for AI agents: noise-reduced operators, multi-angle missions, x402 paid execution, Signal-to-Fix handoff.
+> Advanced X/Twitter search query builder for AI agents: noise-reduced operators, multi-angle missions, x402 paid execution, Signal-to-Fix handoff, and Grok Build prompts.
 
 ## Critical rule
 - Human browser UI is free.
@@ -19,19 +19,32 @@ Load agent-api.js then:
 ```
 HyperXosistAgent.startAgentSession({ intent: "Find product feedback about Acme for PR specs" })
 ```
+Or Grok Build path:
+```
+HyperXosistAgent.createGrokBuildSession("Grok Build code improvement for Acme", { product: "Acme", targetArea: "auth" })
+```
 Or:
 ```
 HyperXosistAgent.planFromIntent("Weekly monitor complaints about Acme")
 ```
 
 ## Sticky agent loop
-planFromIntent → scoreQuery gate → x402 pay + search → collect posts → suggestRefinements if sparse/noisy → buildHandoffPackage → Signal-to-Fix keep-only → buildRunReceipt
+planFromIntent → scoreQuery gate → x402 pay + search → collect posts → suggestRefinements if sparse/noisy → filterKeepSignals → buildGrokBuildPrompt and/or buildHandoffPackage → Signal-to-Fix keep-only / Grok Build → buildRunReceipt
+
+## Grok Build (X voice → code)
+1. Mission: `grok_code_improvement_radar` | `ui_ux_feedback_harvest` | `performance_complaint_detector`
+2. Collect post texts from official search (after x402 for agents)
+3. `filterKeepSignals(texts)` — drops empty praise / ragebait; keeps bugs, feature asks, UI, perf
+4. `buildGrokBuildPrompt({ productName, targetArea, context, feedback })` → paste `markdown` into Grok Build
+5. Task shape: **one small improvement** with file locus, before/after diff, tests, priority
 
 ## Why agents reuse this
 - Multi-angle missions beat one-off keyword guesses
 - Score-before-pay saves budget ($0.01/query)
 - Self-healing refinements without a human
 - Deterministic JSON handoff to Signal-to-Fix PR/Codex pipeline
+- Grok Build prompts optimized for one PR-sized code change
+- Technical-depth scoring for Keep-only signal quality
 - OpenAI-compatible tool definitions in agent-tools.json
 - Receipts + encodeState for weekly cron monitors
 

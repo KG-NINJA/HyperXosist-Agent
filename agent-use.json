@@ -1,13 +1,15 @@
 {
   "name": "HyperXosist Agent Use",
-  "version": "2.1.0",
-  "description": "Agent-first X search mission engine: noise-reduced operators, multi-angle campaigns, score-before-pay, self-healing refinements, x402 execution, and Signal-to-Fix handoff packages.",
+  "version": "2.2.0",
+  "description": "Agent-first X search mission engine: noise-reduced operators, multi-angle campaigns, score-before-pay, self-healing refinements, x402 execution, Signal-to-Fix handoff packages, and Grok Build prompts.",
   "requiresPaymentForAgentUse": true,
   "whyAgentsKeepUsingThis": [
     "planFromIntent turns vague goals into multi-angle missions — fewer wasted searches.",
     "scoreQuery (0–100) gates weak queries before spending $0.01 x402.",
     "suggestRefinements self-heals empty or noisy runs without a human in the loop.",
     "buildHandoffPackage chains straight into Signal-to-Fix keep-only PR/Codex artifacts.",
+    "buildGrokBuildPrompt turns Keep signals into one-small-change Grok Build tasks.",
+    "filterKeepSignals / scoreTechnicalDepth drop praise and ragebait before coding.",
     "buildRunReceipt + encodeState make weekly monitors and audits copy-pasteable.",
     "agent-tools.json drops into OpenAI/Anthropic tool-calling with zero schema invention.",
     "Deterministic outputs: same input → same query → reliable agent memory."
@@ -15,12 +17,13 @@
   "timeToFirstValueSeconds": 30,
   "stickyLoop": [
     "Discover agent-use.json + llms.txt",
-    "startAgentSession({ intent }) or planFromIntent(intent)",
+    "startAgentSession({ intent }) or createGrokBuildSession(intent, productContext)",
     "Score-gate each step (skip band=poor unless intentional)",
     "POST buildPaidRequest → x402 pay on 402 → open searchUrl",
     "Collect candidate post texts",
     "suggestRefinements if sparse/noisy",
-    "buildHandoffPackage → Signal-to-Fix keep-only",
+    "filterKeepSignals → buildGrokBuildPrompt and/or buildHandoffPackage",
+    "Grok Build (one small fix) or Signal-to-Fix keep-only",
     "buildRunReceipt for memory/cron reuse"
   ],
   "agentConversionSummary": {
@@ -36,9 +39,12 @@
   },
   "quickstartForAgents": {
     "bootstrap": "HyperXosistAgent.startAgentSession({ intent: 'Find product feedback about Acme for PR specs' })",
+    "grokBuild": "HyperXosistAgent.createGrokBuildSession('Grok Build code improvement for Acme', { product: 'Acme', targetArea: 'auth' })",
     "oneShotMission": "HyperXosistAgent.buildMission('signal_to_fix_pipeline', { subject: 'Acme' })",
     "scoreBeforePay": "HyperXosistAgent.scoreQuery(input)",
     "pay": "HyperXosistAgent.buildPaidRequest(input)",
+    "keepFilter": "HyperXosistAgent.filterKeepSignals(feedbackTexts)",
+    "grokPrompt": "HyperXosistAgent.buildGrokBuildPrompt({ productName: 'Acme', targetArea: 'auth', feedback: ['...'] })",
     "handoff": "HyperXosistAgent.buildHandoffPackage({ productName: 'Acme', feedback: ['...'] })",
     "toolsFile": "agent-tools.json",
     "playbook": "AGENTS.md",
@@ -81,20 +87,25 @@
     "localPlanningAllowed": true
   },
   "apiSurface": {
-    "version": "2.1.0",
+    "version": "2.2.0",
     "methods": [
       "startAgentSession(options?)",
+      "createGrokBuildSession(intent, productContext?)",
       "planFromIntent(intent, options?)",
       "buildMission(missionId, context)",
       "listMissions()",
       "composeCampaign(options)",
       "scoreQuery(input)",
+      "scoreTechnicalDepth(text)",
+      "filterKeepSignals(feedback, options?)",
+      "summarizeGrokFocus(keepItems)",
       "suggestRefinements(input, signals?)",
       "buildQuery(input)",
       "buildSearchUrl(input)",
       "buildPaidRequest(input)",
       "buildBatch(inputs[])",
       "buildHandoffPackage(options)",
+      "buildGrokBuildPrompt(options)",
       "buildRunReceipt(options)",
       "getToolDefinitions()",
       "getAgentPlaybook()",
@@ -115,7 +126,10 @@
       "japanese_trend",
       "media_only",
       "clean_original",
-      "signal_to_fix"
+      "signal_to_fix",
+      "grok_code_improvement",
+      "ui_ux_feedback",
+      "performance_complaint"
     ],
     "missions": [
       "product_feedback_radar",
@@ -123,7 +137,10 @@
       "launch_pulse",
       "signal_to_fix_pipeline",
       "osint_entity",
-      "weekly_monitor"
+      "weekly_monitor",
+      "grok_code_improvement_radar",
+      "ui_ux_feedback_harvest",
+      "performance_complaint_detector"
     ]
   },
   "failureRecovery": {
@@ -132,12 +149,15 @@
     "zeroSearchHits": "suggestRefinements(input, { tooSparse: true }) → pay best variant.",
     "spamHeavy": "suggestRefinements(input, { tooNoisy: true }) or noise.preset=high + min_faves.",
     "validationError": "Read validateInput().errors; fix date order / reply filter conflicts.",
-    "needPrSpecs": "buildHandoffPackage then follow Signal-to-Fix agent-use.json; keep-only only."
+    "needPrSpecs": "buildHandoffPackage then follow Signal-to-Fix agent-use.json; keep-only only.",
+    "needGrokBuild": "filterKeepSignals then buildGrokBuildPrompt; paste markdown into Grok Build for one small fix.",
+    "weakGrokSignals": "Lower minTechScore or harvest with grok_code_improvement_radar / higher technical language queries."
   },
   "complementaryPositioning": {
     "hyperxosist": "Agent-facing search mission + x402 execution layer with scoring and self-heal.",
     "signalToFix": "Feedback → keep-only issue clusters, PR specs, implementation/Codex prompts.",
-    "whyTogether": "HyperXosist finds cleaner candidates on a budget; Signal-to-Fix turns keep-only items into shippable artifacts. Agents that chain both form a durable product-improvement loop."
+    "grokBuild": "Keep-filtered X signals → structured one-small-change prompt for Grok Build code work.",
+    "whyTogether": "HyperXosist finds cleaner candidates on a budget; Signal-to-Fix and Grok Build turn keep-only items into shippable artifacts. Agents that chain harvest → Keep → Grok/PR form a durable product-improvement loop."
   },
   "inputSchema": {
     "type": "object",

@@ -254,9 +254,46 @@
             <a href="missions.json"><code>missions.json</code></a> のマルチアングル任務を使い、
             <a href="x402-payment.json"><code>x402-payment.json</code></a> 経由で x402 支払い後に検索 URL を利用します。
             ループ: <code>planFromIntent</code> → score → pay → collect → refine →
-            <code>buildHandoffPackage</code> →
-            <a href="https://kg-ninja.github.io/Signal-to-Fix/">Signal-to-Fix</a>。
+            <code>buildHandoffPackage</code> /
+            <code>buildGrokBuildPrompt</code> →
+            <a href="https://kg-ninja.github.io/Signal-to-Fix/">Signal-to-Fix</a> または Grok Build。
           </p>
+        </section>
+
+        <!-- Grok Build handoff -->
+        <section class="grok-section" aria-labelledby="grokTitle">
+          <div class="section-head">
+            <h2 id="grokTitle">Grok Build <span class="pill pill-grok">X → code</span></h2>
+            <p>
+              検索で集めた投稿（Keep のみ）を貼り付け → 技術的深さでフィルタ →
+              Grok Build 用プロンプトを生成。クリップボードへコピーして Grok に渡せます。
+            </p>
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="grokProduct">Product</label>
+              <input type="text" id="grokProduct" placeholder="例: HyperXosist / Acme" autocomplete="off">
+            </div>
+            <div class="form-group">
+              <label for="grokTargetArea">Target Area</label>
+              <input type="text" id="grokTargetArea" placeholder="例: auth UI / search noise / perf" autocomplete="off">
+            </div>
+            <div class="form-group span-2">
+              <label for="grokContext">Product context</label>
+              <input type="text" id="grokContext" placeholder="短い製品コンテキスト（スタック、制約など）" autocomplete="off">
+            </div>
+            <div class="form-group span-2">
+              <label for="grokFeedback">Collected signals（1行1投稿）</label>
+              <textarea id="grokFeedback" rows="5" placeholder="X から集めた不満・要望・バグ報告を貼り付け&#10;例: login button does nothing on Safari&#10;例: ダークモードが欲しい"></textarea>
+            </div>
+          </div>
+          <div id="grokFocusMeta" class="query-meta grok-focus-meta" aria-live="polite"></div>
+          <textarea id="grokPromptPreview" class="grok-prompt-preview" readonly rows="12" placeholder="「Grok Build Prompt」を押すと構造化プロンプトがここに出ます"></textarea>
+          <div class="preview-actions">
+            <button type="button" id="btnGrokPrompt" class="btn btn-primary">Grok Build Prompt</button>
+            <button type="button" id="btnSendToGrok" class="btn btn-accent">Send to Grok</button>
+            <button type="button" id="btnGrokFromKeywords" class="btn btn-secondary">キーワードからセッション</button>
+          </div>
         </section>
 
         <!-- Query preview -->
@@ -303,7 +340,7 @@
 
     <footer>
       <p>
-        © 2026 HyperXosist Agent v2.1 · MIT · Not affiliated with X Corp. ·
+        © 2026 HyperXosist Agent v2.2 · MIT · Not affiliated with X Corp. ·
         <a href="https://github.com/KG-NINJA/HyperXosist-Agent">GitHub</a> ·
         <a href="llms.txt">llms.txt</a> ·
         <a href="AGENTS.md">AGENTS.md</a>

@@ -1,16 +1,17 @@
 /**
- * HyperXosist Agent API v2.1
+ * HyperXosist Agent API v2.2
  * Single source of truth for X advanced search query building,
  * noise reduction, research templates, multi-query missions,
- * agent handoffs, and x402 paid agent requests.
+ * agent handoffs, x402 paid agent requests, and Grok Build prompts.
  *
  * Designed so AI agents get deterministic plans, scorable queries,
- * self-healing refinements, and ready-to-chain Signal-to-Fix packages.
+ * self-healing refinements, Signal-to-Fix packages, and
+ * Grok Build–ready improvement prompts (X voice → code change).
  */
 (function (root) {
   'use strict';
 
-  const VERSION = '2.1.0';
+  const VERSION = '2.2.0';
   const SIGNAL_TO_FIX_URL = 'https://kg-ninja.github.io/Signal-to-Fix/';
   const SIGNAL_TO_FIX_AGENT_USE = 'https://kg-ninja.github.io/Signal-to-Fix/agent-use.json';
   const PUBLIC_BASE = 'https://kg-ninja.github.io/HyperXosist-Agent';
@@ -86,6 +87,10 @@
     'wait until you see'
   ];
 
+  /**
+   * Noise tiers. Medium+ includes Grok Build waste (empty praise, ragebait, abstract vibes)
+   * so harvested posts stay closer to concrete complaints / feature asks / bugs.
+   */
   const noiseRules = {
     low: [
       'giveaway', 'airdrop', 'claim', 'reward', 'referral', 'free money', 'limited offer', 'click here', 'sign up',
@@ -93,13 +98,44 @@
     ],
     medium: [
       'thoughts', 'agree', 'bookmark', 'insane', 'game changer', 'big if true', 'must read', 'hot take', 'thread below', 'you need to see this',
-      'ブクマ推奨', 'やばい', '革命', 'これはすごい', '知らないと損'
+      'love this', 'so good', 'amazing product', 'best ever', 'absolute fire', 'no notes', 'chef kiss',
+      'ratio', 'cope', 'seethe', 'touch grass', 'skill issue', 'just vibes', 'main character energy',
+      'ブクマ推奨', 'やばい', '革命', 'これはすごい', '知らないと損', '神', '最強', '尊い', '煽り'
     ],
     high: [
       'gm', 'wagmi', 'alpha', '100x', 'promo', 'presale', 'whitelist', 'pump', 'moonshot', 'paid partnership', 'sponsored', 'follow for more', 'retweet to win',
-      '固定ポスト', '完全攻略', 'フォローで', 'リポストで'
+      'unpopular opinion', 'change my mind', 'fight me', 'based', 'mid', '// ngl', 'lowkey', 'highkey',
+      '固定ポスト', '完全攻略', 'フォローで', 'リポストで', '論破', '草生える', 'ワロタ'
     ]
   };
+
+  /**
+   * Patterns that make a post useful for Grok Build code improvement (Keep).
+   * Used by scoreTechnicalDepth / filterKeepSignals — not X query excludes.
+   */
+  const GROK_KEEP_PATTERNS = [
+    { re: /\b(bug|crash|error|exception|stack\s*trace|broken|regression|fail(s|ed|ing)?|doesn't work|does not work)\b/i, weight: 28, tag: 'bug' },
+    { re: /(不具合|バグ|落ちる|エラー|クラッシュ|動かない|壊れて)/i, weight: 28, tag: 'bug' },
+    { re: /\b(feature\s*request|please add|should (have|support)|wish|missing|needs? to|can you add)\b/i, weight: 22, tag: 'feature' },
+    { re: /(欲しい|追加して|改善して|要望|実装して|対応して|〜してほしい)/i, weight: 22, tag: 'feature' },
+    { re: /\b(ui|ux|layout|button|modal|nav(igation)?|sidebar|dark mode|accessibility|a11y|responsive|mobile)\b/i, weight: 18, tag: 'ui' },
+    { re: /(UI|UX|レイアウト|ボタン|モーダル|ナビ|ダークモード|アクセシビリティ|スマホ|見づらい|押しづらい)/i, weight: 18, tag: 'ui' },
+    { re: /\b(slow|latency|performance|memory|leak|timeout|lag|cpu|fps|load time)\b/i, weight: 20, tag: 'perf' },
+    { re: /(遅い|重い|カクつく|タイムアウト|パフォーマンス|メモリ|待ち時間)/i, weight: 20, tag: 'perf' },
+    { re: /\b(api|sdk|docs?|documentation|rate\s*limit|dx|cli|config|type(s|script)?|compile)\b/i, weight: 16, tag: 'dx' },
+    { re: /(ドキュメント|API|SDK|型エラー|設定|分かりにくい|手順)/i, weight: 16, tag: 'dx' },
+    { re: /\b(steps? to reproduce|repro|expected|actual|when i|after (i|you)|on (ios|android|chrome|safari|firefox))\b/i, weight: 14, tag: 'repro' },
+    { re: /(再現|手順|期待|実際|すると|したら|のとき)/i, weight: 10, tag: 'repro' }
+  ];
+
+  /** Signals that are usually useless for a single small code change (Drop / low score). */
+  const GROK_DROP_PATTERNS = [
+    { re: /^(so good|love this|amazing|fire|goat|best ever|no notes)[.!]*$/i, weight: 40, tag: 'empty_praise' },
+    { re: /\b(ratio|cope|seethe|touch grass|skill issue|just vibes|main character)\b/i, weight: 30, tag: 'ragebait' },
+    { re: /\b(what do you think|thoughts\?|agree or disagree|hot take)\b/i, weight: 25, tag: 'engagement_bait' },
+    { re: /(神|最強|尊い|好き|推し)[！!。.\s]*$/i, weight: 20, tag: 'empty_praise_ja' },
+    { re: /\b(lfg|wagmi|gm\b|to the moon|100x)\b/i, weight: 25, tag: 'hype' }
+  ];
 
   /** Machine-readable operator catalog for agents and UI tooltips. */
   const OPERATOR_REFERENCE = {
@@ -238,6 +274,47 @@
         minReplies: 1,
         noise: { enabled: true, preset: 'medium', removed: [] },
         anyOf: 'feedback, complaint, request, broken, missing, 要望, 不便, 直して'
+      }
+    },
+    grok_code_improvement: {
+      id: 'grok_code_improvement',
+      label: 'Grok Build code improvement',
+      labelJa: 'Grok Build コード改善',
+      description: 'Concrete bugs/feature asks Grok can turn into one small code change.',
+      defaults: {
+        mode: 'live',
+        minFaves: 2,
+        minReplies: 0,
+        noise: { enabled: true, preset: 'high', removed: [] },
+        anyOf:
+          'bug, crash, error, broken, regression, feature request, please add, missing, 不具合, バグ, 改善して, 欲しい, 直して'
+      }
+    },
+    ui_ux_feedback: {
+      id: 'ui_ux_feedback',
+      label: 'UI/UX feedback harvest',
+      labelJa: 'UI/UX フィードバック',
+      description: 'Layout, interaction, accessibility, and visual friction for frontend fixes.',
+      defaults: {
+        mode: 'live',
+        minFaves: 3,
+        excludeReplies: false,
+        noise: { enabled: true, preset: 'medium', removed: [] },
+        anyOf:
+          'UI, UX, layout, button, modal, cluttered, confusing, dark mode, accessibility, 見づらい, 押しづらい, わかりにくい, デザイン'
+      }
+    },
+    performance_complaint: {
+      id: 'performance_complaint',
+      label: 'Performance complaints',
+      labelJa: 'パフォーマンス不満',
+      description: 'Latency, jank, memory, and load-time complaints for perf work.',
+      defaults: {
+        mode: 'live',
+        minFaves: 2,
+        noise: { enabled: true, preset: 'medium', removed: [] },
+        anyOf:
+          'slow, lag, latency, performance, timeout, memory leak, heavy, jank, 遅い, 重い, カクつく, タイムアウト, 待たされる'
       }
     }
   };
@@ -846,10 +923,124 @@
           datePreset: '7d'
         }
       ]
+    },
+    grok_code_improvement_radar: {
+      id: 'grok_code_improvement_radar',
+      label: 'Grok Build code improvement radar',
+      whyAgentsUseIt:
+        'Harvest concrete bugs/feature asks → technical-depth Keep filter → Grok Build Prompt for one small code change.',
+      recommendedNext: 'grok_build',
+      defaultBudgetUsd: 0.03,
+      angles: [
+        {
+          id: 'actionable_bugs',
+          templateId: 'grok_code_improvement',
+          rationale: 'Defect language Grok can map to a fix.',
+          overrides: {
+            anyOf: 'bug, crash, error, broken, regression, 不具合, バグ, 落ちる, エラー',
+            minFaves: 1,
+            mode: 'live'
+          }
+        },
+        {
+          id: 'small_feature_asks',
+          templateId: 'grok_code_improvement',
+          rationale: 'Scoped feature / improvement asks (one PR size).',
+          overrides: {
+            anyOf: 'please add, feature request, wish, should support, missing, 欲しい, 追加して, 改善して',
+            minFaves: 2,
+            mode: 'live'
+          }
+        },
+        {
+          id: 'dx_pain',
+          templateId: 'product_feedback',
+          rationale: 'Developer-facing friction for Grok Build DX patches.',
+          overrides: {
+            anyOf: 'docs, API, SDK, type error, rate limit, DX, CLI, ドキュメント, 型, 分かりにくい',
+            minFaves: 2,
+            noise: { enabled: true, preset: 'high', removed: [] },
+            mode: 'live'
+          }
+        }
+      ]
+    },
+    ui_ux_feedback_harvest: {
+      id: 'ui_ux_feedback_harvest',
+      label: 'UI/UX feedback harvest',
+      whyAgentsUseIt: 'Frontend-oriented angles for Grok Build UI patches and layout fixes.',
+      recommendedNext: 'grok_build',
+      defaultBudgetUsd: 0.02,
+      angles: [
+        {
+          id: 'layout_friction',
+          templateId: 'ui_ux_feedback',
+          rationale: 'Cluttered / confusing UI language.',
+          overrides: {
+            anyOf: 'cluttered, confusing, hard to find, UI, layout, 見づらい, わかりにくい, どこにある',
+            minFaves: 3,
+            mode: 'live'
+          }
+        },
+        {
+          id: 'interaction',
+          templateId: 'ui_ux_feedback',
+          rationale: 'Buttons, modals, navigation friction.',
+          overrides: {
+            anyOf: 'button, modal, nav, sidebar, click, tap, ボタン, モーダル, 押しづらい, 反応しない',
+            minFaves: 2,
+            mode: 'live'
+          }
+        }
+      ]
+    },
+    performance_complaint_detector: {
+      id: 'performance_complaint_detector',
+      label: 'Performance complaint detector',
+      whyAgentsUseIt: 'Latency/jank/memory complaints for Grok Build perf-focused micro-improvements.',
+      recommendedNext: 'grok_build',
+      defaultBudgetUsd: 0.02,
+      angles: [
+        {
+          id: 'slowness',
+          templateId: 'performance_complaint',
+          rationale: 'Slow / lag language.',
+          overrides: {
+            anyOf: 'slow, lag, latency, jank, load time, 遅い, 重い, カクつく, 待たされる',
+            minFaves: 2,
+            mode: 'live'
+          }
+        },
+        {
+          id: 'resource',
+          templateId: 'performance_complaint',
+          rationale: 'Timeouts and resource issues.',
+          overrides: {
+            anyOf: 'timeout, memory leak, OOM, cpu, freeze, タイムアウト, フリーズ, メモリ',
+            minFaves: 1,
+            mode: 'live'
+          }
+        }
+      ]
     }
   };
 
   const INTENT_PATTERNS = [
+    {
+      id: 'grok_build',
+      re: /grok\s*build|grok\s*prompt|code\s*improvement|small\s*(fix|pr|patch)|1つだけ|小さな改善/i,
+      missionId: 'grok_code_improvement_radar'
+    },
+    {
+      id: 'ui_ux',
+      re: /\bui\b|\bux\b|layout|accessibility|a11y|dark\s*mode|フロント|見づらい|押しづらい|デザイン/i,
+      missionId: 'ui_ux_feedback_harvest'
+    },
+    {
+      id: 'performance',
+      re: /performance|latency|slow|jank|memory\s*leak|タイムアウト|遅い|重い|カクつく|パフォーマンス/i,
+      missionId: 'performance_complaint_detector'
+    },
     {
       id: 'feedback',
       re: /feedback|complaint|feature\s*request|bug|不具合|要望|改善|クレーム|pain/i,
@@ -1065,6 +1256,22 @@
         score: scoreQuery(s2f)
       });
       suggestions.push('Chain: harvest with signal_to_fix template, then handoff to Signal-to-Fix keep-only pipeline.');
+
+      const grok = applyTemplate('grok_code_improvement', {
+        keywords: data.keywords,
+        anyOf: data.anyOf,
+        lang: data.lang,
+        fromUser: data.fromUser
+      });
+      variants.push({
+        id: 'grok_build',
+        label: 'Pivot to Grok Build harvest (actionable code signals)',
+        input: grok,
+        score: scoreQuery(grok)
+      });
+      suggestions.push(
+        'Grok Build: filter with filterKeepSignals, then buildGrokBuildPrompt for one small code change.'
+      );
     }
 
     if (!data.sinceDate && !data.untilDate) {
@@ -1197,6 +1404,7 @@
         '3. Open searchUrl (after payment) and collect candidate post texts.',
         '4. If sparse: call suggestRefinements(step.input, { tooSparse: true }).',
         '5. If mission.recommendedNext === signal_to_fix: buildHandoffPackage and continue there.',
+        '5b. If recommendedNext === grok_build: filterKeepSignals → buildGrokBuildPrompt → Grok Build.',
         '6. Persist buildRunReceipt for audit / reuse.'
       ]
     };
@@ -1276,6 +1484,11 @@
           detail: 'After collecting feedback strings, call buildHandoffPackage and open Signal-to-Fix.'
         },
         {
+          action: 'grok_build_prompt',
+          detail:
+            'After Keep-filter: buildGrokBuildPrompt({ productName, targetArea, context, feedback }) or createGrokBuildSession.'
+        },
+        {
           action: 'self_heal',
           detail: 'On empty/noisy results, use refinements.variants[0] and re-pay.'
         }
@@ -1344,13 +1557,24 @@
       : [];
     const productName = opts.productName || opts.product || opts.subject || 'product';
     const searchMeta = opts.searchMeta || null;
+    const targetArea = opts.targetArea || opts.area || '';
+    const keepFiltered = filterKeepSignals(feedback, { minScore: opts.minTechScore != null ? opts.minTechScore : 18 });
 
     const signalToFixInput = {
       productName,
       productUrl: opts.productUrl || '',
-      targetArea: opts.targetArea || opts.area || '',
+      targetArea,
       feedback
     };
+
+    const grokPrompt = buildGrokBuildPrompt({
+      productName,
+      productUrl: opts.productUrl || '',
+      targetArea,
+      context: opts.context || opts.productContext || '',
+      feedback: keepFiltered.keep.map((k) => k.text),
+      rawFeedback: feedback
+    });
 
     return {
       type: 'hyperxosist.handoff.v1',
@@ -1367,6 +1591,12 @@
         input: signalToFixInput,
         required: ['feedback']
       },
+      grokBuild: {
+        prompt: grokPrompt.markdown,
+        keepSignals: keepFiltered.keep,
+        focusSummary: grokPrompt.focusSummary,
+        ready: keepFiltered.keep.length > 0
+      },
       provenance: {
         searchMeta,
         query: opts.query || null,
@@ -1377,12 +1607,325 @@
       agentInstructions: [
         'Open Signal-to-Fix agent-use.json.',
         'Pass signalToFix.input (productName, productUrl, targetArea, feedback[]).',
-        'Run analysis; export only keep-only clusters / PR specs / Codex prompts.',
+        'Run analysis; export only keep-only clusters / PR specs / Codex or Grok prompts.',
+        'Or paste grokBuild.prompt into Grok Build for one small code improvement.',
         'Do not feed reduce/discard items into implementation artifacts.'
       ],
       ready: feedback.length > 0,
       feedbackCount: feedback.length
     };
+  }
+
+  /**
+   * Score how useful a single post is for Grok Build (code improvement).
+   * Higher = more concrete bug/feature/UI/perf signal.
+   */
+  function scoreTechnicalDepth(text) {
+    const raw = String(text || '').trim();
+    if (!raw) {
+      return { score: 0, band: 'empty', tags: [], reasons: [{ code: 'empty', delta: 0, detail: 'Empty text.' }] };
+    }
+
+    let score = 10;
+    const tags = [];
+    const reasons = [];
+    const seenTags = new Set();
+
+    let keepHits = 0;
+    GROK_KEEP_PATTERNS.forEach((p) => {
+      if (p.re.test(raw)) {
+        keepHits += 1;
+        score += p.weight;
+        if (!seenTags.has(p.tag)) {
+          seenTags.add(p.tag);
+          tags.push(p.tag);
+        }
+        reasons.push({ code: `keep_${p.tag}`, delta: p.weight, detail: `Matched ${p.tag} signal.` });
+      }
+    });
+
+    // Drop patterns: full weight only on pure bait (no Keep, short or bait-dominated).
+    // Light penalty when bait words appear inside a longer complaint.
+    GROK_DROP_PATTERNS.forEach((p) => {
+      if (!p.re.test(raw)) return;
+      let penalty;
+      if (keepHits > 0) {
+        penalty = Math.min(8, Math.floor(p.weight / 4));
+      } else if (raw.length >= 45) {
+        // Longer posts mentioning bait phrases in context (e.g. "lets skill issue bait through")
+        penalty = Math.min(12, Math.floor(p.weight / 3));
+      } else {
+        penalty = p.weight;
+      }
+      if (penalty <= 0) return;
+      score -= penalty;
+      reasons.push({
+        code: `drop_${p.tag}`,
+        delta: -penalty,
+        detail: `Waste pattern ${p.tag} (penalty ${penalty}).`
+      });
+    });
+
+    // Length heuristic: one-liners of pure hype vs short actionable notes
+    if (raw.length >= 80 && raw.length <= 400) {
+      score += 6;
+      reasons.push({ code: 'length_sweet', delta: 6, detail: 'Useful detail length.' });
+    } else if (raw.length < 20) {
+      score -= 8;
+      reasons.push({ code: 'too_short', delta: -8, detail: 'Too short for actionable fix.' });
+    }
+
+    // Numbers / versions often indicate concrete reports
+    if (/\b\d+(\.\d+)+\b|\bv\d+\b|HTTP\s*\d{3}|\b\d+ms\b|\b\d+%/i.test(raw)) {
+      score += 8;
+      reasons.push({ code: 'concrete_numbers', delta: 8, detail: 'Versions/metrics present.' });
+    }
+
+    // Product/feature nouns + negative verbs ≈ actionable even without keyword lists
+    if (
+      keepHits === 0 &&
+      raw.length >= 40 &&
+      /\b(still|always|never|broken|missing|should|can't|cannot|won't|doesn't|lets? through|keeps?)\b|(まだ|ずっと|欲しい|できない|直して|通してしまう)/i.test(
+        raw
+      )
+    ) {
+      score += 18;
+      reasons.push({ code: 'complaint_shape', delta: 18, detail: 'Complaint-shaped sentence without spam tags.' });
+    }
+
+    score = Math.max(0, Math.min(100, score));
+    let band = 'low';
+    if (score >= 70) band = 'high';
+    else if (score >= 40) band = 'medium';
+    else if (score === 0) band = 'empty';
+
+    return { score, band, tags, reasons, text: raw };
+  }
+
+  /**
+   * Keep-only filter for Grok Build: drop empty praise / ragebait; keep code-actionable signals.
+   */
+  function filterKeepSignals(feedback, options) {
+    const opts = options || {};
+    const minScore = opts.minScore != null ? Number(opts.minScore) : 18;
+    const items = (Array.isArray(feedback) ? feedback : [feedback])
+      .map(String)
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map((text, index) => {
+        const depth = scoreTechnicalDepth(text);
+        const decision = depth.score >= minScore ? 'keep' : 'discard';
+        return {
+          index,
+          text,
+          decision,
+          technicalDepth: depth.score,
+          band: depth.band,
+          tags: depth.tags,
+          reasons: depth.reasons
+        };
+      });
+
+    const keep = items
+      .filter((i) => i.decision === 'keep')
+      .sort((a, b) => b.technicalDepth - a.technicalDepth);
+    const discard = items.filter((i) => i.decision === 'discard');
+
+    return {
+      type: 'hyperxosist.keep_filter.v1',
+      minScore,
+      keep,
+      discard,
+      keepCount: keep.length,
+      discardCount: discard.length,
+      focusSummary: summarizeGrokFocus(keep)
+    };
+  }
+
+  function summarizeGrokFocus(keepItems) {
+    const items = Array.isArray(keepItems) ? keepItems : [];
+    if (!items.length) {
+      return {
+        headline: 'No Keep signals yet — harvest more concrete bugs/feature asks.',
+        bullets: [],
+        topTags: []
+      };
+    }
+
+    const tagCounts = {};
+    items.forEach((i) => {
+      (i.tags || []).forEach((t) => {
+        tagCounts[t] = (tagCounts[t] || 0) + 1;
+      });
+    });
+    const topTags = Object.keys(tagCounts)
+      .sort((a, b) => tagCounts[b] - tagCounts[a])
+      .slice(0, 5);
+
+    const bullets = items.slice(0, 5).map((i) => {
+      const tagStr = (i.tags || []).length ? ` [${i.tags.join(', ')}]` : '';
+      const snippet = i.text.length > 120 ? `${i.text.slice(0, 117)}...` : i.text;
+      return `depth=${i.technicalDepth}${tagStr}: ${snippet}`;
+    });
+
+    const headline =
+      topTags.length > 0
+        ? `Grok should focus on: ${topTags.join(', ')} (${items.length} keep signal${items.length === 1 ? '' : 's'}).`
+        : `${items.length} keep signal(s) — pick the highest technical-depth item for one small change.`;
+
+    return { headline, bullets, topTags, keepCount: items.length };
+  }
+
+  /**
+   * Structured Markdown prompt optimized for Grok Build (one small improvement).
+   */
+  function buildGrokBuildPrompt(options) {
+    const opts = options || {};
+    const productName = opts.productName || opts.product || opts.subject || 'product';
+    const targetArea = opts.targetArea || opts.area || 'general';
+    const context = opts.context || opts.productContext || '';
+    const rawList = Array.isArray(opts.feedback)
+      ? opts.feedback
+      : Array.isArray(opts.rawFeedback)
+        ? opts.rawFeedback
+        : [];
+    const filtered =
+      opts.skipFilter === true
+        ? {
+            keep: rawList.map((t, i) => ({ text: String(t).trim(), technicalDepth: null, tags: [], index: i })),
+            focusSummary: summarizeGrokFocus([])
+          }
+        : filterKeepSignals(rawList, { minScore: opts.minTechScore != null ? opts.minTechScore : 18 });
+
+    const keepLines =
+      filtered.keep.length > 0
+        ? filtered.keep.map((k) => {
+            const meta =
+              k.technicalDepth != null
+                ? ` (depth ${k.technicalDepth}${(k.tags || []).length ? `; ${k.tags.join('/')}` : ''})`
+                : '';
+            return `- ${k.text}${meta}`;
+          })
+        : ['- _(no keep signals — paste concrete complaints or lower minTechScore)_'];
+
+    const focus = filtered.focusSummary || summarizeGrokFocus(filtered.keep);
+    const markdown = [
+      '## Grok Build Task',
+      '',
+      `**Product**: ${productName}`,
+      `**Target Area**: ${targetArea}`,
+      `**Context**: ${context || '_(none provided)_'}`,
+      '',
+      '**Grok focus (auto)**:',
+      focus.headline,
+      ...(focus.bullets || []).map((b) => `- ${b}`),
+      '',
+      '**Collected Signals** (Keepのみ):',
+      ...keepLines,
+      '',
+      '**Task**:',
+      '上記の声を基に、**1つだけ小さな改善**を提案してください。',
+      '- 具体的なコード変更箇所を明示',
+      '- 変更前/変更後の差分例を入れる',
+      '- 影響範囲とテスト観点を記載',
+      '- 優先度: High/Medium/Low',
+      '',
+      '**Constraints**:',
+      '- Do not propose large refactors; one PR-sized change only.',
+      '- Prefer the highest technical-depth signal when multiple conflict.',
+      '- If signals are weak, say so and ask for more concrete repro steps instead of inventing bugs.'
+    ].join('\n');
+
+    return {
+      type: 'hyperxosist.grok_build_prompt.v1',
+      version: VERSION,
+      productName,
+      targetArea,
+      context,
+      markdown,
+      keepSignals: filtered.keep,
+      focusSummary: focus,
+      ready: filtered.keep.length > 0,
+      clipboard: markdown
+    };
+  }
+
+  /**
+   * Grok Build–specialized session: plan + prompt template + handoff flags.
+   * @param {string} intent
+   * @param {object|string} [productContext] product name string or { product, targetArea, context, ...plan opts }
+   */
+  function createGrokBuildSession(intent, productContext) {
+    const ctx =
+      productContext == null
+        ? {}
+        : typeof productContext === 'string'
+          ? { product: productContext, context: productContext }
+          : productContext;
+
+    const product =
+      ctx.product || ctx.productName || ctx.subject || extractSubject(intent) || 'product';
+    const targetArea = ctx.targetArea || ctx.area || 'general';
+    const contextText = ctx.context || ctx.productContext || '';
+
+    const forcedMission =
+      ctx.missionId ||
+      (/ui|ux|layout|見づらい|デザイン/i.test(String(intent || ''))
+        ? 'ui_ux_feedback_harvest'
+        : /performance|latency|slow|遅い|重い|カク/i.test(String(intent || ''))
+          ? 'performance_complaint_detector'
+          : 'grok_code_improvement_radar');
+
+    const session = startAgentSession({
+      intent: intent || `Grok Build code improvement for ${product}`,
+      missionId: forcedMission,
+      subject: product,
+      product,
+      lang: ctx.lang,
+      overrides: ctx.overrides
+    });
+
+    const emptyPrompt = buildGrokBuildPrompt({
+      productName: product,
+      targetArea,
+      context: contextText,
+      feedback: ctx.feedback || []
+    });
+
+    session.type = 'hyperxosist.grok_build_session.v1';
+    session.grokBuild = {
+      productName: product,
+      targetArea,
+      context: contextText,
+      promptTemplate: emptyPrompt.markdown,
+      buildPrompt: 'Call buildGrokBuildPrompt({ productName, targetArea, context, feedback }) after collecting posts.',
+      suggestedRefinements: (session.plan && session.plan.refinements && session.plan.refinements.variants) || [],
+      handoffToFix: ctx.handoffToFix !== false,
+      filterKeepSignals: 'filterKeepSignals(feedbackTexts)',
+      scoreTechnicalDepth: 'scoreTechnicalDepth(postText)',
+      loop: [
+        '1. Run mission steps (score → x402 pay → open searchUrl).',
+        '2. Collect post texts; filterKeepSignals(texts) — Keep only.',
+        '3. buildGrokBuildPrompt with Keep texts.',
+        '4. Paste markdown into Grok Build (or copy via UI Send to Grok).',
+        '5. Optional: buildHandoffPackage for Signal-to-Fix keep-only PR path.',
+        '6. buildRunReceipt for memory.'
+      ]
+    };
+
+    if (Array.isArray(ctx.feedback) && ctx.feedback.length) {
+      session.grokBuild.prompt = buildGrokBuildPrompt({
+        productName: product,
+        targetArea,
+        context: contextText,
+        feedback: ctx.feedback
+      });
+    }
+
+    session.stickyTip =
+      'Grok Build path: harvest with grok_code_improvement_radar → Keep-filter by technical depth → one small change prompt. Never dump raw spam into Grok.';
+
+    return session;
   }
 
   function buildRunReceipt(options) {
@@ -1523,16 +2066,70 @@
         type: 'function',
         function: {
           name: 'hyperxosist_build_handoff',
-          description: 'Package collected feedback texts for Signal-to-Fix keep-only PR pipeline.',
+          description: 'Package collected feedback texts for Signal-to-Fix keep-only PR pipeline (also embeds Grok Build prompt).',
           parameters: {
             type: 'object',
             properties: {
               productName: { type: 'string' },
               productUrl: { type: 'string' },
               targetArea: { type: 'string' },
-              feedback: { type: 'array', items: { type: 'string' } }
+              feedback: { type: 'array', items: { type: 'string' } },
+              context: { type: 'string', description: 'Product context for Grok Build prompt.' }
             },
             required: ['productName', 'feedback']
+          }
+        }
+      },
+      {
+        type: 'function',
+        function: {
+          name: 'hyperxosist_build_grok_prompt',
+          description:
+            'Build a structured Grok Build Markdown prompt from Keep-filtered user signals (one small code improvement).',
+          parameters: {
+            type: 'object',
+            properties: {
+              productName: { type: 'string' },
+              targetArea: { type: 'string' },
+              context: { type: 'string' },
+              feedback: { type: 'array', items: { type: 'string' } },
+              minTechScore: { type: 'number' }
+            },
+            required: ['productName', 'feedback']
+          }
+        }
+      },
+      {
+        type: 'function',
+        function: {
+          name: 'hyperxosist_filter_keep_signals',
+          description:
+            'Score posts for technical depth and Keep only those useful for Grok Build code changes.',
+          parameters: {
+            type: 'object',
+            properties: {
+              feedback: { type: 'array', items: { type: 'string' } },
+              minScore: { type: 'number' }
+            },
+            required: ['feedback']
+          }
+        }
+      },
+      {
+        type: 'function',
+        function: {
+          name: 'hyperxosist_create_grok_session',
+          description:
+            'Start a Grok Build session: grok_code_improvement_radar mission + prompt template + handoff flags.',
+          parameters: {
+            type: 'object',
+            properties: {
+              intent: { type: 'string' },
+              product: { type: 'string' },
+              targetArea: { type: 'string' },
+              context: { type: 'string' }
+            },
+            required: ['intent']
           }
         }
       },
@@ -1557,6 +2154,9 @@
         hyperxosist_suggest_refinements: 'suggestRefinements(input, signals)',
         hyperxosist_build_paid_request: 'buildPaidRequest(input)',
         hyperxosist_build_handoff: 'buildHandoffPackage(options)',
+        hyperxosist_build_grok_prompt: 'buildGrokBuildPrompt(options)',
+        hyperxosist_filter_keep_signals: 'filterKeepSignals(feedback, options)',
+        hyperxosist_create_grok_session: 'createGrokBuildSession(intent, productContext)',
         hyperxosist_list_missions: 'listMissions()'
       }
     };
@@ -1571,6 +2171,8 @@
         'scoreQuery prevents wasting x402 on weak queries.',
         'suggestRefinements self-heals empty/noisy runs without human help.',
         'buildHandoffPackage chains into Signal-to-Fix PR specs in one hop.',
+        'buildGrokBuildPrompt turns Keep signals into one-small-change Grok Build tasks.',
+        'filterKeepSignals / scoreTechnicalDepth drop praise and ragebait before coding.',
         'Receipts + encodeState make weekly monitors and audits trivial.',
         'Tool definitions drop into OpenAI/Anthropic tool-calling with zero inventing.'
       ],
@@ -1615,7 +2217,12 @@
         {
           step: 7,
           name: 'Handoff',
-          do: 'buildHandoffPackage → Signal-to-Fix keep-only PR / Codex prompts.'
+          do: 'buildHandoffPackage → Signal-to-Fix keep-only PR / Codex prompts; or buildGrokBuildPrompt → Grok Build.'
+        },
+        {
+          step: 7.5,
+          name: 'Grok Build',
+          do: 'createGrokBuildSession / filterKeepSignals → paste grokBuild.prompt into Grok Build for one small fix.'
         },
         {
           step: 8,
@@ -1627,7 +2234,8 @@
         'Do not invent X operators when HyperXosist already encodes them.',
         'Do not skip x402 for automated agent production use.',
         'Do not pass unfiltered spam into Signal-to-Fix without noise reduction.',
-        'Do not use reduce/discard Signal-to-Fix items in implementation artifacts.'
+        'Do not use reduce/discard Signal-to-Fix items in implementation artifacts.',
+        'Do not dump empty praise or ragebait into Grok Build — Keep-filter first.'
       ],
       entrypoints: {
         agentUse: `${PUBLIC_BASE}/agent-use.json`,
@@ -1700,7 +2308,7 @@
         scoreBand: scoring.band,
         onSparse: 'Call suggestRefinements(input, { tooSparse: true })',
         onNoisy: 'Call suggestRefinements(input, { tooNoisy: true })',
-        afterCollect: 'buildHandoffPackage({ productName, feedback })'
+        afterCollect: 'buildHandoffPackage({ productName, feedback }) or buildGrokBuildPrompt(...)'
       },
       instruction:
         'AI agents must send this request to the x402 endpoint and complete payment before using the generated query or search URL. preview is for local inspection only and is not a paid result.'
@@ -1789,6 +2397,8 @@
     repostBlacklistTerms,
     repostBlacklistPriority,
     NOISE_TERM_LIMITS,
+    GROK_KEEP_PATTERNS,
+    GROK_DROP_PATTERNS,
     // Core
     buildQuery,
     buildSearchUrl,
@@ -1816,6 +2426,12 @@
     getToolDefinitions,
     getAgentPlaybook,
     startAgentSession,
+    // Grok Build layer
+    scoreTechnicalDepth,
+    filterKeepSignals,
+    summarizeGrokFocus,
+    buildGrokBuildPrompt,
+    createGrokBuildSession,
     // State
     encodeState,
     decodeState,
