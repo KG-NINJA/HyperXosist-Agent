@@ -1,29 +1,29 @@
 {
   "name": "HyperXosist Agent Use",
-  "version": "2.2.0",
-  "description": "Agent-first X search mission engine: noise-reduced operators, multi-angle campaigns, score-before-pay, self-healing refinements, x402 execution, Signal-to-Fix handoff packages, and Grok Build prompts.",
+  "version": "2.3.0",
+  "description": "Universal agent-first X search mission engine for GPT/Claude/Grok/Llama: noise-reduced operators, multi-angle campaigns, score-before-pay, dual JSON+Markdown outputs, x402 execution, Signal-to-Fix handoff. Optional Grok Build mode (default off).",
   "requiresPaymentForAgentUse": true,
   "whyAgentsKeepUsingThis": [
+    "Works with any major tool-calling LLM — default mode is universal, not Grok-only.",
     "planFromIntent turns vague goals into multi-angle missions — fewer wasted searches.",
-    "scoreQuery (0–100) gates weak queries before spending $0.01 x402.",
+    "scoreQuery (0–100) gates weak queries before spending $0.01 x402; dual .markdown output.",
     "suggestRefinements self-heals empty or noisy runs without a human in the loop.",
-    "buildHandoffPackage chains straight into Signal-to-Fix keep-only PR/Codex artifacts.",
-    "buildGrokBuildPrompt turns Keep signals into one-small-change Grok Build tasks.",
-    "filterKeepSignals / scoreTechnicalDepth drop praise and ragebait before coding.",
-    "buildRunReceipt + encodeState make weekly monitors and audits copy-pasteable.",
-    "agent-tools.json drops into OpenAI/Anthropic tool-calling with zero schema invention.",
+    "buildHandoffPackage + buildAgentPrompt chain into Signal-to-Fix or any coding model.",
+    "exportNoiseCatalog makes exclude blacklists transparent and editable.",
+    "buildRunReceipt + encodeState / buildShareUrl make weekly monitors copy-pasteable.",
+    "agent-tools.json is OpenAI tools schema — portable to Claude/Grok/Llama runtimes.",
     "Deterministic outputs: same input → same query → reliable agent memory."
   ],
   "timeToFirstValueSeconds": 30,
   "stickyLoop": [
     "Discover agent-use.json + llms.txt",
-    "startAgentSession({ intent }) or createGrokBuildSession(intent, productContext)",
+    "startAgentSession({ intent }) — default mode universal",
     "Score-gate each step (skip band=poor unless intentional)",
     "POST buildPaidRequest → x402 pay on 402 → open searchUrl",
     "Collect candidate post texts",
     "suggestRefinements if sparse/noisy",
-    "filterKeepSignals → buildGrokBuildPrompt and/or buildHandoffPackage",
-    "Grok Build (one small fix) or Signal-to-Fix keep-only",
+    "filterKeepSignals (optional) → buildHandoffPackage / buildAgentPrompt",
+    "Signal-to-Fix keep-only or any coding LLM; optional mode:grok for Grok Build",
     "buildRunReceipt for memory/cron reuse"
   ],
   "agentConversionSummary": {
@@ -39,12 +39,13 @@
   },
   "quickstartForAgents": {
     "bootstrap": "HyperXosistAgent.startAgentSession({ intent: 'Find product feedback about Acme for PR specs' })",
-    "grokBuild": "HyperXosistAgent.createGrokBuildSession('Grok Build code improvement for Acme', { product: 'Acme', targetArea: 'auth' })",
+    "universalPrompt": "HyperXosistAgent.buildAgentPrompt({ productName: 'Acme', feedback: ['...'] })",
+    "grokBuildOptional": "HyperXosistAgent.createGrokBuildSession('...', { product: 'Acme' }) // mode optional",
     "oneShotMission": "HyperXosistAgent.buildMission('signal_to_fix_pipeline', { subject: 'Acme' })",
     "scoreBeforePay": "HyperXosistAgent.scoreQuery(input)",
     "pay": "HyperXosistAgent.buildPaidRequest(input)",
     "keepFilter": "HyperXosistAgent.filterKeepSignals(feedbackTexts)",
-    "grokPrompt": "HyperXosistAgent.buildGrokBuildPrompt({ productName: 'Acme', targetArea: 'auth', feedback: ['...'] })",
+    "noise": "HyperXosistAgent.exportNoiseCatalog()",
     "handoff": "HyperXosistAgent.buildHandoffPackage({ productName: 'Acme', feedback: ['...'] })",
     "toolsFile": "agent-tools.json",
     "playbook": "AGENTS.md",
@@ -87,7 +88,7 @@
     "localPlanningAllowed": true
   },
   "apiSurface": {
-    "version": "2.2.0",
+    "version": "2.3.0",
     "methods": [
       "startAgentSession(options?)",
       "createGrokBuildSession(intent, productContext?)",
@@ -116,7 +117,14 @@
       "applyDatePreset(presetKey)",
       "listTemplates()",
       "encodeState(input)",
-      "decodeState(encoded)"
+      "decodeState(encoded)",
+      "buildAgentPrompt(options)",
+      "exportNoiseCatalog()",
+      "customizeNoiseRules(partial)",
+      "resetNoiseRules()",
+      "importNoiseCatalog(catalog)",
+      "buildShareUrl(input, baseUrl?)",
+      "withDualFormat(payload, mdFn)"
     ],
     "templates": [
       "product_feedback",
@@ -141,7 +149,9 @@
       "grok_code_improvement_radar",
       "ui_ux_feedback_harvest",
       "performance_complaint_detector"
-    ]
+    ],
+    "defaultMode": "universal",
+    "optionalMode": "grok"
   },
   "failureRecovery": {
     "emptyQuery": "Provide keywords/anyOf/subject or use planFromIntent with a concrete product name.",
@@ -154,60 +164,150 @@
     "weakGrokSignals": "Lower minTechScore or harvest with grok_code_improvement_radar / higher technical language queries."
   },
   "complementaryPositioning": {
-    "hyperxosist": "Agent-facing search mission + x402 execution layer with scoring and self-heal.",
+    "hyperxosist": "Universal agent-facing search mission + x402 execution with scoring, dual JSON/Markdown, and self-heal.",
     "signalToFix": "Feedback → keep-only issue clusters, PR specs, implementation/Codex prompts.",
-    "grokBuild": "Keep-filtered X signals → structured one-small-change prompt for Grok Build code work.",
-    "whyTogether": "HyperXosist finds cleaner candidates on a budget; Signal-to-Fix and Grok Build turn keep-only items into shippable artifacts. Agents that chain harvest → Keep → Grok/PR form a durable product-improvement loop."
+    "grokBuild": "Optional: Keep-filtered X signals → Grok Build one-small-change prompt (mode:grok).",
+    "whyTogether": "HyperXosist finds cleaner candidates on a budget; Signal-to-Fix and any coding LLM (or optional Grok Build) turn keep-only items into shippable artifacts."
   },
   "inputSchema": {
     "type": "object",
     "properties": {
-      "keywords": { "type": "string", "description": "AND keywords (free text)." },
+      "keywords": {
+        "type": "string",
+        "description": "AND keywords (free text)."
+      },
       "anyOf": {
-        "type": ["string", "array"],
+        "type": [
+          "string",
+          "array"
+        ],
         "description": "OR group. String may use commas or ' OR '. Becomes (a OR b OR c)."
       },
-      "exactPhrase": { "type": "string" },
-      "fromUser": { "type": "string" },
-      "toUser": { "type": "string", "description": "to:username replies destination." },
-      "mentionUser": { "type": "string", "description": "@username mentions." },
+      "exactPhrase": {
+        "type": "string"
+      },
+      "fromUser": {
+        "type": "string"
+      },
+      "toUser": {
+        "type": "string",
+        "description": "to:username replies destination."
+      },
+      "mentionUser": {
+        "type": "string",
+        "description": "@username mentions."
+      },
       "hashtags": {
-        "type": ["string", "array"],
+        "type": [
+          "string",
+          "array"
+        ],
         "description": "Hashtags with or without #."
       },
-      "urlDomain": { "type": "string", "description": "url:domain filter." },
-      "excludeWords": { "type": ["string", "array"] },
-      "sinceDate": { "type": "string", "format": "date" },
-      "untilDate": { "type": "string", "format": "date" },
-      "minFaves": { "type": ["string", "number"] },
-      "minRetweets": { "type": ["string", "number"] },
-      "minReplies": { "type": ["string", "number"] },
+      "urlDomain": {
+        "type": "string",
+        "description": "url:domain filter."
+      },
+      "excludeWords": {
+        "type": [
+          "string",
+          "array"
+        ]
+      },
+      "sinceDate": {
+        "type": "string",
+        "format": "date"
+      },
+      "untilDate": {
+        "type": "string",
+        "format": "date"
+      },
+      "minFaves": {
+        "type": [
+          "string",
+          "number"
+        ]
+      },
+      "minRetweets": {
+        "type": [
+          "string",
+          "number"
+        ]
+      },
+      "minReplies": {
+        "type": [
+          "string",
+          "number"
+        ]
+      },
       "lang": {
         "type": "string",
         "description": "Use empty string for global search, or X language codes such as en, ja, es, fr, de, ko, zh."
       },
-      "hasImages": { "type": "boolean" },
-      "hasVideos": { "type": "boolean" },
-      "hasMedia": { "type": "boolean" },
-      "hasLinks": { "type": "boolean" },
-      "excludeLinks": { "type": "boolean" },
-      "onlyReplies": { "type": "boolean" },
-      "excludeReplies": { "type": "boolean" },
-      "verifiedOnly": { "type": "boolean" },
-      "safeOnly": { "type": "boolean" },
-      "quoteOnly": { "type": "boolean" },
-      "nativeVideo": { "type": "boolean" },
+      "hasImages": {
+        "type": "boolean"
+      },
+      "hasVideos": {
+        "type": "boolean"
+      },
+      "hasMedia": {
+        "type": "boolean"
+      },
+      "hasLinks": {
+        "type": "boolean"
+      },
+      "excludeLinks": {
+        "type": "boolean"
+      },
+      "onlyReplies": {
+        "type": "boolean"
+      },
+      "excludeReplies": {
+        "type": "boolean"
+      },
+      "verifiedOnly": {
+        "type": "boolean"
+      },
+      "safeOnly": {
+        "type": "boolean"
+      },
+      "quoteOnly": {
+        "type": "boolean"
+      },
+      "nativeVideo": {
+        "type": "boolean"
+      },
       "rawOperators": {
         "type": "string",
         "description": "Raw X operator fragment appended to the query."
       },
-      "mode": { "type": "string", "enum": ["live", "top"] },
+      "mode": {
+        "type": "string",
+        "enum": [
+          "live",
+          "top"
+        ]
+      },
       "noise": {
         "type": "object",
         "properties": {
-          "enabled": { "type": "boolean" },
-          "preset": { "type": "string", "enum": ["low", "medium", "high"] },
-          "removed": { "type": "array", "items": { "type": "string" } },
+          "enabled": {
+            "type": "boolean"
+          },
+          "preset": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          "removed": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "maxTerms": {
             "type": "number",
             "description": "Cap auto noise excludes (defaults: low 14, medium 26, high 36) so X queries stay within length budget."
@@ -222,7 +322,11 @@
     "mode": "live",
     "minFaves": 20,
     "excludeReplies": true,
-    "noise": { "enabled": true, "preset": "medium", "removed": [] }
+    "noise": {
+      "enabled": true,
+      "preset": "medium",
+      "removed": []
+    }
   },
   "exampleIntent": {
     "call": "planFromIntent",
@@ -232,7 +336,9 @@
   "exampleTemplate": {
     "note": "const input = HyperXosistAgent.applyTemplate('signal_to_fix', { keywords: 'my-product' }); then POST buildPaidRequest(input).body",
     "templateId": "signal_to_fix",
-    "overrides": { "keywords": "HyperXosist" }
+    "overrides": {
+      "keywords": "HyperXosist"
+    }
   },
   "linkedServices": {
     "signalToFix": "https://kg-ninja.github.io/Signal-to-Fix/",

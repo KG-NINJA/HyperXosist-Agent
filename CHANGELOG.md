@@ -2,6 +2,31 @@
 
 All notable changes to this project are documented in this file.
 
+## [2.3.0] — 2026-07-09
+
+### Universal agent first
+- Default **mode: `universal`** for GPT / Claude / Grok / Llama / local tool-callers
+- Dual output: core APIs attach **`.markdown`** + `asMarkdown()` / `asJson()` (JSON remains primary)
+- `buildAgentPrompt` — model-agnostic one-small-change implementation prompt
+- `getToolDefinitions()` omits Grok-only tools unless `{ includeGrok: true }` or `{ mode: "grok" }`
+- `startAgentSession` defaults to universal; optional `mode: "grok"`
+- `buildHandoffPackage` always includes `agentPrompt`; `grokBuild` only when Grok mode is on
+- Discovery docs rewritten for multi-LLM clarity (`llms.txt`, `AGENTS.md`, `agent-use.json`)
+
+### Noise transparency
+- `exportNoiseCatalog` / `customizeNoiseRules` / `importNoiseCatalog` / `resetNoiseRules`
+- Per-query `noise.extraTerms` and `noise.customRules` overlays
+- UI: extra exclude field + Noise catalog export
+
+### UI
+- **Agent Prompt** section for any LLM (always on)
+- **Grok Build mode** toggle default **OFF**
+- Share state restore from `?s=` query param as well as `#s=`
+
+### Grok Build (optional)
+- Unchanged helpers: `createGrokBuildSession`, `buildGrokBuildPrompt`, Grok missions
+- Explicitly optional; not required for generic agent workflows
+
 ## [2.2.0] — 2026-07-09
 
 ### Grok Build layer

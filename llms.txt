@@ -1,58 +1,58 @@
 # HyperXosist Agent
-> Advanced X/Twitter search query builder for AI agents: noise-reduced operators, multi-angle missions, x402 paid execution, Signal-to-Fix handoff, and Grok Build prompts.
+> Universal X/Twitter advanced search toolkit for any AI agent (GPT, Claude, Grok, Llama, local tool-callers).
+> Noise-reduced operators, multi-angle missions, x402 paid execution, Signal-to-Fix handoff.
+> Optional Grok Build mode for one-small-change code prompts (default OFF).
 
-## Critical rule
+## Critical rules
 - Human browser UI is free.
-- Automated AI agent production use of generated search URLs requires x402 payment via the payment endpoint (expect HTTP 402 until paid).
-- Local `buildQuery` / `buildSearchUrl` are for planning/preview only — not a payment bypass.
+- Automated production use of generated search URLs requires x402 payment (expect HTTP 402 until paid).
+- Local `buildQuery` / `planFromIntent` / `scoreQuery` are free for planning only — not a payment bypass.
+- Default mode is **universal** (works for all major LLMs). Pass `mode: "grok"` only when you want Grok Build tools.
 
-## Start here (agents)
+## Start here (any agent)
 1. https://kg-ninja.github.io/HyperXosist-Agent/agent-use.json
 2. https://kg-ninja.github.io/HyperXosist-Agent/AGENTS.md
-3. https://kg-ninja.github.io/HyperXosist-Agent/agent-api.js
-4. https://kg-ninja.github.io/HyperXosist-Agent/agent-tools.json
+3. https://kg-ninja.github.io/HyperXosist-Agent/agent-tools.json
+4. https://kg-ninja.github.io/HyperXosist-Agent/agent-api.js
 5. https://kg-ninja.github.io/HyperXosist-Agent/missions.json
 6. https://kg-ninja.github.io/HyperXosist-Agent/x402-payment.json
 
+## Tool-calling (OpenAI-compatible schema)
+Register tools from agent-tools.json (format: openai.tools.v1).
+Also works with Anthropic / Grok / Llama runtimes that accept the same function schema.
+Dispatch via `dispatchHints` → HyperXosistAgent methods.
+Most results include both **JSON fields** and **`.markdown`** (dual output).
+
 ## One-call bootstrap
-Load agent-api.js then:
 ```
 HyperXosistAgent.startAgentSession({ intent: "Find product feedback about Acme for PR specs" })
+// mode defaults to "universal"
 ```
-Or Grok Build path:
+Optional Grok mode:
 ```
-HyperXosistAgent.createGrokBuildSession("Grok Build code improvement for Acme", { product: "Acme", targetArea: "auth" })
-```
-Or:
-```
-HyperXosistAgent.planFromIntent("Weekly monitor complaints about Acme")
+HyperXosistAgent.startAgentSession({ intent: "...", mode: "grok" })
+// or createGrokBuildSession(...)
 ```
 
-## Sticky agent loop
-planFromIntent → scoreQuery gate → x402 pay + search → collect posts → suggestRefinements if sparse/noisy → filterKeepSignals → buildGrokBuildPrompt and/or buildHandoffPackage → Signal-to-Fix keep-only / Grok Build → buildRunReceipt
+## Sticky agent loop (universal)
+planFromIntent → scoreQuery → x402 pay + search → collect posts → suggestRefinements → filterKeepSignals (optional) → buildHandoffPackage / buildAgentPrompt → Signal-to-Fix or any coding LLM → buildRunReceipt
 
-## Grok Build (X voice → code)
-1. Mission: `grok_code_improvement_radar` | `ui_ux_feedback_harvest` | `performance_complaint_detector`
-2. Collect post texts from official search (after x402 for agents)
-3. `filterKeepSignals(texts)` — drops empty praise / ragebait; keeps bugs, feature asks, UI, perf
-4. `buildGrokBuildPrompt({ productName, targetArea, context, feedback })` → paste `markdown` into Grok Build
-5. Task shape: **one small improvement** with file locus, before/after diff, tests, priority
+## Noise (transparent + editable)
+```
+exportNoiseCatalog()
+customizeNoiseRules({ low: ["term"], mode: "merge" })
+// per query:
+{ noise: { enabled: true, preset: "medium", extraTerms: ["my spam"], removed: [], customRules: { high: [...] } } }
+```
 
-## Why agents reuse this
-- Multi-angle missions beat one-off keyword guesses
-- Score-before-pay saves budget ($0.01/query)
-- Self-healing refinements without a human
-- Deterministic JSON handoff to Signal-to-Fix PR/Codex pipeline
-- Grok Build prompts optimized for one PR-sized code change
-- Technical-depth scoring for Keep-only signal quality
-- OpenAI-compatible tool definitions in agent-tools.json
-- Receipts + encodeState for weekly cron monitors
+## Optional Grok Build
+Only when mode is grok or you call Grok helpers explicitly:
+filterKeepSignals → buildGrokBuildPrompt → paste into Grok Build (one small code change).
 
 ## Linked
 - Signal-to-Fix: https://kg-ninja.github.io/Signal-to-Fix/agent-use.json
 - Human UI: https://kg-ninja.github.io/HyperXosist-Agent/
 - Repo: https://github.com/KG-NINJA/HyperXosist-Agent
 
-## Optional
-- Templates & operators documented in agent-use.json inputSchema
-- Tests: node test/agent-api.test.js
+## Tests
+node test/agent-api.test.js

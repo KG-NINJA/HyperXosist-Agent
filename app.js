@@ -51,6 +51,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnGrokPrompt = document.getElementById('btnGrokPrompt');
   const btnSendToGrok = document.getElementById('btnSendToGrok');
   const btnGrokFromKeywords = document.getElementById('btnGrokFromKeywords');
+  const btnAgentPrompt = document.getElementById('btnAgentPrompt');
+  const btnCopyAgentPrompt = document.getElementById('btnCopyAgentPrompt');
+  const btnExportNoise = document.getElementById('btnExportNoise');
+  const grokModeEnabled = document.getElementById('grokModeEnabled');
+  const grokModePanel = document.getElementById('grokModePanel');
+  const noiseExtraTerms = document.getElementById('noiseExtraTerms');
   const grokProduct = document.getElementById('grokProduct');
   const grokTargetArea = document.getElementById('grokTargetArea');
   const grokContext = document.getElementById('grokContext');
@@ -61,8 +67,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const NOISE_STORAGE_KEY = 'hyperxosist_noise_filter';
   const HISTORY_STORAGE_KEY = 'x_search_history';
   const GROK_STORAGE_KEY = 'hyperxosist_grok_build';
+  const GROK_MODE_KEY = 'hyperxosist_grok_mode';
   const MAX_HISTORY = 15;
   let lastGrokMarkdown = '';
+  let grokModeOn = false;
 
   let noiseState = loadNoiseState();
   let explainVisible = false;
@@ -90,15 +98,23 @@ document.addEventListener('DOMContentLoaded', () => {
       return {
         enabled: !!saved.enabled,
         preset: ['low', 'medium', 'high'].includes(saved.preset) ? saved.preset : 'medium',
-        removed: Array.isArray(saved.removed) ? saved.removed : []
+        removed: Array.isArray(saved.removed) ? saved.removed : [],
+        extraTerms: Array.isArray(saved.extraTerms)
+          ? saved.extraTerms
+          : typeof saved.extraTerms === 'string'
+            ? Agent.parseExcludeInput(saved.extraTerms)
+            : []
       };
     } catch (e) {
-      return { enabled: false, preset: 'medium', removed: [] };
+      return { enabled: false, preset: 'medium', removed: [], extraTerms: [] };
     }
   }
 
   function saveNoiseState() {
     try {
+      if (noiseExtraTerms) {
+        noiseState.extraTerms = Agent.parseExcludeInput(noiseExtraTerms.value);
+      }
       localStorage.setItem(NOISE_STORAGE_KEY, JSON.stringify(noiseState));
     } catch (e) {
       console.error('Noise save failed', e);
@@ -117,11 +133,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (v !== '' && v !== undefined && v !== null) input[key] = v;
       }
     });
-    if (noiseState.enabled) {
+    const extras = noiseExtraTerms
+      ? Agent.parseExcludeInput(noiseExtraTerms.value)
+      : noiseState.extraTerms || [];
+    if (noiseState.enabled || extras.length) {
       input.noise = {
-        enabled: true,
+        enabled: noiseState.enabled || extras.length > 0,
         preset: noiseState.preset,
-        removed: noiseState.removed.slice()
+        removed: noiseState.removed.slice(),
+        extraTerms: extras
       };
     }
     return input;
@@ -384,6 +404,7 @@ document.addEventListener('DOMContentLoaded', () => {
           feedback: (grokFeedback && grokFeedback.value) || ''
         })
       );
+      localStorage.setItem(GROK_MODE_KEY, grokModeOn ? '1' : '0');
     } catch (e) { /* ignore */ }
   }
 
@@ -394,10 +415,21 @@ document.addEventListener('DOMContentLoaded', () => {
       if (grokTargetArea && data.targetArea) grokTargetArea.value = data.targetArea;
       if (grokContext && data.context) grokContext.value = data.context;
       if (grokFeedback && data.feedback) grokFeedback.value = data.feedback;
+      // Default OFF — only restore if user previously enabled
+      grokModeOn = localStorage.getItem(GROK_MODE_KEY) === '1';
+      if (grokModeEnabled) grokModeEnabled.checked = grokModeOn;
+      if (grokModePanel) grokModePanel.hidden = !grokModeOn;
     } catch (e) { /* ignore */ }
   }
 
-  function buildGrokFromUi() {
+  function setGrokMode(on) {
+    grokModeOn = !!on;
+    if (grokModeEnabled) grokModeEnabled.checked = grokModeOn;
+    if (grokModePanel) grokModePanel.hidden = !grokModeOn;
+    saveGrokFields();
+  }
+
+  function promptContextFromUi() {
     const product =
       (grokProduct && grokProduct.value.trim()) ||
       (fields.keywords && fields.keywords.value.trim()) ||
@@ -405,12 +437,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const targetArea = (grokTargetArea && grokTargetArea.value.trim()) || 'general';
     const context = (grokContext && grokContext.value.trim()) || '';
     const feedback = parseFeedbackLines(grokFeedback && grokFeedback.value);
-    return Agent.buildGrokBuildPrompt({
-      productName: product,
-      targetArea,
-      context,
-      feedback
-    });
+    return { productName: product, targetArea, context, feedback };
+  }
+
+  function buildAgentFromUi() {
+    return Agent.buildAgentPrompt(promptContextFromUi());
+  }
+
+  function buildGrokFromUi() {
+    return Agent.buildGrokBuildPrompt(promptContextFromUi());
   }
 
   function renderGrokPrompt(result) {
@@ -420,8 +455,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (grokFocusMeta) {
       const focus = result.focusSummary || {};
       const keepN = (result.keepSignals || []).length;
+      const flavor = result.flavor === 'grok' ? 'Grok' : 'Agent';
       grokFocusMeta.innerHTML = focus.headline
-        ? `<span class="meta-ok">Keep ${keepN}</span> ${escapeHtml(focus.headline)}`
+        ? `<span class="meta-ok">${flavor} Keep ${keepN}</span> ${escapeHtml(focus.headline)}`
         : keepN
           ? `<span class="meta-ok">Keep ${keepN}</span>`
           : '<span class="meta-warn">Keep 0 — 具体的な不満・要望を追加</span>';
@@ -429,8 +465,53 @@ document.addEventListener('DOMContentLoaded', () => {
     saveGrokFields();
   }
 
+  if (grokModeEnabled) {
+    grokModeEnabled.addEventListener('change', () => {
+      setGrokMode(grokModeEnabled.checked);
+      toast(grokModeOn ? 'Grok Build モード ON' : '汎用モード（Grok OFF）');
+    });
+  }
+
+  if (btnAgentPrompt) {
+    btnAgentPrompt.addEventListener('click', () => {
+      const result = buildAgentFromUi();
+      renderGrokPrompt(result);
+      if (!result.ready) {
+        toast('Keep 信号が少ないです。具体的な投稿を追加してください');
+      } else {
+        toast(`Agent Prompt 生成 (Keep ${result.keepSignals.length})`);
+      }
+    });
+  }
+
+  if (btnCopyAgentPrompt) {
+    btnCopyAgentPrompt.addEventListener('click', async () => {
+      let md = lastGrokMarkdown || (grokPromptPreview && grokPromptPreview.value.trim());
+      if (!md) {
+        const result = buildAgentFromUi();
+        renderGrokPrompt(result);
+        md = result.markdown;
+      }
+      await copyText(md, 'Agent プロンプトをコピーしました（任意の LLM に貼り付け可）');
+    });
+  }
+
+  if (btnExportNoise) {
+    btnExportNoise.addEventListener('click', async () => {
+      const cat = Agent.exportNoiseCatalog();
+      const text = cat.markdown + '\n\n```json\n' + JSON.stringify(cat.rules, null, 2) + '\n```';
+      if (grokPromptPreview) grokPromptPreview.value = text;
+      lastGrokMarkdown = text;
+      await copyText(text, 'Noise カタログをコピーしました');
+    });
+  }
+
   if (btnGrokPrompt) {
     btnGrokPrompt.addEventListener('click', () => {
+      if (!grokModeOn) {
+        toast('先に Grok Build モードを ON にしてください');
+        return;
+      }
       const result = buildGrokFromUi();
       renderGrokPrompt(result);
       if (!result.ready) {
@@ -443,8 +524,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (btnSendToGrok) {
     btnSendToGrok.addEventListener('click', async () => {
+      if (!grokModeOn) {
+        toast('先に Grok Build モードを ON にしてください');
+        return;
+      }
       let md = lastGrokMarkdown || (grokPromptPreview && grokPromptPreview.value.trim());
-      if (!md) {
+      if (!md || !md.includes('Grok Build')) {
         const result = buildGrokFromUi();
         renderGrokPrompt(result);
         md = result.markdown;
@@ -455,6 +540,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (btnGrokFromKeywords) {
     btnGrokFromKeywords.addEventListener('click', () => {
+      if (!grokModeOn) {
+        toast('先に Grok Build モードを ON にしてください');
+        return;
+      }
       const keywords = (fields.keywords && fields.keywords.value.trim()) || '';
       const product =
         (grokProduct && grokProduct.value.trim()) || keywords || 'product';
@@ -476,7 +565,6 @@ document.addEventListener('DOMContentLoaded', () => {
         lastGrokMarkdown = session.grokBuild.promptTemplate;
         if (grokPromptPreview) grokPromptPreview.value = lastGrokMarkdown;
       }
-      // Apply primary mission step into form for human search
       const step =
         session.plan &&
         session.plan.mission &&
@@ -488,6 +576,17 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         toast('Grok Build セッションを作成しました');
       }
+    });
+  }
+
+  if (noiseExtraTerms) {
+    noiseExtraTerms.addEventListener('change', () => {
+      noiseState.extraTerms = Agent.parseExcludeInput(noiseExtraTerms.value);
+      saveNoiseState();
+      refreshPreview();
+    });
+    noiseExtraTerms.addEventListener('input', () => {
+      refreshPreview();
     });
   }
 
@@ -521,6 +620,21 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   loadGrokFields();
+  if (noiseExtraTerms && noiseState.extraTerms && noiseState.extraTerms.length) {
+    noiseExtraTerms.value = noiseState.extraTerms
+      .map((t) => (/\s/.test(t) ? `"${t}"` : t))
+      .join(' ');
+  }
+
+  // Restore shareable state from ?s= as well as #s=
+  try {
+    const params = new URLSearchParams(location.search);
+    const qState = params.get('s');
+    if (qState && !location.hash.includes('s=')) {
+      const decoded = Agent.decodeState(qState);
+      if (decoded) applyInputToForm(decoded);
+    }
+  } catch (e) { /* ignore */ }
 
   btnCopy.addEventListener('click', () => {
     copyText(queryPreview.value.trim(), 'クエリをコピーしました');

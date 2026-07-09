@@ -1,34 +1,54 @@
 {
   "name": "HyperXosist Agent Tools",
-  "version": "2.2.0",
-  "description": "OpenAI-compatible tool definitions for HyperXosist. Prefer plan_from_intent or create_grok_session. Automated search URL use requires x402 payment.",
+  "version": "2.3.0",
+  "description": "OpenAI-compatible tools for any AI agent (GPT/Claude/Grok/Llama). Default universal mode. Pass includeGrok/mode=grok for optional Grok Build tools. Automated search URL use requires x402.",
   "paymentRequiredForAutomatedSearchUse": true,
   "paymentEndpoint": "https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/hyperxosist-query",
-  "stickyTip": "plan → score → pay → collect → refine → keep-filter → grok prompt / handoff → receipt",
+  "stickyTip": "plan → score → pay → collect → refine → handoff/agent prompt → receipt (optional: grok mode)",
   "format": "openai.tools.v1",
-  "paymentNote": "Automated use of generated search URLs requires x402 payment via paymentEndpoint.",
+  "compatibleWith": [
+    "openai",
+    "anthropic",
+    "grok",
+    "llama",
+    "any-openai-tools-schema-runtime"
+  ],
+  "mode": "universal",
+  "defaultMode": "universal",
+  "paymentNote": "Automated use of generated search URLs requires x402 payment via paymentEndpoint. Human browser UI remains free. Local plan/score/buildQuery is free for planning.",
+  "howToUse": "Register tools[] with your runtime. On tool call, dispatch via dispatchHints to HyperXosistAgent methods. Prefer reading both JSON fields and .markdown when present.",
   "tools": [
     {
       "type": "function",
       "function": {
         "name": "hyperxosist_plan_from_intent",
-        "description": "Turn a natural-language research goal into a multi-query X search mission with scores, paid request bodies, and next actions. Prefer this as the first HyperXosist call.",
+        "description": "First call for most agents. Converts a natural-language research goal into a multi-angle X (Twitter) search mission with quality scores, paid request bodies, and next actions. Works the same for GPT, Claude, Grok, Llama, and other tool-calling runtimes. Returns JSON plus a .markdown summary.",
         "parameters": {
           "type": "object",
           "properties": {
             "intent": {
               "type": "string",
-              "description": "Natural language goal."
+              "description": "Natural language goal, e.g. \"Find product feedback about Acme\"."
             },
             "subject": {
-              "type": "string"
+              "type": "string",
+              "description": "Product or entity name override."
             },
             "lang": {
-              "type": "string"
+              "type": "string",
+              "description": "Optional language code (en, ja, …) or empty for global."
             },
             "missionId": {
               "type": "string",
-              "description": "Optional force mission id from list_missions."
+              "description": "Optional force mission id from hyperxosist_list_missions."
+            },
+            "mode": {
+              "type": "string",
+              "enum": [
+                "universal",
+                "grok"
+              ],
+              "description": "Agent mode. Default universal. Use grok only when Grok Build features are needed."
             }
           },
           "required": [
@@ -41,7 +61,7 @@
       "type": "function",
       "function": {
         "name": "hyperxosist_build_mission",
-        "description": "Build a named multi-angle search mission for a product/entity.",
+        "description": "Build a named multi-angle search mission for a product/entity. Prefer after plan_from_intent when you already know the mission id.",
         "parameters": {
           "type": "object",
           "properties": {
@@ -66,13 +86,13 @@
       "type": "function",
       "function": {
         "name": "hyperxosist_build_query",
-        "description": "Build a single advanced X search query string and URL from structured input.",
+        "description": "Build one advanced X search query string and official search URL from structured fields. Planning/preview is free; automated production use of the URL requires x402 payment.",
         "parameters": {
           "type": "object",
           "properties": {
             "input": {
               "type": "object",
-              "description": "HyperXosist inputSchema object."
+              "description": "HyperXosist inputSchema object (keywords, noise, filters…)."
             }
           },
           "required": [
@@ -85,7 +105,7 @@
       "type": "function",
       "function": {
         "name": "hyperxosist_score_query",
-        "description": "Score a query 0-100 for signal quality before paying x402.",
+        "description": "Score a query 0–100 for signal quality before spending $0.01 x402. Returns recommendPay, reasons, and .markdown.",
         "parameters": {
           "type": "object",
           "properties": {
@@ -103,7 +123,7 @@
       "type": "function",
       "function": {
         "name": "hyperxosist_suggest_refinements",
-        "description": "Self-heal sparse or noisy searches with ranked alternative inputs.",
+        "description": "Self-heal sparse or noisy search results with ranked alternative inputs. Call when resultCount is 0 or feed looks spammy.",
         "parameters": {
           "type": "object",
           "properties": {
@@ -127,7 +147,7 @@
       "type": "function",
       "function": {
         "name": "hyperxosist_build_paid_request",
-        "description": "Create x402 POST payload for agent-paid query generation. Expect 402 until paid.",
+        "description": "Create x402 POST payload for agent-paid query generation. Expect HTTP 402 until payment proof, then 200.",
         "parameters": {
           "type": "object",
           "properties": {
@@ -145,7 +165,7 @@
       "type": "function",
       "function": {
         "name": "hyperxosist_build_handoff",
-        "description": "Package collected feedback texts for Signal-to-Fix keep-only PR pipeline (also embeds Grok Build prompt).",
+        "description": "Package collected feedback for Signal-to-Fix keep-only PR pipeline. Also builds a universal agentPrompt (any coding LLM). Set mode=grok to include grokBuild as well.",
         "parameters": {
           "type": "object",
           "properties": {
@@ -166,7 +186,14 @@
             },
             "context": {
               "type": "string",
-              "description": "Product context for Grok Build prompt."
+              "description": "Product context for implementation prompts."
+            },
+            "mode": {
+              "type": "string",
+              "enum": [
+                "universal",
+                "grok"
+              ]
             }
           },
           "required": [
@@ -179,8 +206,8 @@
     {
       "type": "function",
       "function": {
-        "name": "hyperxosist_build_grok_prompt",
-        "description": "Build a structured Grok Build Markdown prompt from Keep-filtered user signals (one small code improvement).",
+        "name": "hyperxosist_build_agent_prompt",
+        "description": "Build a universal one-small-change implementation prompt (Markdown) from Keep-filtered user signals. Works for Claude, GPT, Grok, Llama, etc.",
         "parameters": {
           "type": "object",
           "properties": {
@@ -214,7 +241,7 @@
       "type": "function",
       "function": {
         "name": "hyperxosist_filter_keep_signals",
-        "description": "Score posts for technical depth and Keep only those useful for Grok Build code changes.",
+        "description": "Score post texts for technical depth; Keep only those useful for code/product improvements. Use before implementation prompts.",
         "parameters": {
           "type": "object",
           "properties": {
@@ -237,27 +264,11 @@
     {
       "type": "function",
       "function": {
-        "name": "hyperxosist_create_grok_session",
-        "description": "Start a Grok Build session: grok_code_improvement_radar mission + prompt template + handoff flags.",
+        "name": "hyperxosist_export_noise",
+        "description": "Export the full noise/exclude catalog (rules, caps, how to customize). Use to inspect or edit blacklists transparently.",
         "parameters": {
           "type": "object",
-          "properties": {
-            "intent": {
-              "type": "string"
-            },
-            "product": {
-              "type": "string"
-            },
-            "targetArea": {
-              "type": "string"
-            },
-            "context": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "intent"
-          ]
+          "properties": {}
         }
       }
     },
@@ -265,7 +276,7 @@
       "type": "function",
       "function": {
         "name": "hyperxosist_list_missions",
-        "description": "List available multi-query missions and why agents reuse them.",
+        "description": "List multi-query missions and why agents reuse them.",
         "parameters": {
           "type": "object",
           "properties": {}
@@ -281,9 +292,14 @@
     "hyperxosist_suggest_refinements": "suggestRefinements(input, signals)",
     "hyperxosist_build_paid_request": "buildPaidRequest(input)",
     "hyperxosist_build_handoff": "buildHandoffPackage(options)",
-    "hyperxosist_build_grok_prompt": "buildGrokBuildPrompt(options)",
+    "hyperxosist_build_agent_prompt": "buildAgentPrompt(options)",
     "hyperxosist_filter_keep_signals": "filterKeepSignals(feedback, options)",
-    "hyperxosist_create_grok_session": "createGrokBuildSession(intent, productContext)",
+    "hyperxosist_export_noise": "exportNoiseCatalog()",
     "hyperxosist_list_missions": "listMissions()"
-  }
+  },
+  "optionalGrokTools": "Call getToolDefinitions({ includeGrok: true }) or getToolDefinitions({ mode: \"grok\" }) to enable.",
+  "grokTools": [
+    "hyperxosist_build_grok_prompt",
+    "hyperxosist_create_grok_session"
+  ]
 }

@@ -255,18 +255,19 @@
             <a href="x402-payment.json"><code>x402-payment.json</code></a> 経由で x402 支払い後に検索 URL を利用します。
             ループ: <code>planFromIntent</code> → score → pay → collect → refine →
             <code>buildHandoffPackage</code> /
-            <code>buildGrokBuildPrompt</code> →
-            <a href="https://kg-ninja.github.io/Signal-to-Fix/">Signal-to-Fix</a> または Grok Build。
+            <code>buildAgentPrompt</code> →
+            <a href="https://kg-ninja.github.io/Signal-to-Fix/">Signal-to-Fix</a>
+            または任意のコーディング LLM。Grok Build はオプション。
           </p>
         </section>
 
-        <!-- Grok Build handoff -->
-        <section class="grok-section" aria-labelledby="grokTitle">
+        <!-- Universal agent handoff (any LLM) -->
+        <section class="agent-prompt-section" aria-labelledby="agentPromptTitle">
           <div class="section-head">
-            <h2 id="grokTitle">Grok Build <span class="pill pill-grok">X → code</span></h2>
+            <h2 id="agentPromptTitle">Agent prompt <span class="pill pill-universal">any LLM</span></h2>
             <p>
-              検索で集めた投稿（Keep のみ）を貼り付け → 技術的深さでフィルタ →
-              Grok Build 用プロンプトを生成。クリップボードへコピーして Grok に渡せます。
+              収集した投稿を貼り付け → Keep フィルタ → どの AI（Claude / GPT / Grok / Llama…）にも貼れる
+              実装プロンプトを生成します。
             </p>
           </div>
           <div class="form-grid">
@@ -283,16 +284,40 @@
               <input type="text" id="grokContext" placeholder="短い製品コンテキスト（スタック、制約など）" autocomplete="off">
             </div>
             <div class="form-group span-2">
+              <label for="noiseExtraTerms">追加除外語 (noise.extraTerms)</label>
+              <input type="text" id="noiseExtraTerms" placeholder='例: spammybrand "always free" 宣伝' autocomplete="off">
+            </div>
+            <div class="form-group span-2">
               <label for="grokFeedback">Collected signals（1行1投稿）</label>
               <textarea id="grokFeedback" rows="5" placeholder="X から集めた不満・要望・バグ報告を貼り付け&#10;例: login button does nothing on Safari&#10;例: ダークモードが欲しい"></textarea>
             </div>
           </div>
           <div id="grokFocusMeta" class="query-meta grok-focus-meta" aria-live="polite"></div>
-          <textarea id="grokPromptPreview" class="grok-prompt-preview" readonly rows="12" placeholder="「Grok Build Prompt」を押すと構造化プロンプトがここに出ます"></textarea>
+          <textarea id="grokPromptPreview" class="grok-prompt-preview" readonly rows="10" placeholder="「Agent Prompt」を押すと構造化プロンプトがここに出ます"></textarea>
           <div class="preview-actions">
-            <button type="button" id="btnGrokPrompt" class="btn btn-primary">Grok Build Prompt</button>
-            <button type="button" id="btnSendToGrok" class="btn btn-accent">Send to Grok</button>
-            <button type="button" id="btnGrokFromKeywords" class="btn btn-secondary">キーワードからセッション</button>
+            <button type="button" id="btnAgentPrompt" class="btn btn-primary">Agent Prompt</button>
+            <button type="button" id="btnCopyAgentPrompt" class="btn btn-secondary">プロンプトをコピー</button>
+            <button type="button" id="btnExportNoise" class="btn btn-secondary">Noise カタログ</button>
+          </div>
+
+          <!-- Optional Grok Build mode (default OFF) -->
+          <div class="grok-mode-bar">
+            <label class="toggle-container grok-toggle-label" for="grokModeEnabled">
+              <input type="checkbox" id="grokModeEnabled">
+              <span class="toggle-slider"></span>
+              <span>Grok Build モード（オプション・デフォルトOFF）</span>
+            </label>
+          </div>
+          <div id="grokModePanel" class="grok-mode-panel" hidden>
+            <p class="grok-mode-hint">
+              有効時: Grok 向け見出しのプロンプト生成と Grok セッション（mission）を使えます。
+              汎用エージェント利用には不要です。
+            </p>
+            <div class="preview-actions">
+              <button type="button" id="btnGrokPrompt" class="btn btn-accent">Grok Build Prompt</button>
+              <button type="button" id="btnSendToGrok" class="btn btn-secondary">Send to Grok</button>
+              <button type="button" id="btnGrokFromKeywords" class="btn btn-secondary">Grok セッション</button>
+            </div>
           </div>
         </section>
 
@@ -340,7 +365,7 @@
 
     <footer>
       <p>
-        © 2026 HyperXosist Agent v2.2 · MIT · Not affiliated with X Corp. ·
+        © 2026 HyperXosist Agent v2.3 · MIT · Not affiliated with X Corp. ·
         <a href="https://github.com/KG-NINJA/HyperXosist-Agent">GitHub</a> ·
         <a href="llms.txt">llms.txt</a> ·
         <a href="AGENTS.md">AGENTS.md</a>

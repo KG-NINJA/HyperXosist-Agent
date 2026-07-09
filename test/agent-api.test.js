@@ -288,8 +288,8 @@ test('listMissions non-empty', () => {
   assert.ok(Agent.listMissions().length >= 5);
 });
 
-test('version is 2.2+', () => {
-  assert.ok(Agent.version.startsWith('2.2') || Number(Agent.version.split('.')[1]) >= 2);
+test('version is 2.3+', () => {
+  assert.ok(Agent.version.startsWith('2.3') || Number(Agent.version.split('.')[1]) >= 3);
 });
 
 // --- v2.2 Grok Build layer ---
@@ -313,6 +313,24 @@ test('filterKeepSignals keeps actionable only', () => {
   assert.ok(r.discardCount >= 1);
   assert.ok(r.focusSummary.headline);
   assert.ok(r.keep.every((k) => k.decision === 'keep'));
+});
+
+test('buildAgentPrompt universal structure', () => {
+  const p = Agent.buildAgentPrompt({
+    productName: 'Acme',
+    targetArea: 'auth',
+    context: 'Next.js app',
+    feedback: [
+      'login button does nothing on Safari',
+      'so good',
+      'session expires too fast after 2 minutes'
+    ]
+  });
+  assert.ok(p.markdown.includes('## Agent Implementation Task'));
+  assert.ok(p.markdown.includes('**Product**: Acme'));
+  assert.ok(p.markdown.includes('exactly one small improvement'));
+  assert.ok(p.ready);
+  assert.strictEqual(p.flavor, 'universal');
 });
 
 test('buildGrokBuildPrompt structure', () => {
@@ -361,23 +379,97 @@ test('buildMission grok_code_improvement_radar', () => {
   assert.ok(m.steps.every((s) => s.query && s.query.includes('Acme')));
 });
 
-test('planFromIntent grok keywords', () => {
-  const plan = Agent.planFromIntent('Grok Build code improvement for WidgetX');
+test('planFromIntent universal has markdown dual format', () => {
+  const plan = Agent.planFromIntent('Find product feedback about Acme');
+  assert.strictEqual(plan.ok, true);
+  assert.strictEqual(plan.mode, 'universal');
+  assert.ok(plan.markdown && plan.markdown.includes('HyperXosist plan'));
+  assert.ok(typeof plan.asJson === 'function');
+  assert.ok(!plan.nextActions.some((a) => a.action === 'grok_build_prompt'));
+  assert.ok(plan.nextActions.some((a) => a.action === 'build_agent_prompt'));
+});
+
+test('planFromIntent grok mode includes grok action', () => {
+  const plan = Agent.planFromIntent('Grok Build code improvement for WidgetX', { mode: 'grok' });
   assert.strictEqual(plan.ok, true);
   assert.strictEqual(plan.missionId, 'grok_code_improvement_radar');
+  assert.strictEqual(plan.mode, 'grok');
   assert.ok(plan.nextActions.some((a) => a.action === 'grok_build_prompt'));
 });
 
-test('handoff includes grokBuild prompt', () => {
+test('handoff universal has agentPrompt not grokBuild by default', () => {
   const h = Agent.buildHandoffPackage({
     productName: 'Acme',
     targetArea: 'UI',
     context: 'dark mode missing',
     feedback: ['button is hard to press on mobile', 'great app!!!']
   });
+  assert.ok(h.agentPrompt);
+  assert.ok(h.agentPrompt.markdown.includes('Agent Implementation Task'));
+  assert.ok(!h.grokBuild);
+  assert.ok(h.markdown);
+});
+
+test('handoff grok mode includes grokBuild', () => {
+  const h = Agent.buildHandoffPackage({
+    productName: 'Acme',
+    targetArea: 'UI',
+    context: 'dark mode missing',
+    feedback: ['button is hard to press on mobile', 'great app!!!'],
+    mode: 'grok'
+  });
   assert.ok(h.grokBuild);
   assert.ok(h.grokBuild.prompt.includes('Grok Build Task'));
   assert.ok(h.grokBuild.keepSignals.length >= 1);
+});
+
+test('scoreQuery dual format', () => {
+  const s = Agent.scoreQuery({
+    keywords: 'Acme',
+    noise: { enabled: true, preset: 'medium', removed: [] },
+    minFaves: 5
+  });
+  assert.ok(s.markdown.includes('Query score'));
+  assert.ok(s.recommendPay);
+});
+
+test('exportNoiseCatalog and customizeNoiseRules', () => {
+  const before = Agent.exportNoiseCatalog();
+  assert.ok(before.rules.low.length >= 1);
+  assert.ok(before.markdown.includes('Noise Catalog'));
+  Agent.customizeNoiseRules({ low: ['customspamtermxyz'] });
+  const q = Agent.buildQuery({
+    keywords: 'x',
+    noise: { enabled: true, preset: 'low', removed: [] }
+  });
+  assert.ok(q.includes('customspamtermxyz'));
+  Agent.resetNoiseRules();
+  const after = Agent.exportNoiseCatalog();
+  assert.ok(!after.rules.low.includes('customspamtermxyz'));
+});
+
+test('noise.extraTerms always applied', () => {
+  const q = Agent.buildQuery({
+    keywords: 'test',
+    noise: { enabled: true, preset: 'low', removed: [], extraTerms: ['mybrandspam'] }
+  });
+  assert.ok(q.includes('mybrandspam') || q.includes('-mybrandspam'));
+});
+
+test('getToolDefinitions universal omits grok tools by default', () => {
+  const t = Agent.getToolDefinitions();
+  assert.strictEqual(t.mode, 'universal');
+  assert.ok(t.tools.some((x) => x.function.name === 'hyperxosist_build_agent_prompt'));
+  assert.ok(!t.tools.some((x) => x.function.name === 'hyperxosist_build_grok_prompt'));
+  const g = Agent.getToolDefinitions({ includeGrok: true });
+  assert.ok(g.tools.some((x) => x.function.name === 'hyperxosist_build_grok_prompt'));
+});
+
+test('startAgentSession default universal', () => {
+  const s = Agent.startAgentSession({ intent: 'Find feedback about Acme' });
+  assert.strictEqual(s.mode, 'universal');
+  assert.ok(s.noise && s.noise.rules);
+  assert.ok(!s.tools.tools.some((x) => x.function.name === 'hyperxosist_create_grok_session'));
 });
 
 test('noise medium includes grok waste terms', () => {

@@ -1,7 +1,7 @@
 {
   "name": "hyperxosist-agent",
-  "version": "2.2.0",
-  "description": "API-free advanced X/Twitter search launcher with AI agent missions, noise reduction, x402 payment path, Signal-to-Fix handoff, and Grok Build prompts.",
+  "version": "2.3.0",
+  "description": "Universal API-free X/Twitter search toolkit for any AI agent (GPT/Claude/Grok/Llama): missions, noise reduction, x402, Signal-to-Fix handoff, optional Grok Build mode.",
   "keywords": [
     "twitter",
     "x",

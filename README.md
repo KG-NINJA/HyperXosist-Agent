@@ -2,17 +2,17 @@
 
 [![CI](https://github.com/KG-NINJA/HyperXosist-Agent/actions/workflows/ci.yml/badge.svg)](https://github.com/KG-NINJA/HyperXosist-Agent/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-2.2.0-brightgreen.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-2.3.0-brightgreen.svg)](CHANGELOG.md)
 [![Live](https://img.shields.io/badge/demo-GitHub%20Pages-black.svg)](https://kg-ninja.github.io/HyperXosist-Agent/)
 
-**API-free advanced X (Twitter) search launcher** — for humans in the browser, and for AI agents that need multi-angle, noise-reduced search missions with an x402 paid path, Signal-to-Fix handoff, and **Grok Build** prompts (X voice → one small code change).
+**API-free advanced X (Twitter) search launcher** — for humans in the browser, and for **any** AI agent (GPT, Claude, Grok, Llama…) that needs multi-angle, noise-reduced search missions with an x402 paid path and Signal-to-Fix handoff. Optional **Grok Build** mode (default off).
 
 | | |
 |---|---|
 | **Live demo** | https://kg-ninja.github.io/HyperXosist-Agent/ |
 | **Repository** | https://github.com/KG-NINJA/HyperXosist-Agent |
 | **Agent entry** | https://kg-ninja.github.io/HyperXosist-Agent/llms.txt |
-| **Version** | 2.2.0 |
+| **Version** | 2.3.0 |
 
 > 日本語の要点: X 公式検索用クエリを組み立てる静的ツールです。人間の UI は無料。AI エージェントの本番利用は x402 支払い前提。検索結果の埋め込みや自動投稿はしません。
 
@@ -47,9 +47,12 @@ Discover → Plan → Score gate → Pay (x402) → Collect → Self-heal → Ke
 - `scoreQuery` before spending **$0.01** per paid call
 - `suggestRefinements` when results are empty or noisy
 - `buildHandoffPackage` → [Signal-to-Fix](https://kg-ninja.github.io/Signal-to-Fix/) keep-only PR pipeline
-- **Grok Build**: `createGrokBuildSession` / `filterKeepSignals` / `buildGrokBuildPrompt`
-- `agent-tools.json` — OpenAI-compatible tool definitions
-- `llms.txt` + `AGENTS.md` discovery docs
+- Dual **JSON + Markdown** outputs on core APIs (any LLM style)
+- `buildAgentPrompt` — model-agnostic one-small-change implementation prompt
+- Transparent noise catalog: `exportNoiseCatalog` / `noise.extraTerms`
+- Optional **Grok Build** mode: `createGrokBuildSession` / `buildGrokBuildPrompt` (default off)
+- `agent-tools.json` — OpenAI-compatible tools (portable to Claude/Grok/Llama runtimes)
+- `llms.txt` + `AGENTS.md` multi-LLM discovery docs
 
 ---
 
@@ -159,27 +162,23 @@ Full catalog: [missions.json](https://kg-ninja.github.io/HyperXosist-Agent/missi
 
 ---
 
-## API surface (v2.2)
+## API surface (v2.3)
 
 | Method | Role |
 |--------|------|
-| `startAgentSession(opts?)` | Playbook + tools + optional plan |
-| `createGrokBuildSession(intent, productContext?)` | Grok Build sticky session |
-| `planFromIntent(intent)` | NL → mission + scored paid steps |
+| `startAgentSession(opts?)` | Universal session (optional `mode:'grok'`) |
+| `planFromIntent(intent)` | NL → mission + scored paid steps + `.markdown` |
 | `buildMission(id, ctx)` | Named multi-angle campaign |
-| `composeCampaign(opts)` | Multi-locale / multi-goal |
-| `scoreQuery(input)` | 0–100 + `recommendPay` |
-| `scoreTechnicalDepth(text)` | Post-level code usefulness |
-| `filterKeepSignals(feedback)` | Keep-only for Grok / PR |
-| `buildGrokBuildPrompt(opts)` | Structured Grok Build Markdown |
-| `suggestRefinements(input, signals)` | Self-heal variants |
-| `buildQuery` / `buildSearchUrl` | Single query |
+| `scoreQuery(input)` | 0–100 + `recommendPay` + `.markdown` |
+| `suggestRefinements(input, signals)` | Self-heal + `.markdown` |
+| `buildHandoffPackage` | Signal-to-Fix + `agentPrompt` (any LLM) |
+| `buildAgentPrompt(opts)` | Universal one-small-change prompt |
+| `exportNoiseCatalog` / `customizeNoiseRules` | Transparent noise editing |
+| `filterKeepSignals` / `scoreTechnicalDepth` | Keep-only signal quality |
+| `buildGrokBuildPrompt` / `createGrokBuildSession` | **Optional** Grok mode |
+| `buildQuery` / `buildSearchUrl` / `buildShareUrl` | Query + shareable state |
 | `buildPaidRequest` / `buildBatch` | x402 payloads |
-| `buildHandoffPackage` / `buildRunReceipt` | Downstream + memory (+ Grok) |
-| `getToolDefinitions` / `listMissions` / `listTemplates` | Catalogs |
-| `applyTemplate` / `applyDatePreset` | Defaults |
-| `validateInput` / `analyzeQuery` / `explainQuery` | Quality |
-| `encodeState` / `decodeState` | Shareable state |
+| `getToolDefinitions` / `listMissions` | Catalogs (Grok tools opt-in) |
 
 ---
 

@@ -1,7 +1,7 @@
 {
   "name": "HyperXosist Missions",
-  "version": "2.2.0",
-  "description": "Multi-angle search campaigns agents re-run. Includes Grok Build–oriented harvest missions. Noise excludes are priority-capped so queries stay under X length limits.",
+  "version": "2.3.0",
+  "description": "Multi-angle search campaigns for any AI agent. Includes optional Grok Build harvest missions. Noise excludes are priority-capped.",
   "whySticky": [
     "Deterministic multi-angle missions beat one-off keyword guesses.",
     "scoreQuery prevents wasting x402 on weak queries.",

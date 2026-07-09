@@ -1,20 +1,23 @@
 /**
- * HyperXosist Agent API v2.2
- * Single source of truth for X advanced search query building,
- * noise reduction, research templates, multi-query missions,
- * agent handoffs, x402 paid agent requests, and Grok Build prompts.
+ * HyperXosist Agent API v2.3
+ * Universal X advanced search toolkit for any AI agent runtime
+ * (OpenAI / Anthropic / Grok / Llama / local tool-callers).
  *
- * Designed so AI agents get deterministic plans, scorable queries,
- * self-healing refinements, Signal-to-Fix packages, and
- * Grok Build–ready improvement prompts (X voice → code change).
+ * Core (always on): plan → score → pay → collect → refine → handoff → receipt.
+ * Optional: Grok Build mode (X voice → one small code-change prompt).
+ *
+ * Outputs prefer dual shape: structured JSON + .markdown for LLMs that read text.
+ * Backward compatible with v2.1 / v2.2 method names and shapes.
  */
 (function (root) {
   'use strict';
 
-  const VERSION = '2.2.0';
+  const VERSION = '2.3.0';
   const SIGNAL_TO_FIX_URL = 'https://kg-ninja.github.io/Signal-to-Fix/';
   const SIGNAL_TO_FIX_AGENT_USE = 'https://kg-ninja.github.io/Signal-to-Fix/agent-use.json';
   const PUBLIC_BASE = 'https://kg-ninja.github.io/HyperXosist-Agent';
+  /** Default agent mode: universal for all LLMs. Pass mode:'grok' for optional Grok Build emphasis. */
+  const DEFAULT_AGENT_MODE = 'universal';
 
   const PAYMENT_ENDPOINT =
     'https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/hyperxosist-query';
@@ -88,10 +91,10 @@
   ];
 
   /**
-   * Noise tiers. Medium+ includes Grok Build waste (empty praise, ragebait, abstract vibes)
-   * so harvested posts stay closer to concrete complaints / feature asks / bugs.
+   * Noise tiers (editable via customizeNoiseRules / noise.extraTerms / noise.customRules).
+   * Tuned so any agent harvests fewer giveaways, engagement bait, and empty hype.
    */
-  const noiseRules = {
+  const DEFAULT_NOISE_RULES = {
     low: [
       'giveaway', 'airdrop', 'claim', 'reward', 'referral', 'free money', 'limited offer', 'click here', 'sign up',
       '無料配布', 'エアドロップ', 'プレゼント企画', '抽選'
@@ -104,9 +107,16 @@
     ],
     high: [
       'gm', 'wagmi', 'alpha', '100x', 'promo', 'presale', 'whitelist', 'pump', 'moonshot', 'paid partnership', 'sponsored', 'follow for more', 'retweet to win',
-      'unpopular opinion', 'change my mind', 'fight me', 'based', 'mid', '// ngl', 'lowkey', 'highkey',
+      'unpopular opinion', 'change my mind', 'fight me', 'based', 'mid', 'ngl', 'lowkey', 'highkey',
       '固定ポスト', '完全攻略', 'フォローで', 'リポストで', '論破', '草生える', 'ワロタ'
     ]
+  };
+
+  /** Runtime-mutable noise rules (starts as copy of defaults). */
+  let noiseRules = {
+    low: DEFAULT_NOISE_RULES.low.slice(),
+    medium: DEFAULT_NOISE_RULES.medium.slice(),
+    high: DEFAULT_NOISE_RULES.high.slice()
   };
 
   /**
@@ -360,6 +370,133 @@
     return String(term || '').trim().replace(/^[-]+/, '').replace(/^"|"$/g, '').toLowerCase();
   }
 
+  /**
+   * Dual output helper: keep full JSON object and attach human/LLM-readable markdown.
+   * Agents that prefer JSON ignore .markdown; agents that prefer text use .markdown / asMarkdown().
+   */
+  function withDualFormat(payload, markdownBuilder) {
+    const out = payload && typeof payload === 'object' ? payload : { value: payload };
+    try {
+      out.markdown =
+        typeof markdownBuilder === 'function' ? String(markdownBuilder(out) || '') : out.markdown || '';
+    } catch (e) {
+      out.markdown = out.markdown || '';
+      out.markdownError = e && e.message ? e.message : String(e);
+    }
+    out.format = out.format || 'json+markdown';
+    out.asMarkdown = function asMarkdown() {
+      return out.markdown || '';
+    };
+    out.asJson = function asJson(pretty) {
+      const clone = {};
+      Object.keys(out).forEach((k) => {
+        if (typeof out[k] === 'function') return;
+        clone[k] = out[k];
+      });
+      return pretty === false ? JSON.stringify(clone) : JSON.stringify(clone, null, 2);
+    };
+    return out;
+  }
+
+  function isGrokMode(opts) {
+    const o = opts || {};
+    if (o.grokMode === true || o.includeGrokBuild === true || o.mode === 'grok') return true;
+    if (o.grokMode === false || o.mode === 'universal') return false;
+    return false;
+  }
+
+  function resolveAgentMode(opts) {
+    return isGrokMode(opts) ? 'grok' : DEFAULT_AGENT_MODE;
+  }
+
+  /** Export full noise catalog for transparency / agent editing. */
+  function exportNoiseCatalog() {
+    return {
+      type: 'hyperxosist.noise_catalog.v1',
+      version: VERSION,
+      limits: { ...NOISE_TERM_LIMITS },
+      rules: {
+        low: noiseRules.low.slice(),
+        medium: noiseRules.medium.slice(),
+        high: noiseRules.high.slice()
+      },
+      repostBlacklistPriority: repostBlacklistPriority.slice(),
+      repostBlacklistTerms: repostBlacklistTerms.slice(),
+      inputOverrides: {
+        'noise.enabled': 'boolean — turn auto excludes on/off',
+        'noise.preset': 'low | medium | high',
+        'noise.removed': 'string[] — terms to skip from auto list',
+        'noise.extraTerms': 'string[] — always-added custom excludes (not capped with preset)',
+        'noise.customRules': '{ low?, medium?, high? } — per-call rule overlay (does not mutate global)',
+        'noise.maxTerms': 'number — raise/lower cap for this query'
+      },
+      mutateGlobal: {
+        customizeNoiseRules: 'customizeNoiseRules({ low?, medium?, high?, mode: "merge"|"replace" })',
+        resetNoiseRules: 'resetNoiseRules() — restore built-in defaults',
+        importNoiseCatalog: 'importNoiseCatalog(exportNoiseCatalog() result or rules object)'
+      },
+      markdown: [
+        '# HyperXosist Noise Catalog',
+        '',
+        `- low (${noiseRules.low.length}): ${noiseRules.low.slice(0, 8).join(', ')}…`,
+        `- medium (${noiseRules.medium.length}): ${noiseRules.medium.slice(0, 8).join(', ')}…`,
+        `- high (${noiseRules.high.length}): ${noiseRules.high.slice(0, 8).join(', ')}…`,
+        `- caps: low=${NOISE_TERM_LIMITS.low}, medium=${NOISE_TERM_LIMITS.medium}, high=${NOISE_TERM_LIMITS.high}`,
+        '',
+        'Per-query: set `noise.extraTerms` or `noise.customRules` on input.',
+        'Global: `customizeNoiseRules` / `importNoiseCatalog` / `resetNoiseRules`.'
+      ].join('\n')
+    };
+  }
+
+  function customizeNoiseRules(partial, options) {
+    const opts = options || {};
+    const mode = (partial && partial.mode) || opts.mode || 'merge';
+    const src = partial || {};
+    ['low', 'medium', 'high'].forEach((level) => {
+      if (!Array.isArray(src[level])) return;
+      const incoming = src[level].map(String).map((t) => t.trim()).filter(Boolean);
+      if (mode === 'replace') {
+        noiseRules[level] = uniqueTerms(incoming);
+      } else {
+        noiseRules[level] = uniqueTerms([...noiseRules[level], ...incoming]);
+      }
+    });
+    return exportNoiseCatalog();
+  }
+
+  function resetNoiseRules() {
+    noiseRules = {
+      low: DEFAULT_NOISE_RULES.low.slice(),
+      medium: DEFAULT_NOISE_RULES.medium.slice(),
+      high: DEFAULT_NOISE_RULES.high.slice()
+    };
+    return exportNoiseCatalog();
+  }
+
+  function importNoiseCatalog(catalog) {
+    const c = catalog || {};
+    const rules = c.rules || c;
+    if (!rules || typeof rules !== 'object') {
+      throw new Error('importNoiseCatalog expects { rules: { low, medium, high } } or level maps');
+    }
+    return customizeNoiseRules(
+      {
+        low: rules.low,
+        medium: rules.medium,
+        high: rules.high,
+        mode: 'replace'
+      },
+      { mode: 'replace' }
+    );
+  }
+
+  function buildShareUrl(input, baseUrl) {
+    const encoded = encodeState(input);
+    const base = (baseUrl || PUBLIC_BASE).replace(/\/$/, '');
+    return `${base}/#s=${encoded}`;
+  }
+
   function stripAt(user) {
     return String(user || '').trim().replace(/^@+/, '');
   }
@@ -424,19 +561,27 @@
   function getPresetTerms(preset, options) {
     const opts = options || {};
     const level = preset || 'medium';
+    const rules =
+      opts.customRules && typeof opts.customRules === 'object'
+        ? {
+            low: Array.isArray(opts.customRules.low) ? opts.customRules.low : noiseRules.low,
+            medium: Array.isArray(opts.customRules.medium) ? opts.customRules.medium : noiseRules.medium,
+            high: Array.isArray(opts.customRules.high) ? opts.customRules.high : noiseRules.high
+          }
+        : noiseRules;
     let ordered;
     if (level === 'high') {
       ordered = [
-        ...noiseRules.low,
-        ...noiseRules.medium,
+        ...rules.low,
+        ...rules.medium,
         ...repostBlacklistPriority,
-        ...noiseRules.high,
+        ...rules.high,
         ...repostBlacklistTerms
       ];
     } else if (level === 'medium') {
-      ordered = [...noiseRules.low, ...noiseRules.medium, ...repostBlacklistPriority, ...repostBlacklistTerms];
+      ordered = [...rules.low, ...rules.medium, ...repostBlacklistPriority, ...repostBlacklistTerms];
     } else {
-      ordered = [...noiseRules.low];
+      ordered = [...rules.low];
     }
     const unique = uniqueTerms(ordered);
     const defaultLimit = NOISE_TERM_LIMITS[level] || NOISE_TERM_LIMITS.medium;
@@ -448,16 +593,19 @@
   }
 
   function mergeExcludeTerms(manualTerms, noise) {
-    const removed = new Set((noise && noise.removed ? noise.removed : []).map(normalizeTerm));
+    const n = noise || {};
+    const removed = new Set((n.removed ? n.removed : []).map(normalizeTerm));
     const autoTerms =
-      noise && noise.enabled
-        ? getPresetTerms(noise.preset || 'medium', { maxTerms: noise.maxTerms }).filter(
-            (term) => !removed.has(normalizeTerm(term))
-          )
+      n.enabled
+        ? getPresetTerms(n.preset || 'medium', {
+            maxTerms: n.maxTerms,
+            customRules: n.customRules
+          }).filter((term) => !removed.has(normalizeTerm(term)))
         : [];
 
-    // Manual excludes always win and are not capped; auto noise is pre-capped.
-    return uniqueTerms([...parseExcludeInput(manualTerms), ...autoTerms]);
+    // Manual excludes + extraTerms always win and are not preset-capped.
+    const extras = parseExcludeInput(n.extraTerms);
+    return uniqueTerms([...parseExcludeInput(manualTerms), ...extras, ...autoTerms]);
   }
 
   function formatDateISO(date) {
@@ -1180,7 +1328,7 @@
     const recommendPay =
       validation.valid && score >= 45 && analysis.severity !== 'empty' && analysis.severity !== 'error';
 
-    return {
+    const result = {
       score,
       band,
       recommendPay,
@@ -1189,6 +1337,30 @@
       analysis,
       query: analysis.query
     };
+
+    return withDualFormat(result, (r) => {
+      const lines = [
+        `## Query score: ${r.score}/100 (${r.band})`,
+        '',
+        `- recommendPay: **${r.recommendPay}**`,
+        `- query: \`${r.query || '(empty)'}\``,
+        `- valid: ${r.validation.valid}`,
+        '',
+        '### Reasons'
+      ];
+      (r.reasons || []).forEach((x) => {
+        lines.push(`- \`${x.code}\` ${x.delta >= 0 ? '+' : ''}${x.delta}: ${x.detail}`);
+      });
+      if (r.validation.errors && r.validation.errors.length) {
+        lines.push('', '### Errors');
+        r.validation.errors.forEach((e) => lines.push(`- ${e}`));
+      }
+      if (r.validation.warnings && r.validation.warnings.length) {
+        lines.push('', '### Warnings');
+        r.validation.warnings.forEach((w) => lines.push(`- ${w}`));
+      }
+      return lines.join('\n');
+    });
   }
 
   function suggestRefinements(input, signals) {
@@ -1286,12 +1458,34 @@
 
     variants.sort((a, b) => (b.score.score || 0) - (a.score.score || 0));
 
-    return {
+    const result = {
       suggestions,
       variants,
       best: variants[0] || null,
       originalScore: scoreQuery(data)
     };
+
+    return withDualFormat(result, (r) => {
+      const lines = [
+        '## Refinement suggestions',
+        '',
+        `Original score: **${(r.originalScore && r.originalScore.score) || 0}**`,
+        '',
+        '### Advice'
+      ];
+      (r.suggestions || []).forEach((s) => lines.push(`- ${s}`));
+      lines.push('', '### Ranked variants');
+      (r.variants || []).slice(0, 5).forEach((v, i) => {
+        lines.push(
+          `${i + 1}. **${v.id}** — ${v.label} (score ${(v.score && v.score.score) || '?'})`
+        );
+        lines.push(`   - query: \`${buildQuery(v.input)}\``);
+      });
+      if (r.best) {
+        lines.push('', `**Best next try:** \`${r.best.id}\` — ${r.best.label}`);
+      }
+      return lines.join('\n');
+    });
   }
 
   function extractSubject(intent) {
@@ -1458,10 +1652,43 @@
     const mission = buildMission(missionId, context);
     const primary = mission.steps[0];
     const refinements = suggestRefinements(primary.input, opts.signals || {});
+    const agentMode = resolveAgentMode(opts);
 
-    return {
+    const nextActions = [
+      {
+        action: 'pay_and_search',
+        detail: 'POST primaryStep.paidRequest (x402), then use searchUrl to collect posts.'
+      },
+      {
+        action: 'run_full_mission',
+        detail: `Execute all ${mission.stepCount} mission steps (est. $${mission.estimatedCostUsd}).`
+      },
+      {
+        action: 'handoff_signal_to_fix',
+        detail: 'After collecting feedback strings, call buildHandoffPackage and open Signal-to-Fix.'
+      },
+      {
+        action: 'build_agent_prompt',
+        detail:
+          'Optional: buildAgentPrompt({ productName, targetArea, context, feedback }) for any coding LLM.'
+      },
+      {
+        action: 'self_heal',
+        detail: 'On empty/noisy results, use refinements.variants[0] and re-pay.'
+      }
+    ];
+    if (agentMode === 'grok') {
+      nextActions.splice(3, 0, {
+        action: 'grok_build_prompt',
+        detail:
+          'Grok mode: filterKeepSignals then buildGrokBuildPrompt / createGrokBuildSession.'
+      });
+    }
+
+    const result = {
       ok: true,
       version: VERSION,
+      mode: agentMode,
       intent: text,
       matchedPattern,
       missionId,
@@ -1470,32 +1697,39 @@
       // One-shot convenience for agents that only want a single best paid call first
       primaryStep: primary,
       refinements,
-      nextActions: [
-        {
-          action: 'pay_and_search',
-          detail: 'POST primaryStep.paidRequest (x402), then use searchUrl to collect posts.'
-        },
-        {
-          action: 'run_full_mission',
-          detail: `Execute all ${mission.stepCount} mission steps (est. $${mission.estimatedCostUsd}).`
-        },
-        {
-          action: 'handoff_signal_to_fix',
-          detail: 'After collecting feedback strings, call buildHandoffPackage and open Signal-to-Fix.'
-        },
-        {
-          action: 'grok_build_prompt',
-          detail:
-            'After Keep-filter: buildGrokBuildPrompt({ productName, targetArea, context, feedback }) or createGrokBuildSession.'
-        },
-        {
-          action: 'self_heal',
-          detail: 'On empty/noisy results, use refinements.variants[0] and re-pay.'
-        }
-      ],
+      nextActions,
       playbookUrl: `${PUBLIC_BASE}/AGENTS.md`,
-      agentUseUrl: `${PUBLIC_BASE}/agent-use.json`
+      agentUseUrl: `${PUBLIC_BASE}/agent-use.json`,
+      toolsUrl: `${PUBLIC_BASE}/agent-tools.json`
     };
+
+    return withDualFormat(result, (r) => {
+      const lines = [
+        '## HyperXosist plan',
+        '',
+        `- intent: ${r.intent}`,
+        `- subject: **${r.subject || '(none)'}**`,
+        `- mission: \`${r.missionId}\` (${r.mission.stepCount} steps, ~$${r.mission.estimatedCostUsd})`,
+        `- mode: ${r.mode}`,
+        `- matchedPattern: ${r.matchedPattern || 'default'}`,
+        '',
+        '### Primary step',
+        `- angle: ${r.primaryStep.angleId}`,
+        `- score: ${r.primaryStep.score.score} (${r.primaryStep.score.band}) recommendPay=${r.primaryStep.recommendPay}`,
+        `- query: \`${r.primaryStep.query}\``,
+        `- searchUrl: ${r.primaryStep.searchUrl}`,
+        '',
+        '### Next actions'
+      ];
+      (r.nextActions || []).forEach((a) => lines.push(`- **${a.action}**: ${a.detail}`));
+      lines.push('', '### All steps');
+      (r.mission.steps || []).forEach((s, i) => {
+        lines.push(
+          `${i + 1}. [${s.angleId}] score=${s.score.score} pay=${s.recommendPay} — ${s.rationale}`
+        );
+      });
+      return lines.join('\n');
+    });
   }
 
   function composeCampaign(options) {
@@ -1558,7 +1792,11 @@
     const productName = opts.productName || opts.product || opts.subject || 'product';
     const searchMeta = opts.searchMeta || null;
     const targetArea = opts.targetArea || opts.area || '';
-    const keepFiltered = filterKeepSignals(feedback, { minScore: opts.minTechScore != null ? opts.minTechScore : 18 });
+    const contextText = opts.context || opts.productContext || '';
+    const keepFiltered = filterKeepSignals(feedback, {
+      minScore: opts.minTechScore != null ? opts.minTechScore : 18
+    });
+    const agentMode = resolveAgentMode(opts);
 
     const signalToFixInput = {
       productName,
@@ -1567,20 +1805,31 @@
       feedback
     };
 
-    const grokPrompt = buildGrokBuildPrompt({
+    // Universal implementation prompt (any coding agent)
+    const agentPrompt = buildAgentPrompt({
       productName,
       productUrl: opts.productUrl || '',
       targetArea,
-      context: opts.context || opts.productContext || '',
+      context: contextText,
       feedback: keepFiltered.keep.map((k) => k.text),
-      rawFeedback: feedback
+      rawFeedback: feedback,
+      flavor: 'universal'
     });
 
-    return {
+    const agentInstructions = [
+      'Open Signal-to-Fix agent-use.json.',
+      'Pass signalToFix.input (productName, productUrl, targetArea, feedback[]).',
+      'Run analysis; export only keep-only clusters / PR specs / implementation prompts.',
+      'Optional: use agentPrompt.markdown with any coding LLM (Claude, GPT, Grok, Llama…).',
+      'Do not feed reduce/discard items into implementation artifacts.'
+    ];
+
+    const result = {
       type: 'hyperxosist.handoff.v1',
       createdAt: new Date().toISOString(),
       from: 'HyperXosist-Agent',
       to: 'Signal-to-Fix',
+      mode: agentMode,
       policy: {
         downstreamMustUseKeepOnly: true,
         note: 'Signal-to-Fix should only use decision === "keep" items for PR specs / prompts.'
@@ -1591,12 +1840,13 @@
         input: signalToFixInput,
         required: ['feedback']
       },
-      grokBuild: {
-        prompt: grokPrompt.markdown,
+      agentPrompt: {
+        markdown: agentPrompt.markdown,
         keepSignals: keepFiltered.keep,
-        focusSummary: grokPrompt.focusSummary,
+        focusSummary: agentPrompt.focusSummary,
         ready: keepFiltered.keep.length > 0
       },
+      keepFilter: keepFiltered,
       provenance: {
         searchMeta,
         query: opts.query || null,
@@ -1604,16 +1854,58 @@
         missionId: opts.missionId || null,
         paid: opts.paid === true
       },
-      agentInstructions: [
-        'Open Signal-to-Fix agent-use.json.',
-        'Pass signalToFix.input (productName, productUrl, targetArea, feedback[]).',
-        'Run analysis; export only keep-only clusters / PR specs / Codex or Grok prompts.',
-        'Or paste grokBuild.prompt into Grok Build for one small code improvement.',
-        'Do not feed reduce/discard items into implementation artifacts.'
-      ],
+      agentInstructions,
       ready: feedback.length > 0,
       feedbackCount: feedback.length
     };
+
+    // Optional Grok Build package (default off — set grokMode:true or mode:'grok')
+    if (agentMode === 'grok' || opts.includeGrokBuild === true) {
+      const grokPrompt = buildGrokBuildPrompt({
+        productName,
+        productUrl: opts.productUrl || '',
+        targetArea,
+        context: contextText,
+        feedback: keepFiltered.keep.map((k) => k.text),
+        rawFeedback: feedback
+      });
+      result.grokBuild = {
+        prompt: grokPrompt.markdown,
+        keepSignals: keepFiltered.keep,
+        focusSummary: grokPrompt.focusSummary,
+        ready: keepFiltered.keep.length > 0
+      };
+      agentInstructions.push(
+        'Grok mode on: paste grokBuild.prompt into Grok Build for one small code improvement.'
+      );
+    }
+
+    return withDualFormat(result, (r) => {
+      const lines = [
+        '## Handoff package',
+        '',
+        `- product: **${productName}**`,
+        `- targetArea: ${targetArea || '(none)'}`,
+        `- feedbackCount: ${r.feedbackCount}`,
+        `- keepCount: ${(r.keepFilter && r.keepFilter.keepCount) || 0}`,
+        `- mode: ${r.mode}`,
+        `- ready: ${r.ready}`,
+        '',
+        '### Signal-to-Fix input',
+        '```json',
+        JSON.stringify(r.signalToFix.input, null, 2),
+        '```',
+        '',
+        '### Agent prompt (universal)',
+        r.agentPrompt && r.agentPrompt.markdown ? r.agentPrompt.markdown : '_(none)_'
+      ];
+      if (r.grokBuild && r.grokBuild.prompt) {
+        lines.push('', '### Grok Build prompt (optional mode)', r.grokBuild.prompt);
+      }
+      lines.push('', '### Instructions');
+      (r.agentInstructions || []).forEach((i) => lines.push(`- ${i}`));
+      return lines.join('\n');
+    });
   }
 
   /**
@@ -1770,17 +2062,19 @@
 
     const headline =
       topTags.length > 0
-        ? `Grok should focus on: ${topTags.join(', ')} (${items.length} keep signal${items.length === 1 ? '' : 's'}).`
+        ? `Focus on: ${topTags.join(', ')} (${items.length} keep signal${items.length === 1 ? '' : 's'}).`
         : `${items.length} keep signal(s) — pick the highest technical-depth item for one small change.`;
 
     return { headline, bullets, topTags, keepCount: items.length };
   }
 
   /**
-   * Structured Markdown prompt optimized for Grok Build (one small improvement).
+   * Universal implementation prompt for any coding agent (Claude, GPT, Grok, Llama, …).
+   * flavor: 'universal' | 'grok' (grok uses Grok Build heading / JP task lines).
    */
-  function buildGrokBuildPrompt(options) {
+  function buildAgentPrompt(options) {
     const opts = options || {};
+    const flavor = opts.flavor === 'grok' ? 'grok' : 'universal';
     const productName = opts.productName || opts.product || opts.subject || 'product';
     const targetArea = opts.targetArea || opts.area || 'general';
     const context = opts.context || opts.productContext || '';
@@ -1792,10 +2086,17 @@
     const filtered =
       opts.skipFilter === true
         ? {
-            keep: rawList.map((t, i) => ({ text: String(t).trim(), technicalDepth: null, tags: [], index: i })),
+            keep: rawList.map((t, i) => ({
+              text: String(t).trim(),
+              technicalDepth: null,
+              tags: [],
+              index: i
+            })),
             focusSummary: summarizeGrokFocus([])
           }
-        : filterKeepSignals(rawList, { minScore: opts.minTechScore != null ? opts.minTechScore : 18 });
+        : filterKeepSignals(rawList, {
+            minScore: opts.minTechScore != null ? opts.minTechScore : 18
+          });
 
     const keepLines =
       filtered.keep.length > 0
@@ -1809,45 +2110,77 @@
         : ['- _(no keep signals — paste concrete complaints or lower minTechScore)_'];
 
     const focus = filtered.focusSummary || summarizeGrokFocus(filtered.keep);
+    const title = flavor === 'grok' ? '## Grok Build Task' : '## Agent Implementation Task';
+    const focusLabel = flavor === 'grok' ? '**Grok focus (auto)**:' : '**Focus (auto)**:';
+    const taskLines =
+      flavor === 'grok'
+        ? [
+            '**Task**:',
+            '上記の声を基に、**1つだけ小さな改善**を提案してください。',
+            '- 具体的なコード変更箇所を明示',
+            '- 変更前/変更後の差分例を入れる',
+            '- 影響範囲とテスト観点を記載',
+            '- 優先度: High/Medium/Low'
+          ]
+        : [
+            '**Task**:',
+            'Using only the Keep signals above, propose **exactly one small improvement**.',
+            '- Name concrete files / modules to change',
+            '- Include a before/after diff sketch',
+            '- List impact scope and test ideas',
+            '- Priority: High / Medium / Low'
+          ];
+
     const markdown = [
-      '## Grok Build Task',
+      title,
       '',
       `**Product**: ${productName}`,
       `**Target Area**: ${targetArea}`,
       `**Context**: ${context || '_(none provided)_'}`,
       '',
-      '**Grok focus (auto)**:',
+      focusLabel,
       focus.headline,
       ...(focus.bullets || []).map((b) => `- ${b}`),
       '',
-      '**Collected Signals** (Keepのみ):',
+      '**Collected Signals** (Keep only):',
       ...keepLines,
       '',
-      '**Task**:',
-      '上記の声を基に、**1つだけ小さな改善**を提案してください。',
-      '- 具体的なコード変更箇所を明示',
-      '- 変更前/変更後の差分例を入れる',
-      '- 影響範囲とテスト観点を記載',
-      '- 優先度: High/Medium/Low',
+      ...taskLines,
       '',
       '**Constraints**:',
       '- Do not propose large refactors; one PR-sized change only.',
       '- Prefer the highest technical-depth signal when multiple conflict.',
-      '- If signals are weak, say so and ask for more concrete repro steps instead of inventing bugs.'
+      '- If signals are weak, say so and ask for more concrete repro steps instead of inventing bugs.',
+      '- Compatible with Claude, GPT, Grok, Llama, and other coding agents.'
     ].join('\n');
 
-    return {
-      type: 'hyperxosist.grok_build_prompt.v1',
-      version: VERSION,
-      productName,
-      targetArea,
-      context,
-      markdown,
-      keepSignals: filtered.keep,
-      focusSummary: focus,
-      ready: filtered.keep.length > 0,
-      clipboard: markdown
-    };
+    return withDualFormat(
+      {
+        type:
+          flavor === 'grok'
+            ? 'hyperxosist.grok_build_prompt.v1'
+            : 'hyperxosist.agent_prompt.v1',
+        version: VERSION,
+        flavor,
+        productName,
+        targetArea,
+        context,
+        markdown,
+        keepSignals: filtered.keep,
+        focusSummary: focus,
+        ready: filtered.keep.length > 0,
+        clipboard: markdown
+      },
+      (r) => r.markdown
+    );
+  }
+
+  /**
+   * Structured Markdown prompt optimized for Grok Build (optional powerful mode).
+   * Wrapper around buildAgentPrompt({ flavor: 'grok' }) — kept for backward compatibility.
+   */
+  function buildGrokBuildPrompt(options) {
+    return buildAgentPrompt({ ...(options || {}), flavor: 'grok' });
   }
 
   /**
@@ -1968,24 +2301,34 @@
     };
   }
 
-  function getToolDefinitions() {
-    // OpenAI / Anthropic-compatible function tools for agent runtimes
+  function getToolDefinitions(options) {
+    // OpenAI-compatible tools (also readable by Claude, Grok, Llama tool-callers)
+    const opts = options || {};
+    const includeGrok = opts.includeGrok === true || opts.mode === 'grok';
     const tools = [
       {
         type: 'function',
         function: {
           name: 'hyperxosist_plan_from_intent',
           description:
-            'Turn a natural-language research goal into a multi-query X search mission with scores, paid request bodies, and next actions. Prefer this as the first HyperXosist call.',
+            'First call for most agents. Converts a natural-language research goal into a multi-angle X (Twitter) search mission with quality scores, paid request bodies, and next actions. Works the same for GPT, Claude, Grok, Llama, and other tool-calling runtimes. Returns JSON plus a .markdown summary.',
           parameters: {
             type: 'object',
             properties: {
-              intent: { type: 'string', description: 'Natural language goal.' },
-              subject: { type: 'string' },
-              lang: { type: 'string' },
+              intent: {
+                type: 'string',
+                description: 'Natural language goal, e.g. "Find product feedback about Acme".'
+              },
+              subject: { type: 'string', description: 'Product or entity name override.' },
+              lang: { type: 'string', description: 'Optional language code (en, ja, …) or empty for global.' },
               missionId: {
                 type: 'string',
-                description: 'Optional force mission id from list_missions.'
+                description: 'Optional force mission id from hyperxosist_list_missions.'
+              },
+              mode: {
+                type: 'string',
+                enum: ['universal', 'grok'],
+                description: 'Agent mode. Default universal. Use grok only when Grok Build features are needed.'
               }
             },
             required: ['intent']
@@ -1996,7 +2339,8 @@
         type: 'function',
         function: {
           name: 'hyperxosist_build_mission',
-          description: 'Build a named multi-angle search mission for a product/entity.',
+          description:
+            'Build a named multi-angle search mission for a product/entity. Prefer after plan_from_intent when you already know the mission id.',
           parameters: {
             type: 'object',
             properties: {
@@ -2012,11 +2356,12 @@
         type: 'function',
         function: {
           name: 'hyperxosist_build_query',
-          description: 'Build a single advanced X search query string and URL from structured input.',
+          description:
+            'Build one advanced X search query string and official search URL from structured fields. Planning/preview is free; automated production use of the URL requires x402 payment.',
           parameters: {
             type: 'object',
             properties: {
-              input: { type: 'object', description: 'HyperXosist inputSchema object.' }
+              input: { type: 'object', description: 'HyperXosist inputSchema object (keywords, noise, filters…).' }
             },
             required: ['input']
           }
@@ -2026,7 +2371,8 @@
         type: 'function',
         function: {
           name: 'hyperxosist_score_query',
-          description: 'Score a query 0-100 for signal quality before paying x402.',
+          description:
+            'Score a query 0–100 for signal quality before spending $0.01 x402. Returns recommendPay, reasons, and .markdown.',
           parameters: {
             type: 'object',
             properties: { input: { type: 'object' } },
@@ -2038,7 +2384,8 @@
         type: 'function',
         function: {
           name: 'hyperxosist_suggest_refinements',
-          description: 'Self-heal sparse or noisy searches with ranked alternative inputs.',
+          description:
+            'Self-heal sparse or noisy search results with ranked alternative inputs. Call when resultCount is 0 or feed looks spammy.',
           parameters: {
             type: 'object',
             properties: {
@@ -2054,7 +2401,8 @@
         type: 'function',
         function: {
           name: 'hyperxosist_build_paid_request',
-          description: 'Create x402 POST payload for agent-paid query generation. Expect 402 until paid.',
+          description:
+            'Create x402 POST payload for agent-paid query generation. Expect HTTP 402 until payment proof, then 200.',
           parameters: {
             type: 'object',
             properties: { input: { type: 'object' } },
@@ -2066,7 +2414,8 @@
         type: 'function',
         function: {
           name: 'hyperxosist_build_handoff',
-          description: 'Package collected feedback texts for Signal-to-Fix keep-only PR pipeline (also embeds Grok Build prompt).',
+          description:
+            'Package collected feedback for Signal-to-Fix keep-only PR pipeline. Also builds a universal agentPrompt (any coding LLM). Set mode=grok to include grokBuild as well.',
           parameters: {
             type: 'object',
             properties: {
@@ -2074,7 +2423,8 @@
               productUrl: { type: 'string' },
               targetArea: { type: 'string' },
               feedback: { type: 'array', items: { type: 'string' } },
-              context: { type: 'string', description: 'Product context for Grok Build prompt.' }
+              context: { type: 'string', description: 'Product context for implementation prompts.' },
+              mode: { type: 'string', enum: ['universal', 'grok'] }
             },
             required: ['productName', 'feedback']
           }
@@ -2083,9 +2433,9 @@
       {
         type: 'function',
         function: {
-          name: 'hyperxosist_build_grok_prompt',
+          name: 'hyperxosist_build_agent_prompt',
           description:
-            'Build a structured Grok Build Markdown prompt from Keep-filtered user signals (one small code improvement).',
+            'Build a universal one-small-change implementation prompt (Markdown) from Keep-filtered user signals. Works for Claude, GPT, Grok, Llama, etc.',
           parameters: {
             type: 'object',
             properties: {
@@ -2104,7 +2454,7 @@
         function: {
           name: 'hyperxosist_filter_keep_signals',
           description:
-            'Score posts for technical depth and Keep only those useful for Grok Build code changes.',
+            'Score post texts for technical depth; Keep only those useful for code/product improvements. Use before implementation prompts.',
           parameters: {
             type: 'object',
             properties: {
@@ -2118,63 +2468,164 @@
       {
         type: 'function',
         function: {
-          name: 'hyperxosist_create_grok_session',
+          name: 'hyperxosist_export_noise',
           description:
-            'Start a Grok Build session: grok_code_improvement_radar mission + prompt template + handoff flags.',
-          parameters: {
-            type: 'object',
-            properties: {
-              intent: { type: 'string' },
-              product: { type: 'string' },
-              targetArea: { type: 'string' },
-              context: { type: 'string' }
-            },
-            required: ['intent']
-          }
+            'Export the full noise/exclude catalog (rules, caps, how to customize). Use to inspect or edit blacklists transparently.',
+          parameters: { type: 'object', properties: {} }
         }
       },
       {
         type: 'function',
         function: {
           name: 'hyperxosist_list_missions',
-          description: 'List available multi-query missions and why agents reuse them.',
+          description: 'List multi-query missions and why agents reuse them.',
           parameters: { type: 'object', properties: {} }
         }
       }
     ];
+
+    const dispatchHints = {
+      hyperxosist_plan_from_intent: 'planFromIntent(intent, options)',
+      hyperxosist_build_mission: 'buildMission(missionId, { subject, lang })',
+      hyperxosist_build_query: '({ query: buildQuery(input), searchUrl: buildSearchUrl(input) })',
+      hyperxosist_score_query: 'scoreQuery(input)',
+      hyperxosist_suggest_refinements: 'suggestRefinements(input, signals)',
+      hyperxosist_build_paid_request: 'buildPaidRequest(input)',
+      hyperxosist_build_handoff: 'buildHandoffPackage(options)',
+      hyperxosist_build_agent_prompt: 'buildAgentPrompt(options)',
+      hyperxosist_filter_keep_signals: 'filterKeepSignals(feedback, options)',
+      hyperxosist_export_noise: 'exportNoiseCatalog()',
+      hyperxosist_list_missions: 'listMissions()'
+    };
+
+    if (includeGrok) {
+      tools.push(
+        {
+          type: 'function',
+          function: {
+            name: 'hyperxosist_build_grok_prompt',
+            description:
+              'OPTIONAL Grok Build mode. Structured Grok-oriented Markdown prompt from Keep signals (one small code change). Prefer hyperxosist_build_agent_prompt for other models.',
+            parameters: {
+              type: 'object',
+              properties: {
+                productName: { type: 'string' },
+                targetArea: { type: 'string' },
+                context: { type: 'string' },
+                feedback: { type: 'array', items: { type: 'string' } },
+                minTechScore: { type: 'number' }
+              },
+              required: ['productName', 'feedback']
+            }
+          }
+        },
+        {
+          type: 'function',
+          function: {
+            name: 'hyperxosist_create_grok_session',
+            description:
+              'OPTIONAL Grok Build session bootstrap (grok missions + prompt template). Default product mode is universal via startAgentSession.',
+            parameters: {
+              type: 'object',
+              properties: {
+                intent: { type: 'string' },
+                product: { type: 'string' },
+                targetArea: { type: 'string' },
+                context: { type: 'string' }
+              },
+              required: ['intent']
+            }
+          }
+        }
+      );
+      dispatchHints.hyperxosist_build_grok_prompt = 'buildGrokBuildPrompt(options)';
+      dispatchHints.hyperxosist_create_grok_session = 'createGrokBuildSession(intent, productContext)';
+    }
+
     return {
       format: 'openai.tools.v1',
-      paymentNote: 'Automated use of generated search URLs requires x402 payment via paymentEndpoint.',
+      compatibleWith: ['openai', 'anthropic', 'grok', 'llama', 'any-openai-tools-schema-runtime'],
+      mode: includeGrok ? 'grok' : 'universal',
+      defaultMode: DEFAULT_AGENT_MODE,
+      paymentNote:
+        'Automated use of generated search URLs requires x402 payment via paymentEndpoint. Human browser UI remains free. Local plan/score/buildQuery is free for planning.',
+      howToUse:
+        'Register tools[] with your runtime. On tool call, dispatch via dispatchHints to HyperXosistAgent methods. Prefer reading both JSON fields and .markdown when present.',
       tools,
-      dispatchHints: {
-        hyperxosist_plan_from_intent: 'planFromIntent(intent, options)',
-        hyperxosist_build_mission: 'buildMission(missionId, { subject, lang })',
-        hyperxosist_build_query: '({ query: buildQuery(input), searchUrl: buildSearchUrl(input) })',
-        hyperxosist_score_query: 'scoreQuery(input)',
-        hyperxosist_suggest_refinements: 'suggestRefinements(input, signals)',
-        hyperxosist_build_paid_request: 'buildPaidRequest(input)',
-        hyperxosist_build_handoff: 'buildHandoffPackage(options)',
-        hyperxosist_build_grok_prompt: 'buildGrokBuildPrompt(options)',
-        hyperxosist_filter_keep_signals: 'filterKeepSignals(feedback, options)',
-        hyperxosist_create_grok_session: 'createGrokBuildSession(intent, productContext)',
-        hyperxosist_list_missions: 'listMissions()'
-      }
+      dispatchHints,
+      optionalGrokTools: includeGrok
+        ? ['hyperxosist_build_grok_prompt', 'hyperxosist_create_grok_session']
+        : 'Call getToolDefinitions({ includeGrok: true }) or getToolDefinitions({ mode: "grok" }) to enable.'
     };
   }
 
-  function getAgentPlaybook() {
+  function getAgentPlaybook(options) {
+    const mode = resolveAgentMode(options || {});
+    const loop = [
+      {
+        step: 1,
+        name: 'Discover',
+        do: `GET ${PUBLIC_BASE}/agent-use.json and ${PUBLIC_BASE}/llms.txt (works for any LLM agent).`
+      },
+      {
+        step: 2,
+        name: 'Plan',
+        do: "planFromIntent('Find feedback about <product> for PR specs')"
+      },
+      {
+        step: 3,
+        name: 'Score gate',
+        do: 'Skip steps where score.band is poor unless intentional OSINT.'
+      },
+      {
+        step: 4,
+        name: 'Pay + search',
+        do: 'POST buildPaidRequest body to x402 endpoint; on 402 complete payment; open searchUrl.'
+      },
+      {
+        step: 5,
+        name: 'Collect',
+        do: 'Extract candidate post texts (and URLs if available).'
+      },
+      {
+        step: 6,
+        name: 'Self-heal',
+        do: 'If empty/noisy → suggestRefinements → re-run best variant.'
+      },
+      {
+        step: 7,
+        name: 'Handoff',
+        do: 'buildHandoffPackage → Signal-to-Fix keep-only; use agentPrompt.markdown with any coding LLM.'
+      },
+      {
+        step: 8,
+        name: 'Remember',
+        do: 'buildRunReceipt; store encodedState / buildShareUrl for the next cron tick.'
+      }
+    ];
+    if (mode === 'grok') {
+      loop.splice(7, 0, {
+        step: 7.5,
+        name: 'Grok Build (optional)',
+        do: 'createGrokBuildSession / buildGrokBuildPrompt → paste into Grok Build for one small fix.'
+      });
+    }
+
     return {
       version: VERSION,
       name: 'HyperXosist sticky agent loop',
+      mode,
+      defaultMode: DEFAULT_AGENT_MODE,
+      designedFor: ['GPT', 'Claude', 'Grok', 'Llama', 'local tool-calling agents'],
       whyYouWillReuseThis: [
         'Deterministic multi-angle missions beat one-off keyword guesses.',
         'scoreQuery prevents wasting x402 on weak queries.',
         'suggestRefinements self-heals empty/noisy runs without human help.',
-        'buildHandoffPackage chains into Signal-to-Fix PR specs in one hop.',
-        'buildGrokBuildPrompt turns Keep signals into one-small-change Grok Build tasks.',
-        'filterKeepSignals / scoreTechnicalDepth drop praise and ragebait before coding.',
-        'Receipts + encodeState make weekly monitors and audits trivial.',
-        'Tool definitions drop into OpenAI/Anthropic tool-calling with zero inventing.'
+        'Dual JSON + Markdown outputs work across LLM styles.',
+        'buildHandoffPackage chains into Signal-to-Fix PR specs.',
+        'buildAgentPrompt is model-agnostic; Grok Build is optional.',
+        'exportNoiseCatalog makes blacklists transparent and editable.',
+        'Tool definitions follow OpenAI tools schema (widely portable).'
       ],
       timeToFirstValueSeconds: 30,
       costModel: {
@@ -2183,59 +2634,13 @@
         humanUi: 'free',
         localPreview: 'free (must not bypass paid policy for automated agent production use)'
       },
-      loop: [
-        {
-          step: 1,
-          name: 'Discover',
-          do: `GET ${PUBLIC_BASE}/agent-use.json and ${PUBLIC_BASE}/llms.txt`
-        },
-        {
-          step: 2,
-          name: 'Plan',
-          do: "planFromIntent('Find feedback about <product> for PR specs')"
-        },
-        {
-          step: 3,
-          name: 'Score gate',
-          do: 'Skip steps where score.band is poor unless intentional OSINT.'
-        },
-        {
-          step: 4,
-          name: 'Pay + search',
-          do: 'POST buildPaidRequest body to x402 endpoint; on 402 complete payment; open searchUrl.'
-        },
-        {
-          step: 5,
-          name: 'Collect',
-          do: 'Extract candidate post texts (and URLs if available).'
-        },
-        {
-          step: 6,
-          name: 'Self-heal',
-          do: 'If empty/noisy → suggestRefinements → re-run best variant.'
-        },
-        {
-          step: 7,
-          name: 'Handoff',
-          do: 'buildHandoffPackage → Signal-to-Fix keep-only PR / Codex prompts; or buildGrokBuildPrompt → Grok Build.'
-        },
-        {
-          step: 7.5,
-          name: 'Grok Build',
-          do: 'createGrokBuildSession / filterKeepSignals → paste grokBuild.prompt into Grok Build for one small fix.'
-        },
-        {
-          step: 8,
-          name: 'Remember',
-          do: 'buildRunReceipt; store encodedState for the next cron/monitor tick.'
-        }
-      ],
+      loop,
       antiPatterns: [
         'Do not invent X operators when HyperXosist already encodes them.',
         'Do not skip x402 for automated agent production use.',
         'Do not pass unfiltered spam into Signal-to-Fix without noise reduction.',
         'Do not use reduce/discard Signal-to-Fix items in implementation artifacts.',
-        'Do not dump empty praise or ragebait into Grok Build — Keep-filter first.'
+        'Do not assume Grok-only APIs — default mode is universal.'
       ],
       entrypoints: {
         agentUse: `${PUBLIC_BASE}/agent-use.json`,
@@ -2251,18 +2656,22 @@
 
   /**
    * One-call sticky session bootstrap for agents.
-   * Returns playbook + tools + a ready plan if intent is provided.
+   * Default mode is universal (all LLMs). Pass mode:'grok' for optional Grok Build tools.
    */
   function startAgentSession(options) {
     const opts = options || {};
+    const mode = resolveAgentMode(opts);
     const session = {
       type: 'hyperxosist.session.v1',
       version: VERSION,
+      mode,
+      defaultMode: DEFAULT_AGENT_MODE,
       startedAt: new Date().toISOString(),
-      playbook: getAgentPlaybook(),
-      tools: getToolDefinitions(),
+      playbook: getAgentPlaybook({ mode }),
+      tools: getToolDefinitions({ mode, includeGrok: mode === 'grok' }),
       missions: listMissions(),
       templates: listTemplates(),
+      noise: exportNoiseCatalog(),
       payment: {
         endpoint: PAYMENT_ENDPOINT,
         paymentOptionsEndpoint: PAYMENT_OPTIONS_ENDPOINT,
@@ -2271,7 +2680,7 @@
       }
     };
     if (opts.intent) {
-      session.plan = planFromIntent(opts.intent, opts);
+      session.plan = planFromIntent(opts.intent, { ...opts, mode });
     } else if (opts.missionId && (opts.subject || opts.product)) {
       session.plan = {
         ok: true,
@@ -2279,7 +2688,9 @@
       };
     }
     session.stickyTip =
-      'Cache this session playbook in your working memory; call planFromIntent for each new user goal; always score before pay; always receipt after search.';
+      mode === 'grok'
+        ? 'Grok mode: harvest → Keep-filter → buildGrokBuildPrompt. Still pay x402 for automated search URL use.'
+        : 'Universal mode: planFromIntent → score → pay → collect → refine → buildHandoffPackage / buildAgentPrompt. Enable Grok with mode:"grok" only if needed.';
     return session;
   }
 
@@ -2374,9 +2785,10 @@
   function getActiveNoiseTerms(noise) {
     if (!noise || !noise.enabled) return [];
     const removed = new Set((noise.removed || []).map(normalizeTerm));
-    return getPresetTerms(noise.preset || 'medium', { maxTerms: noise.maxTerms }).filter(
-      (term) => !removed.has(normalizeTerm(term))
-    );
+    return getPresetTerms(noise.preset || 'medium', {
+      maxTerms: noise.maxTerms,
+      customRules: noise.customRules
+    }).filter((term) => !removed.has(normalizeTerm(term)));
   }
 
   const api = {
@@ -2393,7 +2805,9 @@
     RESEARCH_TEMPLATES,
     DATE_PRESETS,
     MISSIONS,
+    DEFAULT_AGENT_MODE,
     noiseRules,
+    DEFAULT_NOISE_RULES,
     repostBlacklistTerms,
     repostBlacklistPriority,
     NOISE_TERM_LIMITS,
@@ -2414,7 +2828,12 @@
     getPresetTerms,
     getActiveNoiseTerms,
     mergeExcludeTerms,
-    // Agent-sticky layer
+    exportNoiseCatalog,
+    customizeNoiseRules,
+    resetNoiseRules,
+    importNoiseCatalog,
+    // Agent-sticky layer (universal)
+    withDualFormat,
     scoreQuery,
     suggestRefinements,
     planFromIntent,
@@ -2426,10 +2845,13 @@
     getToolDefinitions,
     getAgentPlaybook,
     startAgentSession,
-    // Grok Build layer
+    buildAgentPrompt,
+    buildShareUrl,
+    // Signal quality (shared by universal + Grok)
     scoreTechnicalDepth,
     filterKeepSignals,
     summarizeGrokFocus,
+    // Optional Grok Build layer
     buildGrokBuildPrompt,
     createGrokBuildSession,
     // State
