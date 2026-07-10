@@ -53,7 +53,7 @@
     "test/tool-selection-cases.json"
   ],
   "scripts": {
-    "test": "node test/agent-api.test.js && node test/mcp.test.js && node test/mcp-core.test.js && node test/mcp-remote.test.js && node test/mcp-security.test.js && node test/mcp-schema.test.js && node test/mcp-consistency.test.js",
+    "test": "node test/agent-api.test.js && node test/mcp.test.js && node test/mcp-core.test.js && node test/mcp-remote.test.js && node test/mcp-security.test.js && node test/mcp-schema.test.js && node test/mcp-consistency.test.js && node --test test/mcp-cloudflare-worker.test.mjs",
     "test:agent": "node test/agent-api.test.js",
     "test:mcp": "node test/mcp.test.js",
     "quickstart": "node examples/quickstart.mjs",
@@ -71,7 +71,9 @@
     "test:tool-selection": "node examples/evaluate-tool-selection.mjs",
     "openai:remote-check": "node examples/openai-remote-mcp.mjs --check",
     "mcp:remote": "node mcp/remote-server.js",
-    "test:mcp:consistency": "node test/mcp-consistency.test.js"
+    "test:mcp:consistency": "node test/mcp-consistency.test.js",
+    "test:mcp:cloudflare": "node --test test/mcp-cloudflare-worker.test.mjs",
+    "cloudflare:mcp:check": "npm --prefix workers/remote-mcp run check"
   },
   "engines": {
     "node": ">=18"

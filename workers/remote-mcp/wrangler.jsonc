@@ -1,0 +1,20 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "hyperxosist-remote-mcp",
+  "main": "src/index.js",
+  "compatibility_date": "2026-07-11",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "vars": {
+    "HYPERXOSIST_MCP_ALLOWED_ORIGINS": "",
+    "HYPERXOSIST_MCP_ALLOWED_HOSTS": ""
+  },
+  "env": {
+    "staging": { "name": "hyperxosist-remote-mcp-staging", "vars": { "HYPERXOSIST_MCP_ALLOWED_ORIGINS": "", "HYPERXOSIST_MCP_ALLOWED_HOSTS": "" } },
+    "production": { "name": "hyperxosist-remote-mcp-production", "vars": { "HYPERXOSIST_MCP_ALLOWED_ORIGINS": "", "HYPERXOSIST_MCP_ALLOWED_HOSTS": "" } }
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 0.1
+  }
+}
