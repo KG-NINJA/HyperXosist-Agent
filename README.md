@@ -177,6 +177,8 @@ npm run mcp
 
 For comprehensive step-by-step installation and configuration guides for Cursor, Claude Code, Claude Desktop, and Cloudflare Workers, check out the [Official MCP Documentation](docs/MCP.md).
 
+The checked-in `mcp/server.js` is a **local stdio MCP** for Cursor, Claude Code, and VS Code-compatible MCP clients. GitHub Pages is the human-facing static UI; it does not run MCP. General ChatGPT or GPT-5.6 Sol access requires a separately deployed **Streamable HTTP Remote MCP** adapter. Cloudflare Workers cannot run the stdio implementation unchanged. See [docs/MCP.md](docs/MCP.md).
+
 ### Agent handoff dry-run (offline — recommended first step)
 
 Demonstrates the full **local** path from search intent → keep filter → Signal-to-Fix handoff → coding-agent prompt **without network access**:

@@ -53,6 +53,8 @@
   ],
   "scripts": {
     "test": "node test/agent-api.test.js && node test/mcp.test.js",
+    "test:agent": "node test/agent-api.test.js",
+    "test:mcp": "node test/mcp.test.js",
     "quickstart": "node examples/quickstart.mjs",
     "serve": "npx --yes serve -l 5173 .",
     "agent-handoff-dryrun": "node examples/agent-handoff-dryrun.mjs",

@@ -65,7 +65,7 @@ function runTest() {
         params: {
           name: 'hyperxosist_search_plan',
           arguments: {
-            intent: 'Find user complaints about Acme on X'
+            intent: 'Find user complaints, bug reports, and feature requests on X about HyperXosist-Agent'
           }
         }
       },
@@ -81,8 +81,10 @@ function runTest() {
         assert.ok(Array.isArray(payload.queries));
         assert.ok(Array.isArray(payload.searchUrls));
         assert.strictEqual(typeof payload.estimatedCost, 'number');
+        assert.ok(payload.queries.length > 1);
+        assert.ok(payload.searchUrls.every(url => url.startsWith('https://x.com/search')));
 
-        assert.ok(payload.queries.some(q => q.includes('Acme')));
+        assert.ok(payload.queries.some(q => q.includes('HyperXosist-Agent')));
         console.log('✓ hyperxosist_search_plan verified successfully.');
       }
     },
@@ -95,8 +97,9 @@ function runTest() {
           name: 'hyperxosist_filter_signals',
           arguments: {
             feedback: [
-              'Acme crashes when exporting CSV on Safari',
-              'love this so much game changer',
+              'HyperXosist crashes when generating a search URL on Safari 18.',
+              'Please add a one-click copy button for MCP configuration.',
+              'This is amazing, best product ever!',
               'GM giveaway airdrop 100x'
             ]
           }
@@ -111,7 +114,7 @@ function runTest() {
         assert.ok(Array.isArray(payload.discard));
         assert.ok(payload.summary);
 
-        assert.strictEqual(payload.keep.length, 1);
+        assert.strictEqual(payload.keep.length, 2);
         assert.strictEqual(payload.discard.length, 2);
         console.log('✓ hyperxosist_filter_signals verified successfully.');
       }
@@ -124,10 +127,10 @@ function runTest() {
         params: {
           name: 'hyperxosist_build_handoff',
           arguments: {
-            productName: 'Acme',
+            productName: 'HyperXosist-Agent',
             feedback: [
-              'Acme crashes when exporting CSV on Safari',
-              'love this so much game changer'
+              'HyperXosist crashes when generating a search URL on Safari 18.',
+              'Please add a one-click copy button for MCP configuration.'
             ]
           }
         }
@@ -140,9 +143,62 @@ function runTest() {
         assert.ok(payload.handoff);
         assert.strictEqual(payload.handoff.type, 'hyperxosist.handoff.v1');
         assert.strictEqual(payload.handoff.feedbackCount, 2);
+        assert.strictEqual(payload.handoff.signalToFix.input.productName, 'HyperXosist-Agent');
+        assert.strictEqual(typeof payload.handoff.agentPrompt.markdown, 'string');
+        assert.ok(payload.handoff.agentPrompt.markdown.length > 0);
         console.log('✓ hyperxosist_build_handoff verified successfully.');
       }
-    }
+    },
+    {
+      request: {
+        jsonrpc: '2.0',
+        id: 5,
+        method: 'tools/call',
+        params: {
+          name: 'hyperxosist_filter_signals',
+          arguments: { feedback: ['valid report', 42] }
+        }
+      },
+      assert: (response) => {
+        assert.strictEqual(response.id, 5);
+        assert.strictEqual(response.result.isError, true);
+        assert.match(response.result.content[0].text, /array of strings/);
+        console.log('[ok] invalid tool input returns an MCP error result.');
+      }
+    },
+    {
+      request: {
+        jsonrpc: '2.0',
+        id: 6,
+        method: 'tools/call',
+        params: {
+          name: 'hyperxosist_search_plan',
+          arguments: { intent: '   ' }
+        }
+      },
+      assert: (response) => {
+        assert.strictEqual(response.id, 6);
+        assert.strictEqual(response.result.isError, true);
+        console.log('[ok] empty intent validation verified successfully.');
+      }
+    },
+    {
+      request: {
+        jsonrpc: '2.0',
+        id: 7,
+        method: 'tools/call',
+        params: {
+          name: 'unknown_tool',
+          arguments: {}
+        }
+      },
+      assert: (response) => {
+        assert.strictEqual(response.id, 7);
+        assert.strictEqual(response.result.isError, true);
+        assert.match(response.result.content[0].text, /Unknown tool/);
+        console.log('[ok] unknown tool error response verified successfully.');
+      }
+    },
   ];
 
   let currentStep = 0;
