@@ -44,6 +44,7 @@ Discover → Plan → Score gate → Pay (x402) → Collect → Self-heal → Ke
 - **Shareable state** — URL hash `#s=...`
 
 ### For AI agents
+- **Official Model Context Protocol (MCP) Server** — expose query planning, signal filtering, and downstream handoff capabilities to Cursor, Claude Code, and other LLM assistants. Read [docs/MCP.md](docs/MCP.md).
 - **`dispatchToolCall` / `runTool`** — real multi-runtime tool dispatch (no hand-written mapping)
 - **`toOpenAITools()` / `toAnthropicTools()`** — drop-in schemas for GPT / Claude / Grok / Llama
 - **CLI** `bin/hyperxosist.js` — shell agents get `--json` plan / dispatch / keep / handoff
@@ -164,6 +165,17 @@ npm test
 npm run quickstart
 # or: node examples/quickstart.mjs "Weekly monitor about MyProduct"
 ```
+
+### MCP Server Quick Start
+
+Expose HyperXosist tools (planning, filtering, handoffs) to your AI IDE (Cursor, VS Code) or CLI agent (Claude Code):
+
+```bash
+# Start the local stdio MCP server
+npm run mcp
+```
+
+For comprehensive step-by-step installation and configuration guides for Cursor, Claude Code, Claude Desktop, and Cloudflare Workers, check out the [Official MCP Documentation](docs/MCP.md).
 
 ### Agent handoff dry-run (offline — recommended first step)
 

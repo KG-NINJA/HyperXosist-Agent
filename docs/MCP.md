@@ -175,9 +175,17 @@ Because the official `@modelcontextprotocol/sdk` supports SSE (Server-Sent Event
 
 ## 🔌 Connection Examples
 
-### 1. Claude Code
-Add the tool to your `~/.claude.json` configuration file:
+### 1. Claude Code (CLI)
+You can configure Claude Code to use this MCP server globally or per-project:
 
+#### Option A: Interactive Command (Recommended)
+Run the following command inside Claude Code's CLI:
+```bash
+claude mcp add hyperxosist node /absolute/path/to/HyperXosist-Agent/mcp/server.js
+```
+
+#### Option B: Per-Project `.mcp.json`
+Create a `.mcp.json` file in your repository root:
 ```json
 {
   "mcpServers": {
@@ -189,17 +197,36 @@ Add the tool to your `~/.claude.json` configuration file:
 }
 ```
 
-### 2. Cursor
+### 2. Claude Desktop (App)
+Add the server configuration to your global Claude Desktop App configuration file:
+
+- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+
+Add this configuration to the `mcpServers` object:
+```json
+{
+  "mcpServers": {
+    "hyperxosist": {
+      "command": "node",
+      "args": ["/absolute/path/to/HyperXosist-Agent/mcp/server.js"]
+    }
+  }
+}
+```
+
+### 3. Cursor
 Configure Cursor to run HyperXosist locally via **Settings**:
 1. Open **Cursor Settings** > **Features** > **MCP**.
 2. Click **+ Add New MCP Server**.
 3. Set the configurations:
    - **Name**: `hyperxosist`
    - **Type**: `stdio`
-   - **Command**: `node /absolute/path/to/HyperXosist-Agent/mcp/server.js`
+   - **Command**: `node`
+   - **Arguments**: `/absolute/path/to/HyperXosist-Agent/mcp/server.js`
 
-### 3. VS Code Agent Mode (Cline, Roo Code)
-Add this configuration block to your VS Code MCP settings file (typically `clinediscover.json` or Cline configuration):
+### 4. VS Code Agent Mode (Cline, Roo Code, Roo Cline)
+Add this configuration block to your VS Code MCP settings file (typically `clinediscover.json`, `cline_mcp_settings.json` or Roo Code configuration):
 
 ```json
 {
@@ -215,7 +242,7 @@ Add this configuration block to your VS Code MCP settings file (typically `cline
 }
 ```
 
-### 4. OpenAI Responses API MCP
+### 5. OpenAI Responses API MCP
 You can use the official `@modelcontextprotocol/sdk` to bridge HyperXosist directly to OpenAI’s Assistant/Responses tool schemas in Node.js:
 
 ```javascript

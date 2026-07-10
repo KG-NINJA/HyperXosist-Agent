@@ -47,7 +47,9 @@
     "bin/",
     "examples/",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "mcp/",
+    "docs/"
   ],
   "scripts": {
     "test": "node test/agent-api.test.js",
