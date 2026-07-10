@@ -528,5 +528,151 @@ test('agent-handoff-dryrun example prints full offline pipeline', () => {
   assert.ok(/https:\/\/x\.com\/search/i.test(out), 'search URL present');
 });
 
+test('version is 2.4+', () => {
+  const parts = Agent.version.split('.').map(Number);
+  assert.ok(parts[0] > 2 || (parts[0] === 2 && parts[1] >= 4), Agent.version);
+});
+
+test('dispatchToolCall plan_from_intent', () => {
+  const r = Agent.dispatchToolCall('hyperxosist_plan_from_intent', {
+    intent: 'Find product feedback about Acme for PR specs'
+  });
+  assert.strictEqual(r.ok, true);
+  assert.strictEqual(r.tool, 'hyperxosist_plan_from_intent');
+  assert.ok(r.result && r.result.missionId);
+  assert.ok(r.result.primaryStep);
+});
+
+test('dispatchToolCall accepts OpenAI-shaped call object', () => {
+  const r = Agent.dispatchToolCall({
+    function: {
+      name: 'hyperxosist_list_missions',
+      arguments: '{}'
+    }
+  });
+  assert.strictEqual(r.ok, true);
+  assert.ok(r.result);
+});
+
+test('dispatchToolCall accepts Anthropic-shaped call object', () => {
+  const r = Agent.dispatchToolCall({
+    name: 'hyperxosist_filter_keep_signals',
+    input: {
+      feedback: [
+        'Acme crashes when exporting CSV on Safari',
+        'love this so much game changer'
+      ]
+    }
+  });
+  assert.strictEqual(r.ok, true);
+  assert.ok(r.result.keepCount >= 1);
+  assert.ok(r.result.discardCount >= 1);
+});
+
+test('dispatchToolCall unknown tool returns error without throw', () => {
+  const r = Agent.dispatchToolCall('hyperxosist_does_not_exist', {});
+  assert.strictEqual(r.ok, false);
+  assert.strictEqual(r.error, 'unknown_tool');
+  assert.ok(Array.isArray(r.available));
+});
+
+test('runTool is alias of dispatchToolCall', () => {
+  const a = Agent.runTool('hyperxosist_export_noise', {});
+  assert.strictEqual(a.ok, true);
+  assert.ok(a.result.rules);
+});
+
+test('toOpenAITools and toAnthropicTools shapes', () => {
+  const oai = Agent.toOpenAITools();
+  assert.ok(Array.isArray(oai));
+  assert.ok(oai[0].type === 'function');
+  assert.ok(oai[0].function.name.startsWith('hyperxosist_'));
+  assert.ok(oai[0].function.parameters);
+
+  const ant = Agent.toAnthropicTools();
+  assert.ok(Array.isArray(ant));
+  assert.ok(ant[0].name.startsWith('hyperxosist_'));
+  assert.ok(ant[0].input_schema);
+  assert.ok(!ant[0].function);
+});
+
+test('getToolDefinitions format anthropic', () => {
+  const t = Agent.getToolDefinitions({ format: 'anthropic' });
+  assert.strictEqual(t.format, 'anthropic.tools.v1');
+  assert.ok(t.tools[0].name);
+  assert.ok(t.tools[0].input_schema);
+});
+
+test('exportKeepOnlyJson produces keep texts and optional S2F input', () => {
+  const exp = Agent.exportKeepOnlyJson(
+    [
+      'Acme crashes every time I paste 20 lines of feedback on iOS.',
+      'Love this idea, super useful.',
+      'GM giveaway airdrop 100x'
+    ],
+    { productName: 'Acme', targetArea: 'export' }
+  );
+  assert.strictEqual(exp.type, 'hyperxosist.keep_only.v1');
+  assert.ok(exp.keepCount >= 1);
+  assert.ok(Array.isArray(exp.texts));
+  assert.ok(exp.signalToFixInput);
+  assert.strictEqual(exp.signalToFixInput.productName, 'Acme');
+  assert.ok(exp.signalToFixInput.feedback.length === exp.keepCount);
+  assert.ok(exp.agentPrompt);
+  assert.ok(exp.markdown && exp.markdown.includes('Keep-only'));
+});
+
+test('dispatch export_keep_only tool', () => {
+  const r = Agent.dispatchToolCall('hyperxosist_export_keep_only', {
+    feedback: ['Please add JSON export for kept issues only'],
+    productName: 'Acme'
+  });
+  assert.strictEqual(r.ok, true);
+  assert.ok(r.result.keepCount >= 1);
+});
+
+test('CLI plan --json and dispatch work offline', () => {
+  const { spawnSync } = require('child_process');
+  const path = require('path');
+  const cli = path.join(__dirname, '..', 'bin', 'hyperxosist.js');
+
+  const plan = spawnSync(
+    process.execPath,
+    [cli, 'plan', 'Find product feedback about CliProduct', '--json', '--no-pretty'],
+    { encoding: 'utf8', timeout: 15000 }
+  );
+  assert.strictEqual(plan.status, 0, plan.stderr || plan.stdout);
+  const planJson = JSON.parse(plan.stdout);
+  assert.ok(planJson.missionId);
+  assert.ok(planJson.primaryStep);
+
+  const disp = spawnSync(
+    process.execPath,
+    [
+      cli,
+      'dispatch',
+      'hyperxosist_plan_from_intent',
+      '--args',
+      JSON.stringify({ intent: 'Find feedback about CliProduct' }),
+      '--json',
+      '--no-pretty'
+    ],
+    { encoding: 'utf8', timeout: 15000 }
+  );
+  assert.strictEqual(disp.status, 0, disp.stderr || disp.stdout);
+  const dispJson = JSON.parse(disp.stdout);
+  assert.strictEqual(dispJson.ok, true);
+
+  const tools = spawnSync(
+    process.execPath,
+    [cli, 'tools', '--format', 'anthropic', '--json', '--no-pretty'],
+    { encoding: 'utf8', timeout: 15000 }
+  );
+  assert.strictEqual(tools.status, 0, tools.stderr || tools.stdout);
+  const toolsJson = JSON.parse(tools.stdout);
+  assert.ok(toolsJson.tools[0].name);
+  assert.ok(toolsJson.tools[0].input_schema);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

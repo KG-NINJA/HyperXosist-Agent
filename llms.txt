@@ -1,12 +1,13 @@
 # HyperXosist Agent
-> Universal X/Twitter advanced search toolkit for any AI agent (GPT, Claude, Grok, Llama, local tool-callers).
+> Universal X/Twitter advanced search toolkit for any AI agent (GPT, Claude, Grok, Llama, local tool-callers, shell CLI).
 > Noise-reduced operators, multi-angle missions, x402 paid execution, Signal-to-Fix handoff.
 > Optional Grok Build mode for one-small-change code prompts (default OFF).
+> v2.4: real dispatchToolCall + OpenAI/Anthropic schema adapters + CLI.
 
 ## Critical rules
 - Human browser UI is free.
 - Automated production use of generated search URLs requires x402 payment (expect HTTP 402 until paid).
-- Local `buildQuery` / `planFromIntent` / `scoreQuery` are free for planning only — not a payment bypass.
+- Local `buildQuery` / `planFromIntent` / `scoreQuery` / `dispatchToolCall` (planning tools) are free for planning only — not a payment bypass.
 - Default mode is **universal** (works for all major LLMs). Pass `mode: "grok"` only when you want Grok Build tools.
 
 ## Start here (any agent)
@@ -18,11 +19,28 @@
 6. https://kg-ninja.github.io/HyperXosist-Agent/x402-payment.json
 7. https://kg-ninja.github.io/HyperXosist-Agent/signal-to-fix-pipeline.json  ← linked Signal-to-Fix execution
 
-## Tool-calling (OpenAI-compatible schema)
-Register tools from agent-tools.json (format: openai.tools.v1).
-Also works with Anthropic / Grok / Llama runtimes that accept the same function schema.
-Dispatch via `dispatchHints` → HyperXosistAgent methods.
-Most results include both **JSON fields** and **`.markdown`** (dual output).
+## Tool-calling (drop-in)
+```
+// OpenAI / Grok / Llama (openai tools shape)
+tools: HyperXosistAgent.toOpenAITools()
+
+// Anthropic Messages API
+tools: HyperXosistAgent.toAnthropicTools()
+
+// On tool call — works for OpenAI {function:{name,arguments}}, Anthropic {name,input}, or plain (name, args)
+HyperXosistAgent.dispatchToolCall(nameOrCall, args?)
+// alias: runTool(...)
+```
+Also: `agent-tools.json` (format openai.tools.v1) and `getToolDefinitions({ format: 'anthropic' })`.
+
+## CLI (shell agents)
+```
+npx hyperxosist plan "Find product feedback about Acme" --json
+npx hyperxosist dispatch hyperxosist_plan_from_intent --args '{"intent":"Find feedback about Acme"}' --json
+npx hyperxosist tools --format openai|anthropic|full --json
+npx hyperxosist keep --product Acme --feedback '["…"]' --export-keep-only --json
+npx hyperxosist handoff --product Acme --feedback '["…"]' --json
+```
 
 ## One-call bootstrap
 ```
@@ -36,7 +54,7 @@ HyperXosistAgent.startAgentSession({ intent: "...", mode: "grok" })
 ```
 
 ## Sticky agent loop (universal)
-planFromIntent → scoreQuery → x402 pay + search → collect posts → suggestRefinements → filterKeepSignals (optional) → buildSignalToFixPipeline / buildHandoffPackage → Signal-to-Fix (keep-only) or any coding LLM → buildRunReceipt
+planFromIntent → scoreQuery → x402 pay + search → collect posts → suggestRefinements → filterKeepSignals / exportKeepOnlyJson → buildSignalToFixPipeline / buildHandoffPackage → Signal-to-Fix (keep-only) or any coding LLM → buildRunReceipt
 
 ## Linked Signal-to-Fix (agents)
 ```
@@ -44,6 +62,11 @@ HyperXosistAgent.buildSignalToFixPipeline({ productName: "Acme", feedback: ["...
 // humanManual = free browser steps for humans
 // agentAuto = ordered paid search → handoff → keep-only PR path
 // handoff.signalToFix.input → https://kg-ninja.github.io/Signal-to-Fix/
+```
+Keep-only machine export:
+```
+HyperXosistAgent.exportKeepOnlyJson(feedback, { productName: "Acme" })
+// → .texts, .signalToFixInput, .agentPrompt
 ```
 Manifest: signal-to-fix-pipeline.json
 

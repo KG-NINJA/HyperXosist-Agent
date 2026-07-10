@@ -2,6 +2,27 @@
 
 All notable changes to this project are documented in this file.
 
+## [2.4.0] — 2026-07-10
+
+### Practical multi-agent runtime layer
+- **`dispatchToolCall(nameOrCall, args?)`** / **`runTool`** — real tool-name → method dispatch for any runtime
+  - Accepts plain `(name, args)`, OpenAI `{ function: { name, arguments } }`, Anthropic `{ name, input }`
+  - Returns `{ ok, tool, result }` — never throws on unknown tools
+- **`toOpenAITools()`** / **`toAnthropicTools()`** — drop-in schema adapters
+- **`getToolDefinitions({ format: 'anthropic' })`** — Anthropic Messages tools shape
+- **`exportKeepOnlyJson(feedback, options?)`** — keep-only machine export + optional Signal-to-Fix input + agentPrompt
+- New tools: `hyperxosist_export_keep_only`, `hyperxosist_start_session`
+
+### Universal CLI
+- New `bin/hyperxosist.js` (`npx hyperxosist` / `npm run cli`)
+- Commands: `plan`, `session`, `mission`, `missions`, `score`, `query`, `keep`, `export-keep`, `handoff`, `pipeline`, `prompt`, `tools`, `dispatch`, `playbook`, `version`
+- `--json` machine stdout for shell agents that cannot embed JS
+
+### Discovery / packaging
+- `package.json` version 2.4.0 + `bin.hyperxosist`
+- `agent-tools.json`, `agent-use.json`, `llms.txt`, `AGENTS.md` updated for dispatch + CLI
+- Expanded zero-dep tests (dispatch shapes, Anthropic tools, CLI smoke)
+
 ## [2.3.2] — 2026-07-09
 
 ### Agent dry-run handoff (offline CLI)

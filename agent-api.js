@@ -1,18 +1,24 @@
 /**
- * HyperXosist Agent API v2.3.2
+ * HyperXosist Agent API v2.4.0
  * Universal X advanced search toolkit for any AI agent runtime
- * (OpenAI / Anthropic / Grok / Llama / local tool-callers).
+ * (OpenAI / Anthropic / Grok / Llama / local tool-callers / shell CLI).
  *
  * Core (always on): plan → score → pay → collect → refine → handoff → receipt.
  * Optional: Grok Build mode (X voice → one small code-change prompt).
  *
+ * Multi-runtime practical layer:
+ *   dispatchToolCall / runTool — real tool-name → method dispatch
+ *   toOpenAITools / toAnthropicTools — schema adapters
+ *   exportKeepOnlyJson — keep-only machine export for any coding agent
+ *   CLI: bin/hyperxosist.js (plan | dispatch | tools | keep | handoff …)
+ *
  * Outputs prefer dual shape: structured JSON + .markdown for LLMs that read text.
- * Backward compatible with v2.1 / v2.2 method names and shapes.
+ * Backward compatible with v2.1 / v2.2 / v2.3 method names and shapes.
  */
 (function (root) {
   'use strict';
 
-  const VERSION = '2.3.2';
+  const VERSION = '2.4.0';
   const SIGNAL_TO_FIX_URL = 'https://kg-ninja.github.io/Signal-to-Fix/';
   const SIGNAL_TO_FIX_AGENT_USE = 'https://kg-ninja.github.io/Signal-to-Fix/agent-use.json';
   const PUBLIC_BASE = 'https://kg-ninja.github.io/HyperXosist-Agent';
@@ -2754,22 +2760,63 @@
           description: 'List multi-query missions and why agents reuse them.',
           parameters: { type: 'object', properties: {} }
         }
+      },
+      {
+        type: 'function',
+        function: {
+          name: 'hyperxosist_export_keep_only',
+          description:
+            'Export Keep-only JSON (texts + Signal-to-Fix input + optional agentPrompt). Use after collecting post texts so any coding agent receives only actionable signals.',
+          parameters: {
+            type: 'object',
+            properties: {
+              feedback: { type: 'array', items: { type: 'string' } },
+              productName: { type: 'string' },
+              productUrl: { type: 'string' },
+              targetArea: { type: 'string' },
+              context: { type: 'string' },
+              minScore: { type: 'number' }
+            },
+            required: ['feedback']
+          }
+        }
+      },
+      {
+        type: 'function',
+        function: {
+          name: 'hyperxosist_start_session',
+          description:
+            'Bootstrap a sticky agent session from intent (plan + tools + playbook). Preferred one-call entry for any LLM runtime.',
+          parameters: {
+            type: 'object',
+            properties: {
+              intent: { type: 'string' },
+              mode: { type: 'string', enum: ['universal', 'grok'] },
+              subject: { type: 'string' },
+              lang: { type: 'string' },
+              missionId: { type: 'string' }
+            },
+            required: ['intent']
+          }
+        }
       }
     ];
 
     const dispatchHints = {
-      hyperxosist_plan_from_intent: 'planFromIntent(intent, options)',
-      hyperxosist_build_mission: 'buildMission(missionId, { subject, lang })',
-      hyperxosist_build_query: '({ query: buildQuery(input), searchUrl: buildSearchUrl(input) })',
-      hyperxosist_score_query: 'scoreQuery(input)',
-      hyperxosist_suggest_refinements: 'suggestRefinements(input, signals)',
-      hyperxosist_build_paid_request: 'buildPaidRequest(input)',
-      hyperxosist_build_handoff: 'buildHandoffPackage(options)',
-      hyperxosist_signal_to_fix_pipeline: 'buildSignalToFixPipeline(options)',
-      hyperxosist_build_agent_prompt: 'buildAgentPrompt(options)',
-      hyperxosist_filter_keep_signals: 'filterKeepSignals(feedback, options)',
-      hyperxosist_export_noise: 'exportNoiseCatalog()',
-      hyperxosist_list_missions: 'listMissions()'
+      hyperxosist_plan_from_intent: 'dispatchToolCall("hyperxosist_plan_from_intent", args) → planFromIntent',
+      hyperxosist_build_mission: 'dispatchToolCall → buildMission(missionId, { subject, lang })',
+      hyperxosist_build_query: 'dispatchToolCall → { query, searchUrl, validation, score }',
+      hyperxosist_score_query: 'dispatchToolCall → scoreQuery(input)',
+      hyperxosist_suggest_refinements: 'dispatchToolCall → suggestRefinements(input, signals)',
+      hyperxosist_build_paid_request: 'dispatchToolCall → buildPaidRequest(input)',
+      hyperxosist_build_handoff: 'dispatchToolCall → buildHandoffPackage(options)',
+      hyperxosist_signal_to_fix_pipeline: 'dispatchToolCall → buildSignalToFixPipeline(options)',
+      hyperxosist_build_agent_prompt: 'dispatchToolCall → buildAgentPrompt(options)',
+      hyperxosist_filter_keep_signals: 'dispatchToolCall → filterKeepSignals(feedback, options)',
+      hyperxosist_export_keep_only: 'dispatchToolCall → exportKeepOnlyJson(feedback, options)',
+      hyperxosist_export_noise: 'dispatchToolCall → exportNoiseCatalog()',
+      hyperxosist_list_missions: 'dispatchToolCall → listMissions()',
+      hyperxosist_start_session: 'dispatchToolCall → startAgentSession(options)'
     };
 
     if (includeGrok) {
@@ -2812,25 +2859,326 @@
           }
         }
       );
-      dispatchHints.hyperxosist_build_grok_prompt = 'buildGrokBuildPrompt(options)';
-      dispatchHints.hyperxosist_create_grok_session = 'createGrokBuildSession(intent, productContext)';
+      dispatchHints.hyperxosist_build_grok_prompt =
+        'dispatchToolCall → buildGrokBuildPrompt(options)';
+      dispatchHints.hyperxosist_create_grok_session =
+        'dispatchToolCall → createGrokBuildSession(intent, productContext)';
     }
 
-    return {
-      format: 'openai.tools.v1',
-      compatibleWith: ['openai', 'anthropic', 'grok', 'llama', 'any-openai-tools-schema-runtime'],
+    const format = String(opts.format || 'openai').toLowerCase();
+    const base = {
+      format: format === 'anthropic' ? 'anthropic.tools.v1' : 'openai.tools.v1',
+      compatibleWith: ['openai', 'anthropic', 'grok', 'llama', 'cli', 'any-openai-tools-schema-runtime'],
       mode: includeGrok ? 'grok' : 'universal',
       defaultMode: DEFAULT_AGENT_MODE,
       paymentNote:
         'Automated use of generated search URLs requires x402 payment via paymentEndpoint. Human browser UI remains free. Local plan/score/buildQuery is free for planning.',
       howToUse:
-        'Register tools[] with your runtime. On tool call, dispatch via dispatchHints to HyperXosistAgent methods. Prefer reading both JSON fields and .markdown when present.',
-      tools,
+        'Register tools with your runtime (toOpenAITools / toAnthropicTools / getToolDefinitions). On tool call, prefer HyperXosistAgent.dispatchToolCall(name, args) — no hand-written mapping needed. Prefer reading both JSON fields and .markdown when present. Shell agents: npx hyperxosist dispatch <tool> --args \'{...}\'.',
       dispatchHints,
+      dispatchMethod: 'dispatchToolCall(name, args) or runTool(name, args)',
       optionalGrokTools: includeGrok
         ? ['hyperxosist_build_grok_prompt', 'hyperxosist_create_grok_session']
         : 'Call getToolDefinitions({ includeGrok: true }) or getToolDefinitions({ mode: "grok" }) to enable.'
     };
+
+    if (format === 'anthropic') {
+      return Object.assign({}, base, {
+        tools: tools.map(function (t) {
+          return {
+            name: t.function.name,
+            description: t.function.description,
+            input_schema: t.function.parameters
+          };
+        })
+      });
+    }
+
+    return Object.assign({}, base, { tools: tools });
+  }
+
+  /**
+   * OpenAI Chat Completions / Responses tools array.
+   * Drop-in: tools: HyperXosistAgent.toOpenAITools()
+   */
+  function toOpenAITools(options) {
+    return getToolDefinitions(Object.assign({}, options || {}, { format: 'openai' })).tools;
+  }
+
+  /**
+   * Anthropic Messages API tools array (name + input_schema).
+   * Drop-in: tools: HyperXosistAgent.toAnthropicTools()
+   */
+  function toAnthropicTools(options) {
+    return getToolDefinitions(Object.assign({}, options || {}, { format: 'anthropic' })).tools;
+  }
+
+  /**
+   * Normalize tool-call payloads from different agent runtimes.
+   * Accepts:
+   *   dispatchToolCall('hyperxosist_plan_from_intent', { intent: '...' })
+   *   dispatchToolCall({ name, arguments })
+   *   dispatchToolCall({ name, input })                 // Anthropic
+   *   dispatchToolCall({ function: { name, arguments }}) // OpenAI
+   *   dispatchToolCall({ toolName / tool_name, args / parameters })
+   */
+  function normalizeToolCall(nameOrCall, maybeArgs) {
+    if (typeof nameOrCall === 'string') {
+      let args = maybeArgs;
+      if (typeof args === 'string') {
+        try {
+          args = JSON.parse(args);
+        } catch (e) {
+          args = {};
+        }
+      }
+      return { name: nameOrCall, args: args && typeof args === 'object' ? args : {} };
+    }
+    if (!nameOrCall || typeof nameOrCall !== 'object') {
+      return { name: '', args: {}, error: 'invalid_tool_call' };
+    }
+    const call = nameOrCall;
+    let name =
+      call.name ||
+      call.toolName ||
+      call.tool_name ||
+      (call.function && call.function.name) ||
+      '';
+    let raw =
+      call.arguments !== undefined
+        ? call.arguments
+        : call.input !== undefined
+          ? call.input
+          : call.args !== undefined
+            ? call.args
+            : call.parameters !== undefined
+              ? call.parameters
+              : call.function && call.function.arguments !== undefined
+                ? call.function.arguments
+                : maybeArgs;
+    if (typeof raw === 'string') {
+      try {
+        raw = JSON.parse(raw);
+      } catch (e) {
+        raw = {};
+      }
+    }
+    if (!raw || typeof raw !== 'object') raw = {};
+    return { name: String(name || ''), args: raw };
+  }
+
+  /**
+   * Execute an OpenAI/Anthropic/Grok-style tool call against this API.
+   * Returns { ok, tool, result, error? } — never throws for unknown tools.
+   */
+  function dispatchToolCall(nameOrCall, maybeArgs) {
+    const normalized = normalizeToolCall(nameOrCall, maybeArgs);
+    const name = normalized.name;
+    const args = normalized.args || {};
+
+    if (!name) {
+      return {
+        ok: false,
+        tool: null,
+        error: 'missing_tool_name',
+        message: 'Provide a tool name string or a tool-call object with name / function.name.',
+        available: Object.keys(getToolDefinitions({ includeGrok: true }).dispatchHints)
+      };
+    }
+
+    try {
+      let result;
+      switch (name) {
+        case 'hyperxosist_plan_from_intent':
+          result = planFromIntent(args.intent, args);
+          break;
+        case 'hyperxosist_build_mission':
+          result = buildMission(args.missionId, {
+            subject: args.subject,
+            lang: args.lang,
+            mode: args.mode
+          });
+          break;
+        case 'hyperxosist_build_query': {
+          const input = args.input || args;
+          result = {
+            query: buildQuery(input),
+            searchUrl: buildSearchUrl(input),
+            validation: validateInput(input),
+            score: scoreQuery(input)
+          };
+          break;
+        }
+        case 'hyperxosist_score_query':
+          result = scoreQuery(args.input || args);
+          break;
+        case 'hyperxosist_suggest_refinements':
+          result = suggestRefinements(args.input || args, {
+            tooSparse: args.tooSparse,
+            tooNoisy: args.tooNoisy,
+            resultCount: args.resultCount
+          });
+          break;
+        case 'hyperxosist_build_paid_request':
+          result = buildPaidRequest(args.input || args);
+          break;
+        case 'hyperxosist_build_handoff':
+          result = buildHandoffPackage(args);
+          break;
+        case 'hyperxosist_signal_to_fix_pipeline':
+          result = buildSignalToFixPipeline(args);
+          break;
+        case 'hyperxosist_build_agent_prompt':
+          result = buildAgentPrompt(args);
+          break;
+        case 'hyperxosist_filter_keep_signals':
+          result = filterKeepSignals(args.feedback || args.signals || [], {
+            minScore: args.minScore
+          });
+          break;
+        case 'hyperxosist_export_keep_only':
+          result = exportKeepOnlyJson(args.feedback || args.signals || [], args);
+          break;
+        case 'hyperxosist_export_noise':
+          result = exportNoiseCatalog();
+          break;
+        case 'hyperxosist_list_missions':
+          result = listMissions();
+          break;
+        case 'hyperxosist_start_session':
+          result = startAgentSession(args);
+          break;
+        case 'hyperxosist_build_grok_prompt':
+          result = buildGrokBuildPrompt(args);
+          break;
+        case 'hyperxosist_create_grok_session':
+          result = createGrokBuildSession(args.intent, {
+            product: args.product,
+            targetArea: args.targetArea,
+            context: args.context
+          });
+          break;
+        default:
+          return {
+            ok: false,
+            tool: name,
+            error: 'unknown_tool',
+            message:
+              'Unknown tool "' +
+              name +
+              '". Use getToolDefinitions() or hyperxosist tools --format full.',
+            available: Object.keys(getToolDefinitions({ includeGrok: true }).dispatchHints)
+          };
+      }
+
+      return {
+        ok: true,
+        tool: name,
+        result: result,
+        // Convenience for runtimes that want a string tool message:
+        asJson: function () {
+          return JSON.stringify(result, null, 2);
+        }
+      };
+    } catch (err) {
+      return {
+        ok: false,
+        tool: name,
+        error: 'dispatch_failed',
+        message: err && err.message ? err.message : String(err)
+      };
+    }
+  }
+
+  /** Alias preferred by some agent frameworks. */
+  function runTool(nameOrCall, maybeArgs) {
+    return dispatchToolCall(nameOrCall, maybeArgs);
+  }
+
+  /**
+   * Machine-readable Keep-only export for any coding agent / Signal-to-Fix.
+   * Prefer this over pasting raw posts when handing off to Codex, Claude, GPT, etc.
+   */
+  function exportKeepOnlyJson(feedback, options) {
+    const opts = options || {};
+    const filter = filterKeepSignals(feedback || [], {
+      minScore: opts.minScore
+    });
+    const texts = (filter.keep || []).map(function (k) {
+      return k.text;
+    });
+    const productName = opts.productName || opts.product || null;
+    const payload = {
+      type: 'hyperxosist.keep_only.v1',
+      version: VERSION,
+      createdAt: new Date().toISOString(),
+      productName: productName,
+      productUrl: opts.productUrl || null,
+      targetArea: opts.targetArea || null,
+      minScore: filter.minScore,
+      keepCount: filter.keepCount,
+      discardCount: filter.discardCount,
+      keep: (filter.keep || []).map(function (k) {
+        return {
+          text: k.text,
+          decision: 'keep',
+          technicalDepth: k.technicalDepth,
+          band: k.band,
+          tags: k.tags,
+          index: k.index
+        };
+      }),
+      texts: texts,
+      focusSummary: filter.focusSummary,
+      policy:
+        'Only decision === "keep" items may drive PR specs or implementation prompts. Discard items must be ignored.',
+      signalToFixInput: productName
+        ? {
+            productName: productName,
+            productUrl: opts.productUrl || undefined,
+            targetArea: opts.targetArea || undefined,
+            feedback: texts,
+            context: opts.context || undefined
+          }
+        : null,
+      agentPrompt:
+        productName && texts.length
+          ? buildAgentPrompt({
+              productName: productName,
+              productUrl: opts.productUrl,
+              targetArea: opts.targetArea,
+              context: opts.context,
+              feedback: texts,
+              minTechScore: 0
+            })
+          : null
+    };
+    return withDualFormat(payload, function () {
+      const lines = [
+        '# Keep-only export',
+        '',
+        '**Product**: ' + (productName || '(unset)'),
+        '**Keep**: ' + payload.keepCount + ' / discard ' + payload.discardCount,
+        '',
+        '## Keep signals'
+      ];
+      payload.keep.forEach(function (k, i) {
+        lines.push(
+          (i + 1) +
+            '. (depth=' +
+            k.technicalDepth +
+            '; ' +
+            (k.tags || []).join('/') +
+            ') ' +
+            k.text
+        );
+      });
+      if (payload.focusSummary && payload.focusSummary.headline) {
+        lines.push('', '## Focus', payload.focusSummary.headline);
+      }
+      lines.push('', '## Policy', payload.policy);
+      return lines.join('\n');
+    });
   }
 
   function getAgentPlaybook(options) {
@@ -3119,6 +3467,11 @@
     getSignalToFixLinks,
     buildRunReceipt,
     getToolDefinitions,
+    toOpenAITools,
+    toAnthropicTools,
+    dispatchToolCall,
+    runTool,
+    normalizeToolCall,
     getAgentPlaybook,
     startAgentSession,
     buildAgentPrompt,
@@ -3126,6 +3479,7 @@
     // Signal quality (shared by universal + Grok)
     scoreTechnicalDepth,
     filterKeepSignals,
+    exportKeepOnlyJson,
     summarizeGrokFocus,
     // Optional Grok Build layer
     buildGrokBuildPrompt,

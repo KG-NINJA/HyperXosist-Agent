@@ -1,7 +1,7 @@
 {
   "name": "hyperxosist-agent",
-  "version": "2.3.2",
-  "description": "Universal API-free X/Twitter search toolkit for any AI agent (GPT/Claude/Grok/Llama): missions, noise reduction, x402, Signal-to-Fix handoff, optional Grok Build mode.",
+  "version": "2.4.0",
+  "description": "Universal API-free X/Twitter search toolkit for any AI agent (GPT/Claude/Grok/Llama): missions, noise reduction, x402, Signal-to-Fix handoff, tool dispatch, CLI, optional Grok Build mode.",
   "keywords": [
     "twitter",
     "x",
@@ -11,7 +11,10 @@
     "noise-reduction",
     "osint",
     "signal-to-fix",
-    "query-builder"
+    "query-builder",
+    "openai-tools",
+    "anthropic-tools",
+    "cli"
   ],
   "homepage": "https://kg-ninja.github.io/HyperXosist-Agent/",
   "repository": {
@@ -25,6 +28,9 @@
   "author": "KG-NINJA",
   "main": "agent-api.js",
   "browser": "agent-api.js",
+  "bin": {
+    "hyperxosist": "bin/hyperxosist.js"
+  },
   "files": [
     "agent-api.js",
     "agent-use.json",
@@ -38,6 +44,7 @@
     "app.js",
     "style.css",
     "top30_repost_blacklist.json",
+    "bin/",
     "examples/",
     "LICENSE",
     "README.md"
@@ -46,7 +53,11 @@
     "test": "node test/agent-api.test.js",
     "quickstart": "node examples/quickstart.mjs",
     "serve": "npx --yes serve -l 5173 .",
-    "agent-handoff-dryrun": "node examples/agent-handoff-dryrun.mjs"
+    "agent-handoff-dryrun": "node examples/agent-handoff-dryrun.mjs",
+    "cli": "node bin/hyperxosist.js",
+    "multi-runtime": "node examples/multi-runtime.mjs",
+    "tools:openai": "node bin/hyperxosist.js tools --format openai --json",
+    "tools:anthropic": "node bin/hyperxosist.js tools --format anthropic --json"
   },
   "engines": {
     "node": ">=18"

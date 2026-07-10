@@ -21,6 +21,32 @@ Prefer JSON for tool dispatch; use markdown when pasting into a chat model.
 
 ## Fast path (copy this)
 
+### A) Tool-calling agents (OpenAI / Anthropic / Grok / Llama)
+
+```js
+// Register tools (pick one schema):
+const openaiTools = HyperXosistAgent.toOpenAITools();       // Chat Completions
+const anthropicTools = HyperXosistAgent.toAnthropicTools(); // Messages API
+
+// On every tool call from the model — ONE dispatcher for all runtimes:
+const out = HyperXosistAgent.dispatchToolCall(toolName, toolArgs);
+// also accepts OpenAI { function: { name, arguments } } and Anthropic { name, input }
+// → out.ok, out.result
+```
+
+### B) Shell / CLI agents (no embed required)
+
+```bash
+npx hyperxosist plan "Find product feedback about <PRODUCT> for PR specs" --json
+npx hyperxosist dispatch hyperxosist_plan_from_intent --args '{"intent":"Find feedback about <PRODUCT>"}' --json
+npx hyperxosist tools --format openai --json
+npx hyperxosist tools --format anthropic --json
+npx hyperxosist keep --product <PRODUCT> --feedback '["post1","post2"]' --export-keep-only --json
+npx hyperxosist handoff --product <PRODUCT> --feedback '["…"]' --json
+```
+
+### C) Library sticky loop
+
 ```js
 // 1) Bootstrap (universal — all LLMs)
 const session = HyperXosistAgent.startAgentSession({
@@ -44,7 +70,13 @@ const paid = step.paidRequest;
 // 5) Self-heal if empty
 // HyperXosistAgent.suggestRefinements(step.input, { tooSparse: true })
 
-// 6) Linked Signal-to-Fix pipeline (preferred) OR handoff only
+// 6) Keep-only export (any coding agent) + Signal-to-Fix
+const keepOnly = HyperXosistAgent.exportKeepOnlyJson(feedback, {
+  productName: '<PRODUCT>',
+  targetArea: 'auth'
+});
+// → keepOnly.texts / keepOnly.signalToFixInput / keepOnly.agentPrompt
+
 const pipeline = HyperXosistAgent.buildSignalToFixPipeline({
   productName: '<PRODUCT>',
   feedback: [/* posts */],
@@ -95,18 +127,22 @@ const gp = HyperXosistAgent.buildGrokBuildPrompt({ productName: '<PRODUCT>', fee
 
 | Goal | Call |
 |------|------|
-| Vague NL goal | `planFromIntent(intent)` |
+| Vague NL goal | `planFromIntent(intent)` or `dispatchToolCall('hyperxosist_plan_from_intent', …)` |
 | Named campaign | `buildMission(id, { subject })` |
 | Score before pay | `scoreQuery(input)` |
 | Empty / spammy results | `suggestRefinements` |
 | Linked Signal-to-Fix pipeline | `buildSignalToFixPipeline` |
 | PR / keep-only handoff | `buildHandoffPackage` |
+| Keep-only JSON for any agent | `exportKeepOnlyJson(feedback, { productName })` |
 | Any-LLM implementation prompt | `buildAgentPrompt` |
 | Keep-only post filter | `filterKeepSignals` |
 | Inspect / edit noise blacklist | `exportNoiseCatalog` / `customizeNoiseRules` |
 | Shareable URL | `buildShareUrl(input)` or `encodeState` |
 | Optional Grok session | `createGrokBuildSession` / `mode: 'grok'` |
-| Tool-calling schema | `getToolDefinitions()` or `agent-tools.json` |
+| Tool-calling schema (OpenAI) | `toOpenAITools()` / `agent-tools.json` |
+| Tool-calling schema (Anthropic) | `toAnthropicTools()` |
+| Execute a tool call | **`dispatchToolCall(name, args)`** / `runTool` |
+| Shell / no-JS agents | `npx hyperxosist <cmd> --json` |
 
 ## Noise transparency
 

@@ -46,3 +46,9 @@ jobs:
 
       - name: Smoke agent handoff dry-run (offline)
         run: npm run agent-handoff-dryrun -- HyperXosist-Agent
+
+      - name: Smoke universal CLI (plan + dispatch + anthropic tools)
+        run: |
+          node bin/hyperxosist.js plan "Find product feedback about CliSmoke" --json --no-pretty | node -e "const d=JSON.parse(require('fs').readFileSync(0,'utf8')); if(!d.missionId) process.exit(1)"
+          node bin/hyperxosist.js dispatch hyperxosist_list_missions --args '{}' --json --no-pretty | node -e "const d=JSON.parse(require('fs').readFileSync(0,'utf8')); if(!d.ok) process.exit(1)"
+          node bin/hyperxosist.js tools --format anthropic --json --no-pretty | node -e "const d=JSON.parse(require('fs').readFileSync(0,'utf8')); if(!d.tools[0].input_schema) process.exit(1)"

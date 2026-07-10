@@ -1,6 +1,6 @@
 {
   "name": "HyperXosist → Signal-to-Fix Linked Pipeline",
-  "version": "2.3.2",
+  "version": "2.4.0",
   "type": "hyperxosist.signal_to_fix_pipeline.manifest",
   "description": "Machine-readable linked workflow so AI agents chain HyperXosist-Agent search/handoff into Signal-to-Fix keep-only PR specs. Humans use the free browser path documented in humanManual.",
   "requiresPaymentForAgentSearchUse": true,

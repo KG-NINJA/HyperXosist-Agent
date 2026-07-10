@@ -2,17 +2,18 @@
 
 [![CI](https://github.com/KG-NINJA/HyperXosist-Agent/actions/workflows/ci.yml/badge.svg)](https://github.com/KG-NINJA/HyperXosist-Agent/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-2.3.2-brightgreen.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-2.4.0-brightgreen.svg)](CHANGELOG.md)
 [![Live](https://img.shields.io/badge/demo-GitHub%20Pages-black.svg)](https://kg-ninja.github.io/HyperXosist-Agent/)
 
-**API-free advanced X (Twitter) search launcher** — for humans in the browser, and for **any** AI agent (GPT, Claude, Grok, Llama…) that needs multi-angle, noise-reduced search missions with an x402 paid path and Signal-to-Fix handoff. Optional **Grok Build** mode (default off).
+**API-free advanced X (Twitter) search launcher** — for humans in the browser, and for **any** AI agent (GPT, Claude, Grok, Llama, shell tool-callers…) that needs multi-angle, noise-reduced search missions with an x402 paid path and Signal-to-Fix handoff. Optional **Grok Build** mode (default off).
 
 | | |
 |---|---|
 | **Live demo** | https://kg-ninja.github.io/HyperXosist-Agent/ |
 | **Repository** | https://github.com/KG-NINJA/HyperXosist-Agent |
 | **Agent entry** | https://kg-ninja.github.io/HyperXosist-Agent/llms.txt |
-| **Version** | 2.3.2 |
+| **CLI** | `npx hyperxosist plan "…" --json` |
+| **Version** | 2.4.0 |
 
 > 日本語の要点: X 公式検索用クエリを組み立てる静的ツールです。人間の UI は無料。AI エージェントの本番利用は x402 支払い前提。検索結果の埋め込みや自動投稿はしません。
 
@@ -43,6 +44,10 @@ Discover → Plan → Score gate → Pay (x402) → Collect → Self-heal → Ke
 - **Shareable state** — URL hash `#s=...`
 
 ### For AI agents
+- **`dispatchToolCall` / `runTool`** — real multi-runtime tool dispatch (no hand-written mapping)
+- **`toOpenAITools()` / `toAnthropicTools()`** — drop-in schemas for GPT / Claude / Grok / Llama
+- **CLI** `bin/hyperxosist.js` — shell agents get `--json` plan / dispatch / keep / handoff
+- `exportKeepOnlyJson` — keep-only machine export for any coding agent
 - `planFromIntent` / multi-angle **missions**
 - `scoreQuery` before spending **$0.01** per paid call
 - `suggestRefinements` when results are empty or noisy
@@ -88,7 +93,27 @@ npm run serve
 4. [agent-tools.json](https://kg-ninja.github.io/HyperXosist-Agent/agent-tools.json)
 5. [x402-payment.json](https://kg-ninja.github.io/HyperXosist-Agent/x402-payment.json)
 
-**One call**
+**Any runtime in 3 lines**
+
+```js
+const HyperXosistAgent = require('hyperxosist-agent'); // or ./agent-api.js
+
+// 1) Register tools with your model runtime
+const tools = HyperXosistAgent.toOpenAITools();     // or toAnthropicTools()
+
+// 2) When the model calls a tool — one dispatcher for all shapes
+const { ok, result } = HyperXosistAgent.dispatchToolCall(name, args);
+```
+
+**Shell / CLI (no embed)**
+
+```bash
+npm run cli -- plan "Find product feedback about Acme for PR specs" --json
+# or: node bin/hyperxosist.js dispatch hyperxosist_plan_from_intent \
+#        --args '{"intent":"Find feedback about Acme"}' --json
+```
+
+**One call (library sticky loop)**
 
 ```js
 // Node
@@ -105,6 +130,12 @@ if (step.score.recommendPay) {
   // expect HTTP 402 until x402 payment proof, then 200
   // after authorization, open step.searchUrl and collect post texts
 }
+
+const keepOnly = HyperXosistAgent.exportKeepOnlyJson(
+  ['...candidate posts...'],
+  { productName: 'Acme' }
+);
+// → keepOnly.texts / keepOnly.signalToFixInput / keepOnly.agentPrompt
 
 const handoff = HyperXosistAgent.buildHandoffPackage({
   productName: 'Acme',
@@ -186,10 +217,13 @@ Full catalog: [missions.json](https://kg-ninja.github.io/HyperXosist-Agent/missi
 
 ---
 
-## API surface (v2.3)
+## API surface (v2.4)
 
 | Method | Role |
 |--------|------|
+| **`dispatchToolCall` / `runTool`** | **Execute any tool name** (OpenAI/Anthropic/plain shapes) |
+| **`toOpenAITools` / `toAnthropicTools`** | Drop-in tool schemas |
+| **`exportKeepOnlyJson`** | Keep-only JSON + S2F input + agent prompt |
 | `startAgentSession(opts?)` | Universal session (optional `mode:'grok'`) |
 | `planFromIntent(intent)` | NL → mission + scored paid steps + `.markdown` |
 | `buildMission(id, ctx)` | Named multi-angle campaign |
@@ -202,7 +236,18 @@ Full catalog: [missions.json](https://kg-ninja.github.io/HyperXosist-Agent/missi
 | `buildGrokBuildPrompt` / `createGrokBuildSession` | **Optional** Grok mode |
 | `buildQuery` / `buildSearchUrl` / `buildShareUrl` | Query + shareable state |
 | `buildPaidRequest` / `buildBatch` | x402 payloads |
-| `getToolDefinitions` / `listMissions` | Catalogs (Grok tools opt-in) |
+| `getToolDefinitions` / `listMissions` | Catalogs (Grok tools opt-in; `format:'anthropic'`) |
+
+### CLI surface
+
+```bash
+npx hyperxosist plan "…" --json
+npx hyperxosist dispatch <toolName> --args '{…}' --json
+npx hyperxosist tools --format openai|anthropic|full --json
+npx hyperxosist keep --product X --feedback '[…]' --export-keep-only --json
+npx hyperxosist handoff --product X --feedback '[…]' --json
+npx hyperxosist pipeline --product X --json
+```
 
 ---
 
@@ -211,6 +256,7 @@ Full catalog: [missions.json](https://kg-ninja.github.io/HyperXosist-Agent/missi
 ```
 index.html, app.js, style.css, favicon.svg   # Human UI
 agent-api.js                                # Single-source API (Node + browser)
+bin/hyperxosist.js                          # Universal CLI (plan/dispatch/tools/keep…)
 agent-use.json                              # Agent manifest (sticky loop)
 agent-tools.json                            # OpenAI-compatible tools
 missions.json                               # Mission catalog
