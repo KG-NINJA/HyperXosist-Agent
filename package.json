@@ -57,10 +57,14 @@
     "cli": "node bin/hyperxosist.js",
     "multi-runtime": "node examples/multi-runtime.mjs",
     "tools:openai": "node bin/hyperxosist.js tools --format openai --json",
-    "tools:anthropic": "node bin/hyperxosist.js tools --format anthropic --json"
+    "tools:anthropic": "node bin/hyperxosist.js tools --format anthropic --json",
+    "mcp": "node mcp/server.js"
   },
   "engines": {
     "node": ">=18"
   },
-  "private": false
+  "private": false,
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0"
+  }
 }
