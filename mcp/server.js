@@ -91,7 +91,7 @@ async function main() {
 
     try {
       if (name === 'hyperxosist_search_plan') {
-        if (!args || typeof args.intent !== 'string') {
+        if (!args || typeof args.intent !== 'string' || !args.intent.trim()) {
           return {
             content: [{ type: 'text', text: "Error: 'intent' parameter must be a string." }],
             isError: true,
@@ -133,7 +133,11 @@ async function main() {
       }
 
       if (name === 'hyperxosist_filter_signals') {
-        if (!args || !Array.isArray(args.feedback)) {
+        if (
+          !args ||
+          !Array.isArray(args.feedback) ||
+          args.feedback.some((item) => typeof item !== 'string' || !item.trim())
+        ) {
           return {
             content: [{ type: 'text', text: "Error: 'feedback' parameter must be an array of strings." }],
             isError: true,
@@ -160,7 +164,13 @@ async function main() {
       }
 
       if (name === 'hyperxosist_build_handoff') {
-        if (!args || typeof args.productName !== 'string' || !Array.isArray(args.feedback)) {
+        if (
+          !args ||
+          typeof args.productName !== 'string' ||
+          !args.productName.trim() ||
+          !Array.isArray(args.feedback) ||
+          args.feedback.some((item) => typeof item !== 'string' || !item.trim())
+        ) {
           return {
             content: [
               {

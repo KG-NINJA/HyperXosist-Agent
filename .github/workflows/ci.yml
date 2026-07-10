@@ -8,7 +8,7 @@ on:
 
 jobs:
   test:
-    name: Agent API tests
+    name: Agent API and MCP validation
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -19,8 +19,14 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Run unit and MCP integration tests
-        run: npm test
+      - name: Install npm dependencies
+        run: npm install
+
+      - name: Run Agent API tests
+        run: npm run test:agent
+
+      - name: Run MCP stdio integration tests
+        run: npm run test:mcp
 
       - name: Validate JSON manifests
         run: |
@@ -52,3 +58,8 @@ jobs:
           node bin/hyperxosist.js plan "Find product feedback about CliSmoke" --json --no-pretty | node -e "const d=JSON.parse(require('fs').readFileSync(0,'utf8')); if(!d.missionId) process.exit(1)"
           node bin/hyperxosist.js dispatch hyperxosist_list_missions --args '{}' --json --no-pretty | node -e "const d=JSON.parse(require('fs').readFileSync(0,'utf8')); if(!d.ok) process.exit(1)"
           node bin/hyperxosist.js tools --format anthropic --json --no-pretty | node -e "const d=JSON.parse(require('fs').readFileSync(0,'utf8')); if(!d.tools[0].input_schema) process.exit(1)"
+
+      - name: Verify npm package includes MCP and documentation
+        run: |
+          npm pack --dry-run --json > npm-pack.json
+          node -e "const p=require('./npm-pack.json')[0]; const files=new Set(p.files.map(x=>x.path)); for (const f of ['agent-api.js','mcp/server.js','docs/MCP.md','agent-use.json','agent-tools.json','missions.json','x402-payment.json','README.md']) { if (!files.has(f)) throw new Error('Missing from npm package: '+f); }"
