@@ -19,8 +19,8 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Run unit tests
-        run: node test/agent-api.test.js
+      - name: Run unit and MCP integration tests
+        run: npm test
 
       - name: Validate JSON manifests
         run: |

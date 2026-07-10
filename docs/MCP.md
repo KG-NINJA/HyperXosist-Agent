@@ -13,6 +13,13 @@ HyperXosist-Agent is a **query-planning and signal-filtering system**.
 
 ---
 
+## 🌐 Connection Transport & Remote MCP Limitation
+
+- **Stdio-Only Out-of-the-Box**: The current implementation in `mcp/server.js` is built and pre-configured **strictly for local stdio-based transport** (standard input/standard output) suitable for desktop environments (Cursor, Claude Code CLI, etc.).
+- **Remote MCP Requirement**: Running HyperXosist as a Remote MCP Server (for example, on a central cloud instance or as an external SaaS utility) **requires an additional Streamable HTTP, SSE, or WebSocket adapter**. The default stdio code cannot be connected directly over the web without wrapping it in a network-aware transport layer.
+
+---
+
 ## 🏗️ Architecture
 
 ```
