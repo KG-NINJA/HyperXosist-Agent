@@ -107,10 +107,11 @@ async function main() {
           };
         }
 
-        const mission = plan.mission;
-        const queries = mission.steps.map((s) => s.query);
-        const searchUrls = mission.steps.map((s) => s.searchUrl);
-        const estimatedCost = mission.estimatedCostUsd;
+        const mission = plan.mission || {};
+        const steps = mission.steps || [];
+        const queries = steps.map((s) => s.query || '');
+        const searchUrls = steps.map((s) => s.searchUrl || '');
+        const estimatedCost = typeof mission.estimatedCostUsd === 'number' ? mission.estimatedCostUsd : 0;
 
         return {
           content: [
@@ -206,6 +207,25 @@ async function main() {
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
+
+  // Graceful shutdown handling to prevent orphaned processes
+  const cleanup = async () => {
+    console.error('Shutting down MCP server gracefully...');
+    try {
+      await server.close();
+    } catch (e) {
+      console.error('Error during MCP server shutdown:', e);
+    }
+    process.exit(0);
+  };
+
+  process.on('SIGINT', cleanup);
+  process.on('SIGTERM', cleanup);
+
+  process.stdin.on('close', () => {
+    console.error('stdin closed, shutting down MCP server...');
+    cleanup();
+  });
 }
 
 main().catch((err) => {
