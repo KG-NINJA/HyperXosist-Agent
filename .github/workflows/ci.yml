@@ -20,7 +20,7 @@ jobs:
           node-version: "20"
 
       - name: Install npm dependencies
-        run: npm ci
+        run: npm install
 
       - name: Run Agent API tests
         run: npm run test:agent
