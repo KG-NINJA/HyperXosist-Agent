@@ -1,0 +1,11 @@
+services:
+  hyperxosist-remote-mcp:
+    build: .
+    ports:
+      - "8787:8787"
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8787
+      HYPERXOSIST_MCP_TOKEN: ${HYPERXOSIST_MCP_TOKEN:?set HYPERXOSIST_MCP_TOKEN}
+      HYPERXOSIST_MCP_ALLOWED_HOSTS: ${HYPERXOSIST_MCP_ALLOWED_HOSTS:-localhost}
+    restart: unless-stopped

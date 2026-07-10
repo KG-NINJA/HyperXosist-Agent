@@ -18,7 +18,7 @@
 (function (root) {
   'use strict';
 
-  const VERSION = '2.4.0';
+  const VERSION = '2.5.0';
   const SIGNAL_TO_FIX_URL = 'https://kg-ninja.github.io/Signal-to-Fix/';
   const SIGNAL_TO_FIX_AGENT_USE = 'https://kg-ninja.github.io/Signal-to-Fix/agent-use.json';
   const PUBLIC_BASE = 'https://kg-ninja.github.io/HyperXosist-Agent';
