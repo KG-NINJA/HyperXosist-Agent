@@ -8,8 +8,12 @@ on:
 
 jobs:
   test:
-    name: Agent API and MCP validation
+    name: Node ${{ matrix.node-version }} Agent API and MCP validation
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ["18", "20"]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -17,7 +21,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: ${{ matrix.node-version }}
 
       - name: Install npm dependencies
         run: npm install
@@ -25,8 +29,23 @@ jobs:
       - name: Run Agent API tests
         run: npm run test:agent
 
-      - name: Run MCP stdio integration tests
+      - name: Run local stdio MCP integration tests
         run: npm run test:mcp
+
+      - name: Run shared MCP core and schema tests
+        run: npm run test:mcp:core && npm run test:mcp:schema
+
+      - name: Run Remote Streamable HTTP MCP tests
+        run: npm run test:mcp:remote
+
+      - name: Run Remote MCP security tests
+        run: npm run test:mcp:security
+
+      - name: Evaluate MCP tool selection
+        run: npm run test:tool-selection
+
+      - name: Validate OpenAI Remote MCP example without API access
+        run: npm run openai:remote-check
 
       - name: Validate JSON manifests
         run: |
@@ -39,7 +58,9 @@ jobs:
             'x402-payment.json',
             'top30_repost_blacklist.json',
             'package.json',
-            'examples/agent-session.example.json'
+            'examples/agent-session.example.json',
+            'test/tool-selection-cases.json',
+            'signal-to-fix-pipeline.json'
           ];
           for (const f of files) {
             JSON.parse(fs.readFileSync(f, 'utf8'));
@@ -47,19 +68,23 @@ jobs:
           }
           "
 
-      - name: Smoke agent session
-        run: node examples/quickstart.mjs
+      - name: Smoke quickstart
+        run: npm run quickstart
 
-      - name: Smoke agent handoff dry-run (offline)
+      - name: Smoke agent handoff dry-run
         run: npm run agent-handoff-dryrun -- HyperXosist-Agent
 
-      - name: Smoke universal CLI (plan + dispatch + anthropic tools)
+      - name: Smoke universal CLI
         run: |
           node bin/hyperxosist.js plan "Find product feedback about CliSmoke" --json --no-pretty | node -e "const d=JSON.parse(require('fs').readFileSync(0,'utf8')); if(!d.missionId) process.exit(1)"
           node bin/hyperxosist.js dispatch hyperxosist_list_missions --args '{}' --json --no-pretty | node -e "const d=JSON.parse(require('fs').readFileSync(0,'utf8')); if(!d.ok) process.exit(1)"
           node bin/hyperxosist.js tools --format anthropic --json --no-pretty | node -e "const d=JSON.parse(require('fs').readFileSync(0,'utf8')); if(!d.tools[0].input_schema) process.exit(1)"
 
-      - name: Verify npm package includes MCP and documentation
+      - name: Verify npm package contents
         run: |
           npm pack --dry-run --json > npm-pack.json
-          node -e "const p=require('./npm-pack.json')[0]; const files=new Set(p.files.map(x=>x.path)); for (const f of ['agent-api.js','mcp/server.js','docs/MCP.md','agent-use.json','agent-tools.json','missions.json','x402-payment.json','README.md']) { if (!files.has(f)) throw new Error('Missing from npm package: '+f); }"
+          node -e "const p=require('./npm-pack.json')[0]; const files=new Set(p.files.map(x=>x.path)); for (const f of ['agent-api.js','mcp/server.js','mcp/remote-server.js','mcp/core.js','mcp/tools.js','docs/MCP.md','docs/CHATGPT_APP.md','agent-use.json','agent-tools.json','missions.json','x402-payment.json','README.md']) { if (!files.has(f)) throw new Error('Missing from npm package: '+f); }"
+
+      - name: Build Remote MCP Docker image
+        if: matrix.node-version == '20'
+        run: docker build -t hyperxosist-remote-mcp:test .

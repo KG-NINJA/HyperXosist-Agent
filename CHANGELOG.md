@@ -2,6 +2,16 @@
 
 All notable changes to this project are documented in this file.
 
+## [2.5.0] - 2026-07-10
+
+### Remote MCP and OpenAI integration
+- Added a stateless Streamable HTTP MCP endpoint at `POST /mcp` with `GET /health`.
+- Split shared MCP tool schemas and dispatch into `mcp/tools.js` and `mcp/core.js`; local stdio remains supported.
+- Added structured tool output, Bearer authentication, Origin/Host controls, body limits, timeouts, and generic errors.
+- Added Responses API configuration example, 20-case tool-selection evaluation, Docker packaging, and ChatGPT App preparation.
+- Added Remote, security, schema, and stdio/Remote consistency tests plus Node 18/20 CI coverage.
+- Preserved free planning/manual search and the existing x402 automated-production execution boundary.
+
 ## [2.4.0] — 2026-07-10
 
 ### Practical multi-agent runtime layer

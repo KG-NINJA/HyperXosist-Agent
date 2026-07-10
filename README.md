@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/KG-NINJA/HyperXosist-Agent/actions/workflows/ci.yml/badge.svg)](https://github.com/KG-NINJA/HyperXosist-Agent/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-2.4.0-brightgreen.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-2.5.0-brightgreen.svg)](CHANGELOG.md)
 [![Live](https://img.shields.io/badge/demo-GitHub%20Pages-black.svg)](https://kg-ninja.github.io/HyperXosist-Agent/)
 
 **API-free advanced X (Twitter) search launcher** — for humans in the browser, and for **any** AI agent (GPT, Claude, Grok, Llama, shell tool-callers…) that needs multi-angle, noise-reduced search missions with an x402 paid path and Signal-to-Fix handoff. Optional **Grok Build** mode (default off).
@@ -13,7 +13,7 @@
 | **Repository** | https://github.com/KG-NINJA/HyperXosist-Agent |
 | **Agent entry** | https://kg-ninja.github.io/HyperXosist-Agent/llms.txt |
 | **CLI** | `npx hyperxosist plan "…" --json` |
-| **Version** | 2.4.0 |
+| **Version** | 2.5.0 |
 
 > 日本語の要点: X 公式検索用クエリを組み立てる静的ツールです。人間の UI は無料。AI エージェントの本番利用は x402 支払い前提。検索結果の埋め込みや自動投稿はしません。
 
@@ -166,19 +166,33 @@ npm run quickstart
 # or: node examples/quickstart.mjs "Weekly monitor about MyProduct"
 ```
 
-### MCP Server Quick Start
+### MCP: Local and Remote
 
-Expose HyperXosist tools (planning, filtering, handoffs) to your AI IDE (Cursor, VS Code) or CLI agent (Claude Code):
+The same three read-only tools are available over two adapters:
 
 ```bash
-# Start the local stdio MCP server
+# Local stdio for Cursor, Claude Code, and VS Code-compatible clients
 npm run mcp
+
+# Remote Streamable HTTP for Responses API / ChatGPT integrations
+HYPERXOSIST_MCP_TOKEN="replace-me" npm run mcp:remote
 ```
 
-For comprehensive step-by-step installation and configuration guides for Cursor, Claude Code, Claude Desktop, and Cloudflare Workers, check out the [Official MCP Documentation](docs/MCP.md).
+Remote endpoints are `POST /mcp` and `GET /health`. Public deployment requires HTTPS, Bearer authentication, allowed-host configuration, rate limiting, and monitoring.
 
-The checked-in `mcp/server.js` is a **local stdio MCP** for Cursor, Claude Code, and VS Code-compatible MCP clients. GitHub Pages is the human-facing static UI; it does not run MCP. General ChatGPT or GPT-5.6 Sol access requires a separately deployed **Streamable HTTP Remote MCP** adapter. Cloudflare Workers cannot run the stdio implementation unchanged. See [docs/MCP.md](docs/MCP.md).
+```bash
+# No API call: validate the OpenAI Remote MCP example
+npm run openai:remote-check
 
+# 20 positive/negative tool-selection cases
+npm run test:tool-selection
+```
+
+GitHub Pages remains the static human UI and cannot host MCP. Cloudflare Workers require a separate Web Standard transport adapter; the Node stdio and `node:http` adapters cannot run there unchanged.
+
+Planning, collected-post filtering, and handoff are free. Human manual use of generated X URLs is free. Automated production execution remains behind the existing x402 endpoint; this change does not modify payment behavior.
+
+See [MCP setup and security](docs/MCP.md) and [ChatGPT App preparation](docs/CHATGPT_APP.md).
 ### Agent handoff dry-run (offline — recommended first step)
 
 Demonstrates the full **local** path from search intent → keep filter → Signal-to-Fix handoff → coding-agent prompt **without network access**:
@@ -280,7 +294,11 @@ top30_repost_blacklist.json                 # Bait phrase reference
 examples/quickstart.mjs                     # CLI demo
 examples/agent-handoff-dryrun.mjs           # Offline handoff dry-run (intent→keep→S2F)
 examples/agent-session.example.json         # Session shape
-test/agent-api.test.js                      # Zero-dep tests
+mcp/tools.js, mcp/core.js                  # Shared MCP schemas + dispatch
+mcp/server.js, mcp/remote-server.js         # Local stdio + Remote Streamable HTTP
+examples/openai-remote-mcp.mjs              # Responses API Remote MCP example
+test/agent-api.test.js                      # Agent API tests
+test/mcp-*.test.js                          # stdio, remote, security, schema tests
 .github/workflows/ci.yml                    # CI
 LICENSE, CHANGELOG.md, SECURITY.md, CONTRIBUTING.md
 ```
