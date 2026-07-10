@@ -1,6 +1,6 @@
 {
   "name": "hyperxosist-agent",
-  "version": "2.4.0",
+  "version": "2.5.0",
   "description": "Universal API-free X/Twitter search toolkit for any AI agent (GPT/Claude/Grok/Llama): missions, noise reduction, x402, Signal-to-Fix handoff, tool dispatch, CLI, optional Grok Build mode.",
   "keywords": [
     "twitter",
@@ -49,10 +49,11 @@
     "LICENSE",
     "README.md",
     "mcp/",
-    "docs/MCP.md"
+    "docs/",
+    "test/tool-selection-cases.json"
   ],
   "scripts": {
-    "test": "node test/agent-api.test.js && node test/mcp.test.js",
+    "test": "node test/agent-api.test.js && node test/mcp.test.js && node test/mcp-core.test.js && node test/mcp-remote.test.js && node test/mcp-security.test.js && node test/mcp-schema.test.js && node test/mcp-consistency.test.js",
     "test:agent": "node test/agent-api.test.js",
     "test:mcp": "node test/mcp.test.js",
     "quickstart": "node examples/quickstart.mjs",
@@ -62,13 +63,21 @@
     "multi-runtime": "node examples/multi-runtime.mjs",
     "tools:openai": "node bin/hyperxosist.js tools --format openai --json",
     "tools:anthropic": "node bin/hyperxosist.js tools --format anthropic --json",
-    "mcp": "node mcp/server.js"
+    "mcp": "node mcp/server.js",
+    "test:mcp:core": "node test/mcp-core.test.js",
+    "test:mcp:remote": "node test/mcp-remote.test.js",
+    "test:mcp:security": "node test/mcp-security.test.js",
+    "test:mcp:schema": "node test/mcp-schema.test.js",
+    "test:tool-selection": "node examples/evaluate-tool-selection.mjs",
+    "openai:remote-check": "node examples/openai-remote-mcp.mjs --check",
+    "mcp:remote": "node mcp/remote-server.js",
+    "test:mcp:consistency": "node test/mcp-consistency.test.js"
   },
   "engines": {
     "node": ">=18"
   },
   "private": false,
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0"
+    "@modelcontextprotocol/sdk": "1.29.0"
   }
 }

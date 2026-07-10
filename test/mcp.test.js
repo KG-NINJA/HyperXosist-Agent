@@ -80,7 +80,7 @@ function runTest() {
         assert.ok(payload.mission);
         assert.ok(Array.isArray(payload.queries));
         assert.ok(Array.isArray(payload.searchUrls));
-        assert.strictEqual(typeof payload.estimatedCost, 'number');
+        assert.strictEqual(typeof payload.estimatedCostUsd, 'number');
         assert.ok(payload.queries.length > 1);
         assert.ok(payload.searchUrls.every(url => url.startsWith('https://x.com/search')));
 
@@ -162,7 +162,7 @@ function runTest() {
       assert: (response) => {
         assert.strictEqual(response.id, 5);
         assert.strictEqual(response.result.isError, true);
-        assert.match(response.result.content[0].text, /array of strings/);
+        assert.match(response.result.content[0].text, /array of .*strings/);
         console.log('[ok] invalid tool input returns an MCP error result.');
       }
     },

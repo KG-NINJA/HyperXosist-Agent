@@ -1,78 +1,36 @@
-# HyperXosist Model Context Protocol (MCP) Server
+# HyperXosist Model Context Protocol (MCP)
 
-HyperXosist-Agent currently ships a local stdio MCP server at `mcp/server.js`. It runs on Node.js 18 or newer and exposes query planning, signal filtering, and coding-agent handoffs without scraping X or making network requests.
+HyperXosist-Agent provides two adapters over one shared tool core:
 
-## Current scope
+- Local stdio: `mcp/server.js`
+- Remote Streamable HTTP: `mcp/remote-server.js`, endpoint `POST /mcp`
 
-- Transport: local stdio using JSON-RPC 2.0.
-- Local clients: Cursor, Claude Code, and VS Code-compatible MCP clients that can launch a process.
-- Runtime: Node.js 18 or newer with `@modelcontextprotocol/sdk`.
-- Network behavior: no X scraping, posting, or automatic search-result collection.
-- Logging: protocol messages use stdout; diagnostics and shutdown messages use stderr.
+Both adapters expose the same three read-only tools and use `agent-api.js` as the business-logic source of truth. GitHub Pages remains a static human UI and is not an MCP server.
 
-GitHub Pages is the human-facing static HTML/CSS/JS interface. It does not run `mcp/server.js`, cannot launch a stdio process, and is not a Remote MCP endpoint.
+## Tool scope
 
-## Tools
+- `hyperxosist_search_plan`: specialized X research planning and official `x.com/search` URLs.
+- `hyperxosist_filter_signals`: filtering of X post text that the caller already collected.
+- `hyperxosist_build_handoff`: Signal-to-Fix input and a coding-agent prompt from collected feedback.
 
-### `hyperxosist_search_plan`
+These tools are not general web search. They do not scrape X, call the X API, collect posts, post content, or persist input.
 
-Input:
+Each successful call returns text content plus `structuredContent`:
 
-```json
-{
-  "intent": "Find user complaints, bug reports, and feature requests on X about HyperXosist-Agent"
-}
-```
+- `hyperxosist.search_plan.v1`
+- `hyperxosist.signal_filter.v1`
+- `hyperxosist.handoff.v1`
 
-Returns a mission, multiple X search queries, `https://x.com/search` URLs, and a numeric estimated cost.
+## Local stdio
 
-### `hyperxosist_filter_signals`
-
-Input:
-
-```json
-{
-  "feedback": [
-    "HyperXosist crashes when generating a search URL on Safari 18.",
-    "Please add a one-click copy button for MCP configuration."
-  ]
-}
-```
-
-Returns actionable `keep` signals, discarded noise, and a focus summary.
-
-### `hyperxosist_build_handoff`
-
-Input:
-
-```json
-{
-  "productName": "HyperXosist-Agent",
-  "feedback": [
-    "HyperXosist crashes when generating a search URL on Safari 18.",
-    "Please add a one-click copy button for MCP configuration."
-  ]
-}
-```
-
-Returns a Signal-to-Fix input package and a model-neutral coding-agent prompt.
-
-## Install and run
+Requirements: Node.js 18 or newer.
 
 ```bash
 npm install
 npm run mcp
 ```
 
-The server waits for MCP JSON-RPC messages on stdin. Run the integration test with:
-
-```bash
-npm run test:mcp
-```
-
-## Local client configuration
-
-Use an absolute path in client configuration:
+Example local client configuration:
 
 ```json
 {
@@ -85,29 +43,133 @@ Use an absolute path in client configuration:
 }
 ```
 
-Claude Code can register the same local process:
+This works with Cursor, Claude Code, and VS Code-compatible clients that can launch a local stdio process. Logs go to stderr; stdout is reserved for MCP JSON-RPC.
+
+## Remote Streamable HTTP
+
+The implementation uses the official `@modelcontextprotocol/sdk` Streamable HTTP transport in stateless JSON-response mode. SSE is not required for these request-response tools.
 
 ```bash
-claude mcp add hyperxosist node /absolute/path/to/HyperXosist-Agent/mcp/server.js
+export HYPERXOSIST_MCP_TOKEN="replace-with-a-long-random-secret"
+export HOST=127.0.0.1
+export PORT=8787
+npm run mcp:remote
 ```
 
-## Remote MCP limitation
+Endpoints:
 
-The checked-in stdio server is not a public Remote MCP service. General ChatGPT and GPT-5.6 Sol clients cannot use the GitHub Pages URL or `mcp/server.js` as a Remote MCP endpoint.
+- `POST /mcp`: Streamable HTTP MCP
+- `GET /health`: health and auth-configuration status
+- `GET /mcp`: 405 in stateless mode
 
-That use case requires a separate network adapter, normally a Streamable HTTP Remote MCP endpoint. SSE may be appropriate for clients and runtimes that support it, but it is not the only recommended transport.
+Test locally:
 
-Cloudflare Workers cannot execute the Node.js stdio implementation unchanged. A Worker version must separately register the same tools against an HTTP transport and add authentication, origin policy, deployment configuration, and remote integration tests. No Remote MCP adapter is included in this repository today.
+```bash
+curl http://127.0.0.1:8787/health
+npm run test:mcp:remote
+npm run test:mcp:security
+```
+
+### Environment variables
+
+| Variable | Default | Purpose |
+|---|---:|---|
+| `HOST` | `127.0.0.1` | Bind address |
+| `PORT` | `8787` | HTTP port |
+| `HYPERXOSIST_MCP_TOKEN` | unset | Bearer token; mandatory for public deployment |
+| `HYPERXOSIST_MCP_MAX_BODY_BYTES` | `1048576` | Request body limit |
+| `HYPERXOSIST_MCP_TIMEOUT_MS` | `15000` | Request timeout |
+| `HYPERXOSIST_MCP_ALLOWED_ORIGINS` | empty | Comma-separated browser origins; requests with Origin are rejected unless listed |
+| `HYPERXOSIST_MCP_ALLOWED_HOSTS` | empty | Comma-separated public hostnames for deployment validation |
+
+If the token is unset, the server starts for local development and prints a warning without printing any secret. Never expose that unauthenticated configuration publicly.
+
+The server also accepts an injected `rateLimit` callback through `createRemoteServer()`. Production hosting must connect this extension point to a shared limiter or gateway. The built-in process does not claim distributed rate limiting.
+
+## Security policy
+
+- Require HTTPS and Bearer authentication for public endpoints.
+- Keep secrets in environment or platform secret storage.
+- Do not put tokens in URLs, images, Docker layers, logs, or Git.
+- Origin checks default closed when an Origin header is present.
+- Configure allowed hostnames behind a public reverse proxy.
+- Requests require `application/json`.
+- Oversized and malformed bodies receive bounded JSON-RPC errors.
+- Internal exceptions never expose stack traces.
+- Inputs are processed in memory and are not persisted.
+- No unconditional wildcard CORS is enabled.
+- Put production rate limiting, TLS, monitoring, and abuse controls at the gateway.
+
+## OpenAI Responses API and GPT-5.x
+
+A public HTTPS Remote MCP URL is required. GitHub Pages and local stdio paths cannot be supplied as `server_url`.
+
+```bash
+export OPENAI_API_KEY="..."
+export HYPERXOSIST_MCP_URL="https://mcp.example.com/mcp"
+export HYPERXOSIST_MCP_TOKEN="..."
+export OPENAI_MODEL="gpt-5.5"
+node examples/openai-remote-mcp.mjs
+```
+
+The example sends a Responses API MCP tool with `server_url`, allowed tool names, and an optional Authorization header. Run configuration validation without an API call:
+
+```bash
+npm run openai:remote-check
+```
+
+OpenAI currently documents GPT-5.5 as the generally available recommended model. GPT-5.6 is limited preview; accounts with an enabled GPT-5.6 model ID can set it through `OPENAI_MODEL` without code changes.
+
+Official references:
+
+- [OpenAI Responses API MCP tool fields](https://platform.openai.com/docs/api-reference/responses/create)
+- [OpenAI models](https://developers.openai.com/api/docs/models)
+- [MCP Streamable HTTP transport](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports)
+- [MCP TypeScript SDK server guide](https://github.com/modelcontextprotocol/typescript-sdk/blob/main/docs/server.md)
+
+## Tool-selection evaluation
+
+```bash
+npm run test:tool-selection
+```
+
+The default run statically checks 20 positive and negative prompts. Optional live evaluation requires `EVALUATE_WITH_OPENAI=1`, `OPENAI_API_KEY`, and a reachable `HYPERXOSIST_MCP_URL`.
+
+## Docker and hosting
+
+```bash
+docker build -t hyperxosist-remote-mcp .
+docker run --rm -p 8787:8787 \
+  -e HYPERXOSIST_MCP_TOKEN="replace-with-a-long-random-secret" \
+  hyperxosist-remote-mcp
+```
+
+The image uses Node 20 slim, production dependencies, a non-root user, port 8787, and a health check. The same container can be placed behind HTTPS on a VPS, Render, Fly.io, or Railway. Configure the public hostname, token, rate limiting, and platform health checks.
+
+Cloudflare Workers cannot run the Node `http` or stdio adapters unchanged. A separate Worker adapter must reuse `mcp/core.js` and use a Web Standard Streamable HTTP transport. That adapter and production deployment are outside this change.
 
 ## Free planning and x402 boundary
 
-Local MCP planning, filtering, and handoff generation are free and require no wallet or API key. The MCP tools generate search plans and URLs; they do not execute a paid search request.
+Remote MCP tool discovery and all three MCP calls are free. The Remote MCP endpoint must not return HTTP 402 for planning, filtering, or handoff.
 
-Automated production use of the existing HyperXosist search endpoint remains behind the separately documented x402 payment flow. An unpaid request returns HTTP 402 and payment verification occurs at that endpoint, not on GitHub Pages and not inside the local stdio MCP server. This repository does not change the existing x402 endpoint or settlement behavior.
+```json
+{
+  "planning": "free",
+  "humanManualSearch": "free",
+  "automatedProductionExecution": "x402_required",
+  "estimatedCostUsd": 0.01
+}
+```
 
-## Security notes
+A human may manually open a generated official X search URL for free. Automated production execution of generated search URLs uses the existing x402 endpoint documented in `x402-payment.json`. This change does not modify that endpoint, wallet, price, facilitator, verification, or settlement behavior.
 
-- Inputs are processed in memory by the local process.
-- No raw X database is stored.
-- No TCP port is opened by the stdio server.
-- Do not print application logs to stdout because that would corrupt MCP framing; use stderr.
+## ChatGPT App preparation
+
+See [CHATGPT_APP.md](CHATGPT_APP.md). A directory submission is intentionally not performed. A stable public HTTPS Remote MCP endpoint, production auth, policies, support contact, monitoring, and manual review are required first.
+
+## Limitations
+
+- No hosted Remote MCP URL is deployed by this repository change.
+- Bearer token auth is suitable for controlled deployments; a public multi-user app may require OAuth/account linking.
+- The in-process rate-limit hook needs a shared production implementation.
+- No X scraping or X API integration is included.
