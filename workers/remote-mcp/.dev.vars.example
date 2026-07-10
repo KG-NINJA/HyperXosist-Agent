@@ -1,0 +1,4 @@
+# Copy to .dev.vars. Never commit the copied file.
+HYPERXOSIST_MCP_TOKEN=replace-with-a-long-random-secret
+HYPERXOSIST_MCP_ALLOWED_ORIGINS=http://localhost:3000
+HYPERXOSIST_MCP_ALLOWED_HOSTS=localhost

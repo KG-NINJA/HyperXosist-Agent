@@ -41,6 +41,9 @@ jobs:
       - name: Run Remote MCP security tests
         run: npm run test:mcp:security
 
+      - name: Run Cloudflare Worker MCP adapter tests
+        run: npm run test:mcp:cloudflare
+
       - name: Evaluate MCP tool selection
         run: npm run test:tool-selection
 
@@ -88,3 +91,27 @@ jobs:
       - name: Build Remote MCP Docker image
         if: matrix.node-version == '20'
         run: docker build -t hyperxosist-remote-mcp:test .
+
+  cloudflare-worker:
+    name: Node 22 Cloudflare Worker MCP validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install root MCP dependencies
+        run: npm ci
+
+      - name: Install Cloudflare Worker build dependencies
+        run: npm --prefix workers/remote-mcp ci
+
+      - name: Run Cloudflare Worker MCP adapter tests
+        run: npm run test:mcp:cloudflare
+
+      - name: Validate staging Worker bundle without deployment
+        run: npm --prefix workers/remote-mcp run check -- --env staging

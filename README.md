@@ -188,7 +188,7 @@ npm run openai:remote-check
 npm run test:tool-selection
 ```
 
-GitHub Pages remains the static human UI and cannot host MCP. Cloudflare Workers require a separate Web Standard transport adapter; the Node stdio and `node:http` adapters cannot run there unchanged.
+GitHub Pages remains the static human UI and cannot host MCP. The repository includes a separate [Cloudflare Worker Remote MCP adapter](workers/remote-mcp/README.md) using Web Standard Streamable HTTP. It is intended for a custom-domain deployment with a required Bearer secret, closed-by-default origin/host allowlists, a 1 MiB request limit, and a zone-level WAF rate-limit rule. The Node stdio and `node:http` adapters do not run in Workers unchanged.
 
 Planning, collected-post filtering, and handoff are free. Human manual use of generated X URLs is free. Automated production execution remains behind the existing x402 endpoint; this change does not modify payment behavior.
 
