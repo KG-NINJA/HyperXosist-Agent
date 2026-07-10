@@ -146,7 +146,18 @@ docker run --rm -p 8787:8787 \
 
 The image uses Node 20 slim, production dependencies, a non-root user, port 8787, and a health check. The same container can be placed behind HTTPS on a VPS, Render, Fly.io, or Railway. Configure the public hostname, token, rate limiting, and platform health checks.
 
-Cloudflare Workers cannot run the Node `http` or stdio adapters unchanged. A separate Worker adapter must reuse `mcp/core.js` and use a Web Standard Streamable HTTP transport. That adapter and production deployment are outside this change.
+### Cloudflare Worker public endpoint
+
+`workers/remote-mcp/` is a separate Worker adapter that reuses `mcp/core.js` with the SDK's Web Standard Streamable HTTP transport. It does not run the Node `http` or stdio adapter in Workers, and it does not alter GitHub Pages or the existing x402 endpoint.
+
+Use a Cloudflare custom domain for production, not a `workers.dev` hostname. Before a public deployment:
+
+1. Set `HYPERXOSIST_MCP_TOKEN` with `wrangler secret put`; it is mandatory for `POST /mcp`.
+2. Set `HYPERXOSIST_MCP_ALLOWED_HOSTS` to the exact custom hostname and only add `HYPERXOSIST_MCP_ALLOWED_ORIGINS` for browser clients that require it.
+3. Create a zone-level Cloudflare WAF rate-limiting rule that matches `POST /mcp`, groups by source IP, and returns JSON `429`. Keep it at the Cloudflare edge; Workers module memory is not a distributed rate limiter.
+4. Deploy staging first, test authenticated `initialize` and tool calls, then deploy production with the custom domain.
+
+The Worker exposes only `POST /mcp`, CORS preflight for an allowlisted browser origin, and `GET /health`. It enforces Bearer authentication, closed-by-default Origin and Host validation, a 1 MiB body limit, JSON-only requests, generic errors, and `no-store` responses. Run `npm run test:mcp:cloudflare` and `npm run cloudflare:mcp:check` before deployment. See [Worker deployment details](../workers/remote-mcp/README.md).
 
 ## Free planning and x402 boundary
 
