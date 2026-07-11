@@ -4,23 +4,45 @@
   "version": "2.1.0",
   "call": "HyperXosistAgent.startAgentSession({ intent: 'Find product feedback about Acme for PR specs' })",
   "expectedShape": {
-    "playbook": { "loop": ["Discover", "Plan", "Score gate", "Pay + search", "Collect", "Self-heal", "Handoff", "Remember"] },
-    "tools": { "format": "openai.tools.v1" },
+    "playbook": {
+      "loop": [
+        "Discover",
+        "Plan",
+        "Score gate",
+        "Pay + search",
+        "Collect",
+        "Self-heal",
+        "Handoff",
+        "Remember"
+      ]
+    },
+    "tools": {
+      "format": "openai.tools.v1"
+    },
     "plan": {
       "ok": true,
       "missionId": "signal_to_fix_pipeline | product_feedback_radar",
       "primaryStep": {
         "query": "string",
         "searchUrl": "https://x.com/search?...",
-        "score": { "score": 0, "band": "good|excellent|fair|poor", "recommendPay": true },
+        "score": {
+          "score": 0,
+          "band": "good|excellent|fair|poor",
+          "recommendPay": true
+        },
         "paidRequest": {
           "method": "POST",
-          "endpoint": "https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/hyperxosist-query",
+          "endpoint": "https://api.kgninja.dev/hyperxosist-query",
           "expectedUnpaidStatus": 402,
           "body": {}
         }
       },
-      "nextActions": ["pay_and_search", "run_full_mission", "handoff_signal_to_fix", "self_heal"]
+      "nextActions": [
+        "pay_and_search",
+        "run_full_mission",
+        "handoff_signal_to_fix",
+        "self_heal"
+      ]
     }
   },
   "afterCollect": {

@@ -7,6 +7,7 @@ const { TOOL_DEFINITIONS } = require('../mcp/tools.js');
 async function main() {
   assert.strictEqual(TOOL_DEFINITIONS.length, 3);
   const dispatch = createToolDispatcher();
+  const stagingDispatch = createToolDispatcher(undefined, { paymentEnvironment: 'staging' });
 
   const plan = await dispatch('hyperxosist_search_plan', {
     intent: 'Find user complaints, bugs, and feature requests on X about HyperXosist-Agent',
@@ -18,6 +19,10 @@ async function main() {
     plan.structuredContent.searchUrls.every((url) => url.startsWith('https://x.com/search'))
   );
   assert.ok(plan.structuredContent.qualityScores.every((score) => typeof score === 'number'));
+  assert.ok(plan.structuredContent.mission.steps.every((step) => step.paidRequest.endpoint === 'https://api.kgninja.dev/hyperxosist-query'));
+  assert.doesNotMatch(JSON.stringify(plan.structuredContent), /workers\.dev|mainnet-staging/);
+  const stagingPlan = await stagingDispatch('hyperxosist_search_plan', { intent: 'Find HyperXosist-Agent bug reports' });
+  assert.ok(stagingPlan.structuredContent.mission.steps.every((step) => step.paidRequest.endpoint.includes('mainnet-staging.fuwafuwow.workers.dev')));
   assert.strictEqual(plan.structuredContent.paymentPolicy.planning, 'free');
   assert.strictEqual(
     plan.structuredContent.paymentPolicy.automatedProductionExecution,

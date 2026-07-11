@@ -29,7 +29,7 @@ function validStringArray(value) {
   );
 }
 
-function createToolDispatcher(agent = HyperXosistAgent) {
+function createToolDispatcher(agent = HyperXosistAgent, options = {}) {
   return async function dispatchTool(name, args) {
     try {
       if (name === 'hyperxosist_search_plan') {
@@ -37,7 +37,10 @@ function createToolDispatcher(agent = HyperXosistAgent) {
           return errorResult("'intent' must be a non-empty string.");
         }
 
-        const session = agent.startAgentSession({ intent: args.intent.trim() });
+        const session = agent.startAgentSession({
+          intent: args.intent.trim(),
+          paymentEnvironment: options.paymentEnvironment,
+        });
         const plan = session && session.plan;
         if (!plan || !plan.ok || !plan.mission) {
           return errorResult('Unable to build an X research plan.');
@@ -125,7 +128,7 @@ async function createMcpServer(options = {}) {
   const { ListToolsRequestSchema, CallToolRequestSchema } = await import(
     '@modelcontextprotocol/sdk/types.js'
   );
-  const dispatchTool = createToolDispatcher(options.agent);
+  const dispatchTool = createToolDispatcher(options.agent, options);
 
   const server = new Server(
     { name: 'hyperxosist-mcp-server', version: require('../package.json').version },

@@ -5,7 +5,9 @@ const { createMcpServer } = require('./core.js');
 
 async function main() {
   const { StdioServerTransport } = await import('@modelcontextprotocol/sdk/server/stdio.js');
-  const server = await createMcpServer();
+  const server = await createMcpServer({
+    paymentEnvironment: process.env.HYPERXOSIST_PAYMENT_ENVIRONMENT || 'production',
+  });
   const transport = new StdioServerTransport();
   await server.connect(transport);
 

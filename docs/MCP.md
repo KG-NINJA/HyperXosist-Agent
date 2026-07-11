@@ -81,6 +81,7 @@ npm run test:mcp:security
 | `HYPERXOSIST_MCP_TIMEOUT_MS` | `15000` | Request timeout |
 | `HYPERXOSIST_MCP_ALLOWED_ORIGINS` | empty | Comma-separated browser origins; requests with Origin are rejected unless listed |
 | `HYPERXOSIST_MCP_ALLOWED_HOSTS` | empty | Comma-separated public hostnames for deployment validation |
+| `HYPERXOSIST_PAYMENT_ENVIRONMENT` | `production` | Payment URL profile: `production` returns `https://api.kgninja.dev`; `staging` preserves the existing Worker URL |
 
 If the token is unset, the server starts for local development and prints a warning without printing any secret. Never expose that unauthenticated configuration publicly.
 
@@ -159,7 +160,7 @@ Use a Cloudflare custom domain for production, not a `workers.dev` hostname. Bef
 
 The checked-in production configuration binds the Worker to `mcp.kgninja.dev`, disables `workers.dev` and version preview URLs, and restricts the Host allowlist to that hostname. It deliberately leaves browser origins empty because Remote MCP clients are server-to-server by default.
 
-The Worker exposes only `POST /mcp`, CORS preflight for an allowlisted browser origin, and `GET /health`. It enforces Bearer authentication, closed-by-default Origin and Host validation, a 1 MiB body limit, JSON-only requests, generic errors, and `no-store` responses. Run `npm run test:mcp:cloudflare` and `npm run cloudflare:mcp:check` before deployment. See [Worker deployment details](../workers/remote-mcp/README.md).
+The Worker exposes only `POST /mcp`, CORS preflight for an allowlisted browser origin, and `GET /health`. It enforces Bearer authentication, closed-by-default Origin and Host validation, a 1 MiB body limit, JSON-only requests, generic errors, and `no-store` responses. Production returns x402 execution URLs under `https://api.kgninja.dev`; staging preserves the existing `workers.dev` payment origin. Run `npm run test:mcp:cloudflare` and `npm run cloudflare:mcp:check` before deployment. See [Worker deployment details](../workers/remote-mcp/README.md).
 
 ## Free planning and x402 boundary
 

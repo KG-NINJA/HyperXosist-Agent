@@ -12,8 +12,8 @@
     "hyperxosistLlms": "https://kg-ninja.github.io/HyperXosist-Agent/llms.txt",
     "hyperxosistApi": "https://kg-ninja.github.io/HyperXosist-Agent/agent-api.js",
     "paymentManifest": "https://kg-ninja.github.io/HyperXosist-Agent/x402-payment.json",
-    "paymentEndpoint": "https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/hyperxosist-query",
-    "paymentOptionsEndpoint": "https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/payment-options.json",
+    "paymentEndpoint": "https://api.kgninja.dev/hyperxosist-query",
+    "paymentOptionsEndpoint": "https://api.kgninja.dev/payment-options.json",
     "signalToFixHumanUi": "https://kg-ninja.github.io/Signal-to-Fix/",
     "signalToFixAgentUse": "https://kg-ninja.github.io/Signal-to-Fix/agent-use.json"
   },
