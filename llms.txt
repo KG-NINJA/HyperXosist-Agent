@@ -2,8 +2,18 @@
 > Universal X/Twitter advanced search toolkit for any AI agent (GPT, Claude, Grok, Llama, local tool-callers, shell CLI).
 > Noise-reduced operators, multi-angle missions, x402 paid execution, Signal-to-Fix handoff.
 > Optional Grok Build mode for one-small-change code prompts (default OFF).
-> v2.4: real dispatchToolCall + OpenAI/Anthropic schema adapters + CLI.
+> v2.5.0: Remote Streamable HTTP MCP, x402 production endpoint metadata, noise reduction, dispatchToolCall, and CLI.
 
+
+## Remote MCP (production)
+- Endpoint: https://mcp.kgninja.dev/mcp
+- Health: https://mcp.kgninja.dev/health
+- Transport: Streamable HTTP
+- Authentication: Bearer token
+- Deployment status: deployed; verify /health before use
+- Free tools: hyperxosist_search_plan, hyperxosist_filter_signals, hyperxosist_build_handoff
+- Free: MCP initialize, tools/list, planning, filtering, handoff
+- Paid: production search URL usage, automated external collection, paid execution at https://api.kgninja.dev/hyperxosist-query
 ## Critical rules
 - Human browser UI is free.
 - Automated production use of generated search URLs requires x402 payment (expect HTTP 402 until paid).

@@ -179,6 +179,16 @@ HYPERXOSIST_MCP_TOKEN="replace-me" npm run mcp:remote
 ```
 
 Remote endpoints are `POST /mcp` and `GET /health`. Public deployment requires HTTPS, Bearer authentication, allowed-host configuration, rate limiting, and monitoring.
+Public production Remote MCP:
+
+- Endpoint: `https://mcp.kgninja.dev/mcp`
+- Health: `https://mcp.kgninja.dev/health`
+- Transport: Streamable HTTP
+- Authentication: Bearer token
+- Status: deployed; verify `/health` before use
+- Free tools: `hyperxosist_search_plan`, `hyperxosist_filter_signals`, `hyperxosist_build_handoff`
+
+MCP initialization, `tools/list`, planning, filtering, and handoff do not require x402. x402 applies only to production search URL usage, automated external collection, and the paid execution endpoint at `https://api.kgninja.dev/hyperxosist-query`.
 
 ```bash
 # No API call: validate the OpenAI Remote MCP example
@@ -245,7 +255,7 @@ Full catalog: [missions.json](https://kg-ninja.github.io/HyperXosist-Agent/missi
 
 ---
 
-## API surface (v2.4)
+## API surface (v2.5)
 
 | Method | Role |
 |--------|------|
