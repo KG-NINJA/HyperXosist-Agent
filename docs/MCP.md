@@ -157,6 +157,8 @@ Use a Cloudflare custom domain for production, not a `workers.dev` hostname. Bef
 3. Create a zone-level Cloudflare WAF rate-limiting rule that matches `POST /mcp`, groups by source IP, and returns JSON `429`. Keep it at the Cloudflare edge; Workers module memory is not a distributed rate limiter.
 4. Deploy staging first, test authenticated `initialize` and tool calls, then deploy production with the custom domain.
 
+The checked-in production configuration binds the Worker to `mcp.kgninja.dev`, disables `workers.dev` and version preview URLs, and restricts the Host allowlist to that hostname. It deliberately leaves browser origins empty because Remote MCP clients are server-to-server by default.
+
 The Worker exposes only `POST /mcp`, CORS preflight for an allowlisted browser origin, and `GET /health`. It enforces Bearer authentication, closed-by-default Origin and Host validation, a 1 MiB body limit, JSON-only requests, generic errors, and `no-store` responses. Run `npm run test:mcp:cloudflare` and `npm run cloudflare:mcp:check` before deployment. See [Worker deployment details](../workers/remote-mcp/README.md).
 
 ## Free planning and x402 boundary

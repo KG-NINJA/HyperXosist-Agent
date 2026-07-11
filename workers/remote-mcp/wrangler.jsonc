@@ -3,18 +3,43 @@
   "name": "hyperxosist-remote-mcp",
   "main": "src/index.js",
   "compatibility_date": "2026-07-11",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
   "workers_dev": true,
   "vars": {
     "HYPERXOSIST_MCP_ALLOWED_ORIGINS": "",
     "HYPERXOSIST_MCP_ALLOWED_HOSTS": ""
   },
   "env": {
-    "staging": { "name": "hyperxosist-remote-mcp-staging", "vars": { "HYPERXOSIST_MCP_ALLOWED_ORIGINS": "", "HYPERXOSIST_MCP_ALLOWED_HOSTS": "" } },
-    "production": { "name": "hyperxosist-remote-mcp-production", "vars": { "HYPERXOSIST_MCP_ALLOWED_ORIGINS": "", "HYPERXOSIST_MCP_ALLOWED_HOSTS": "" } }
+    "staging": {
+      "name": "hyperxosist-remote-mcp-staging",
+      "vars": {
+        "HYPERXOSIST_MCP_ALLOWED_ORIGINS": "",
+        "HYPERXOSIST_MCP_ALLOWED_HOSTS": ""
+      },
+      "workers_dev": true,
+      "preview_urls": false
+    },
+    "production": {
+      "name": "hyperxosist-remote-mcp-production",
+      "vars": {
+        "HYPERXOSIST_MCP_ALLOWED_ORIGINS": "",
+        "HYPERXOSIST_MCP_ALLOWED_HOSTS": "mcp.kgninja.dev"
+      },
+      "workers_dev": false,
+      "preview_urls": false,
+      "routes": [
+        {
+          "pattern": "mcp.kgninja.dev",
+          "custom_domain": true
+        }
+      ]
+    }
   },
   "observability": {
     "enabled": true,
     "head_sampling_rate": 0.1
-  }
+  },
+  "preview_urls": false
 }
