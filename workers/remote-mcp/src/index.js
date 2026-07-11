@@ -11,15 +11,14 @@ function splitCsv(value) {
     .filter(Boolean);
 }
 
-function jsonError(status, code, message, id = null, headers = {}) {
+function jsonError(status, code, message, id = null, extraHeaders = {}) {
+  const headers = new Headers(extraHeaders);
+  headers.set('Cache-Control', 'no-store');
+  headers.set('Content-Type', 'application/json; charset=utf-8');
+  headers.set('X-Content-Type-Options', 'nosniff');
   return new Response(JSON.stringify({ jsonrpc: '2.0', error: { code, message }, id }), {
     status,
-    headers: {
-      'Cache-Control': 'no-store',
-      'Content-Type': 'application/json; charset=utf-8',
-      'X-Content-Type-Options': 'nosniff',
-      ...headers,
-    },
+    headers,
   });
 }
 

@@ -7,7 +7,10 @@ const { default: worker } = await import('../workers/remote-mcp/src/index.js');
 const env = { HYPERXOSIST_MCP_TOKEN: 'test-token', HYPERXOSIST_MCP_ALLOWED_ORIGINS: 'https://app.example.com', HYPERXOSIST_MCP_ALLOWED_HOSTS: 'mcp.example.com' };
 function request(path, options = {}) { return new Request(`https://mcp.example.com${path}`, options); }
 test('Cloudflare Worker rejects unauthenticated and disallowed requests', async () => {
-  assert.equal((await worker.fetch(request('/mcp', { method: 'POST' }), env)).status, 401);
+  const unauthorized = await worker.fetch(request('/mcp', { method: 'POST' }), env);
+  assert.equal(unauthorized.status, 401);
+  assert.equal(unauthorized.headers.get('cache-control'), 'no-store');
+  assert.equal(unauthorized.headers.get('x-content-type-options'), 'nosniff');
   assert.equal((await worker.fetch(request('/mcp', { method: 'POST', headers: { Authorization: 'Bearer test-token', Origin: 'https://untrusted.example.com' } }), env)).status, 403);
   assert.equal((await worker.fetch(request('/mcp', { method: 'POST', headers: { Authorization: 'Bearer test-token' } }), { ...env, HYPERXOSIST_MCP_TOKEN: '' })).status, 503);
 });
