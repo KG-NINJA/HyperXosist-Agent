@@ -121,14 +121,16 @@
     ],
     medium: [
       'thoughts', 'agree', 'bookmark', 'insane', 'game changer', 'big if true', 'must read', 'hot take', 'thread below', 'you need to see this',
+      'ブクマ推奨', 'やばい', '革命', 'これはすごい', '知らないと損',
       'love this', 'so good', 'amazing product', 'best ever', 'absolute fire', 'no notes', 'chef kiss',
       'ratio', 'cope', 'seethe', 'touch grass', 'skill issue', 'just vibes', 'main character energy',
-      'ブクマ推奨', 'やばい', '革命', 'これはすごい', '知らないと損', '神', '最強', '尊い', '煽り'
+      '神', '最強', '尊い', '煽り'
     ],
     high: [
-      'gm', 'wagmi', 'alpha', '100x', 'promo', 'presale', 'whitelist', 'pump', 'moonshot', 'paid partnership', 'sponsored', 'follow for more', 'retweet to win',
+      'gm', 'wagmi', 'alpha', '100x', 'promo', 'presale', 'whitelist', '固定ポスト', '完全攻略', 'フォローで', 'リポストで',
+      'pump', 'moonshot', 'paid partnership', 'sponsored', 'follow for more', 'retweet to win',
       'unpopular opinion', 'change my mind', 'fight me', 'based', 'mid', 'ngl', 'lowkey', 'highkey',
-      '固定ポスト', '完全攻略', 'フォローで', 'リポストで', '論破', '草生える', 'ワロタ'
+      '論破', '草生える', 'ワロタ'
     ]
   };
 
@@ -591,11 +593,15 @@
         : noiseRules;
     let ordered;
     if (level === 'high') {
+      // Keep the documented Low + Medium + High core rules inside the default cap.
+      // Additional bait/repost terms follow them and remain available via maxTerms.
       ordered = [
         ...rules.low,
-        ...rules.medium,
+        ...rules.medium.slice(0, 11),
+        ...rules.high.slice(0, 12),
+        ...rules.medium.slice(11),
+        ...rules.high.slice(12),
         ...repostBlacklistPriority,
-        ...rules.high,
         ...repostBlacklistTerms
       ];
     } else if (level === 'medium') {

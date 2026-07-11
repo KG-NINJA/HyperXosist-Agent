@@ -674,5 +674,12 @@ test('CLI plan --json and dispatch work offline', () => {
   assert.ok(toolsJson.tools[0].input_schema);
 });
 
+test('noise high keeps documented cumulative terms', () => {
+  const high = Agent.getActiveNoiseTerms({ enabled: true, preset: 'high' });
+  [
+    'giveaway', 'big if true', 'ブクマ推奨', 'gm', 'wagmi', 'alpha', '100x',
+    'promo', 'presale', 'whitelist', '固定ポスト', '完全攻略', 'フォローで', 'リポストで'
+  ].forEach((term) => assert.ok(high.includes(term), `high should include ${term}`));
+});
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
