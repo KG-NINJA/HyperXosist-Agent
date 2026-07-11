@@ -3,6 +3,30 @@
   "version": "2.5.0",
   "description": "Universal agent-first X search mission engine for GPT/Claude/Grok/Llama: noise-reduced operators, multi-angle campaigns, score-before-pay, dual JSON+Markdown outputs, x402 execution, Signal-to-Fix handoff, real tool dispatch, Anthropic/OpenAI schema adapters, shell CLI. Optional Grok Build mode (default off).",
   "requiresPaymentForAgentUse": true,
+  "remoteMcp": {
+    "endpoint": "https://mcp.kgninja.dev/mcp",
+    "healthEndpoint": "https://mcp.kgninja.dev/health",
+    "transport": "Streamable HTTP",
+    "authentication": "Bearer token",
+    "deploymentStatus": "deployed; verify healthEndpoint before use",
+    "freeTools": [
+      "hyperxosist_search_plan",
+      "hyperxosist_filter_signals",
+      "hyperxosist_build_handoff"
+    ],
+    "freeOperations": [
+      "initialize",
+      "tools/list",
+      "query planning",
+      "signal filtering",
+      "handoff generation"
+    ],
+    "paidOperations": [
+      "production search URL usage",
+      "automated external collection",
+      "paid execution endpoint"
+    ]
+  },
   "whyAgentsKeepUsingThis": [
     "dispatchToolCall(name, args) — real multi-runtime tool dispatch (OpenAI / Anthropic / Grok call shapes). No hand-written mapping.",
     "toOpenAITools() / toAnthropicTools() — drop-in schema adapters for any major tool-calling runtime.",

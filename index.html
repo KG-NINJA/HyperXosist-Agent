@@ -30,7 +30,7 @@
     <header>
       <div class="header-top">
         <h1>HyperXosist</h1>
-        <span class="version-badge" id="versionBadge">v2</span>
+        <span class="version-badge" id="versionBadge">v2.5.0</span>
       </div>
       <p class="subtitle">Advanced X search launcher — API-free query builder with noise reduction &amp; agent path</p>
     </header>
@@ -263,6 +263,20 @@
           </p>
         </section>
 
+        <!-- Remote MCP production -->
+        <section class="agent-section remote-mcp-section" aria-labelledby="remoteMcpTitle">
+          <h2 id="remoteMcpTitle">Remote MCP <span class="pill">production</span></h2>
+          <p>AIエージェント向けの無料MCPツールを公開しています。利用前にHealth endpointがHTTP 200であることを確認してください。</p>
+          <dl class="remote-mcp-details">
+            <dt>MCP endpoint</dt><dd><a href="https://mcp.kgninja.dev/mcp">https://mcp.kgninja.dev/mcp</a></dd>
+            <dt>Health endpoint</dt><dd><a href="https://mcp.kgninja.dev/health">https://mcp.kgninja.dev/health</a></dd>
+            <dt>Transport</dt><dd>Streamable HTTP</dd>
+            <dt>Authentication</dt><dd>Bearer token</dd>
+            <dt>Deployment status</dt><dd id="remoteMcpStatus">Deployed; verify Health before use</dd>
+          </dl>
+          <p><strong>無料:</strong> <code>hyperxosist_search_plan</code> / <code>hyperxosist_filter_signals</code> / <code>hyperxosist_build_handoff</code>、initialize、tools/list、planning、filtering、handoff。</p>
+          <p><strong>有料:</strong> production search URL usage、automated external collection、<a href="https://api.kgninja.dev/hyperxosist-query">paid execution endpoint</a>。</p>
+        </section>
         <!-- Signal-to-Fix linked pipeline (human manual + agent auto) -->
         <section class="s2f-pipeline-section" aria-labelledby="s2fPipelineTitle">
           <div class="section-head">

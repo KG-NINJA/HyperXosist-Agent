@@ -162,6 +162,18 @@ HyperXosistAgent.resetNoiseRules()
 - `competitive_intel` / `weekly_monitor` / `launch_pulse` / `osint_entity`  
 - Optional Grok-oriented: `grok_code_improvement_radar`, `ui_ux_feedback_harvest`, `performance_complaint_detector`
 
+## Remote MCP (production)
+
+- Endpoint: `https://mcp.kgninja.dev/mcp`
+- Health: `https://mcp.kgninja.dev/health`
+- Transport: Streamable HTTP
+- Authentication: Bearer token
+- Deployment status: deployed; verify `/health` before use
+- Free tools: `hyperxosist_search_plan`, `hyperxosist_filter_signals`, `hyperxosist_build_handoff`
+- Free: MCP initialize, `tools/list`, planning, filtering, and handoff
+- Paid: production search URL usage, automated external collection, and `https://api.kgninja.dev/hyperxosist-query`
+
+JavaScript API examples above are local/library usage. Remote MCP examples use JSON-RPC over `POST /mcp`; do not mix the two transports.
 ## Payment policy
 
 1. Read `x402-payment.json`  
