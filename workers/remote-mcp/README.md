@@ -32,6 +32,6 @@ npx wrangler secret put HYPERXOSIST_MCP_TOKEN --env staging
 npx wrangler deploy --env staging
 ```
 
-Before production, configure a Cloudflare custom domain, set `HYPERXOSIST_MCP_ALLOWED_HOSTS` to that hostname, set a narrow origin allowlist only when browser clients are required, add the zone-level WAF/rate-limiting rule, and deploy with `--env production` after a staged smoke test.
+Production is configured for `mcp.kgninja.dev`. It disables `workers.dev` and preview URLs, sets the Host allowlist to that hostname, leaves browser origins empty, and requires a separate production `HYPERXOSIST_MCP_TOKEN` secret. Add the zone-level WAF/rate-limiting rule before deploying with `--env production` after a staged smoke test.
 
 The Worker keeps planning, filtering, and handoff free. It does not call, replace, or alter the existing x402 payment endpoint.
