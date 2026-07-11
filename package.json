@@ -33,6 +33,7 @@
   },
   "files": [
     "agent-api.js",
+    "payment-endpoints.js",
     "agent-use.json",
     "agent-tools.json",
     "missions.json",
@@ -53,7 +54,7 @@
     "test/tool-selection-cases.json"
   ],
   "scripts": {
-    "test": "node test/agent-api.test.js && node test/mcp.test.js && node test/mcp-core.test.js && node test/mcp-remote.test.js && node test/mcp-security.test.js && node test/mcp-schema.test.js && node test/mcp-consistency.test.js && node --test test/mcp-cloudflare-worker.test.mjs",
+    "test": "node test/agent-api.test.js && node test/mcp.test.js && node test/mcp-core.test.js && node test/mcp-remote.test.js && node test/mcp-security.test.js && node test/mcp-schema.test.js && node test/mcp-consistency.test.js && node --test test/mcp-cloudflare-worker.test.mjs && node test/payment-endpoints.test.js",
     "test:agent": "node test/agent-api.test.js",
     "test:mcp": "node test/mcp.test.js",
     "quickstart": "node examples/quickstart.mjs",
@@ -73,7 +74,9 @@
     "mcp:remote": "node mcp/remote-server.js",
     "test:mcp:consistency": "node test/mcp-consistency.test.js",
     "test:mcp:cloudflare": "node --test test/mcp-cloudflare-worker.test.mjs",
-    "cloudflare:mcp:check": "npm --prefix workers/remote-mcp run check"
+    "cloudflare:mcp:check": "npm --prefix workers/remote-mcp run check",
+    "sync:payment-metadata": "node scripts/sync-payment-metadata.mjs",
+    "test:payment-endpoints": "node test/payment-endpoints.test.js"
   },
   "engines": {
     "node": ">=18"

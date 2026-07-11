@@ -130,7 +130,9 @@ export default {
     let server;
     let transport;
     try {
-      server = await createMcpServer();
+      server = await createMcpServer({
+        paymentEnvironment: env.HYPERXOSIST_PAYMENT_ENVIRONMENT || 'production',
+      });
       transport = new WebStandardStreamableHTTPServerTransport({
         sessionIdGenerator: undefined,
         enableJsonResponse: true,

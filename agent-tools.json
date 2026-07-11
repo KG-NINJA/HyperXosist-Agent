@@ -3,7 +3,7 @@
   "version": "2.5.0",
   "description": "OpenAI-compatible tools for any AI agent (GPT/Claude/Grok/Llama). Default universal mode. Pass includeGrok/mode=grok for optional Grok Build tools. Automated search URL use requires x402. Prefer dispatchToolCall(name, args) — no hand-written mapping.",
   "paymentRequiredForAutomatedSearchUse": true,
-  "paymentEndpoint": "https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/hyperxosist-query",
+  "paymentEndpoint": "https://api.kgninja.dev/hyperxosist-query",
   "stickyTip": "plan → score → pay → collect → refine → keep/exportKeepOnly → handoff/agent prompt → receipt (optional: grok mode)",
   "format": "openai.tools.v1",
   "compatibleWith": [

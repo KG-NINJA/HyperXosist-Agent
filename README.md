@@ -190,7 +190,7 @@ npm run test:tool-selection
 
 GitHub Pages remains the static human UI and cannot host MCP. The repository includes a separate [Cloudflare Worker Remote MCP adapter](workers/remote-mcp/README.md) using Web Standard Streamable HTTP. It is intended for a custom-domain deployment with a required Bearer secret, closed-by-default origin/host allowlists, a 1 MiB request limit, and a zone-level WAF rate-limit rule. The Node stdio and `node:http` adapters do not run in Workers unchanged.
 
-Planning, collected-post filtering, and handoff are free. Human manual use of generated X URLs is free. Automated production execution remains behind the existing x402 endpoint; this change does not modify payment behavior.
+Planning, collected-post filtering, and handoff are free. Human manual use of generated X URLs is free. Automated production execution uses `https://api.kgninja.dev/hyperxosist-query`; staging MCP deployments preserve the existing staging payment Worker through `HYPERXOSIST_PAYMENT_ENVIRONMENT=staging`. This change does not modify x402 payment behavior.
 
 See [MCP setup and security](docs/MCP.md) and [ChatGPT App preparation](docs/CHATGPT_APP.md).
 ### Agent handoff dry-run (offline — recommended first step)

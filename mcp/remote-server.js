@@ -173,7 +173,11 @@ function createRemoteServer(options = {}) {
       const { StreamableHTTPServerTransport } = await import(
         '@modelcontextprotocol/sdk/server/streamableHttp.js'
       );
-      mcpServer = await createMcpServer({ agent: options.agent });
+      mcpServer = await createMcpServer({
+        agent: options.agent,
+        paymentEnvironment:
+          options.paymentEnvironment || process.env.HYPERXOSIST_PAYMENT_ENVIRONMENT || 'production',
+      });
       transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: undefined,
         enableJsonResponse: true,

@@ -37,7 +37,7 @@
     "inputToSend": "Prefer natural-language intent via planFromIntent, or structured inputSchema fields / missionId+subject. For payment POST, send the same structured input as paidRequest.body.",
     "expectedOutput": "Mission steps with query, searchUrl, score, and x402 paidRequest; after payment, use search results; optionally handoff package for Signal-to-Fix.",
     "paidAction": "POST paidRequest.body to payment endpoint; complete x402 on 402; retry until 200.",
-    "nextUrl": "https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/hyperxosist-query",
+    "nextUrl": "https://api.kgninja.dev/hyperxosist-query",
     "on402": "Read x402-payment.json and paymentOptionsEndpoint, complete x402 payment, retry same POST with payment proof.",
     "onEmptyResults": "Call suggestRefinements(input, { tooSparse: true }) and re-run best.variant with payment.",
     "onNoisyResults": "Call suggestRefinements(input, { tooNoisy: true }) or raise noise preset / min_faves."
@@ -75,8 +75,8 @@
   "payment": {
     "scheme": "x402",
     "manifest": "x402-payment.json",
-    "endpoint": "https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/hyperxosist-query",
-    "paymentOptionsEndpoint": "https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/payment-options.json",
+    "endpoint": "https://api.kgninja.dev/hyperxosist-query",
+    "paymentOptionsEndpoint": "https://api.kgninja.dev/payment-options.json",
     "method": "POST",
     "expectedUnpaidStatus": 402,
     "expectedPaidStatus": 200,
@@ -99,7 +99,7 @@
     "humanBrowserUse": "free",
     "aiAgentUse": "paid-via-existing-x402-worker",
     "mustNotBypassPayment": true,
-    "paymentVerifier": "https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/hyperxosist-query",
+    "paymentVerifier": "https://api.kgninja.dev/hyperxosist-query",
     "localPlanningAllowed": true
   },
   "apiSurface": {

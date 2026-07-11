@@ -8,6 +8,7 @@ This Worker is the public Streamable HTTP adapter. It is separate from GitHub Pa
 - `HYPERXOSIST_MCP_ALLOWED_ORIGINS` is a comma-separated allowlist. Browser-originated requests default closed.
 - `HYPERXOSIST_MCP_ALLOWED_HOSTS` is a comma-separated hostname allowlist for the production custom domain.
 - Only `POST /mcp`, CORS preflight, and `GET /health` are exposed. MCP is stateless JSON response mode and has a 1 MiB body limit.
+- `HYPERXOSIST_PAYMENT_ENVIRONMENT=production` returns `https://api.kgninja.dev` execution URLs; use `staging` only for the existing staging payment Worker.
 - Run this Worker behind a Cloudflare custom domain. Add a zone-level WAF rate-limiting rule for `POST /mcp`, grouped by source IP, before public release. `workers.dev` is staging only because it cannot use your domain-zone WAF policy.
 
 ## Local verification

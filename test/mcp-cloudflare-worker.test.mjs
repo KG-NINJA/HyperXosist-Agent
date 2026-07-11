@@ -27,4 +27,13 @@ test('Cloudflare Worker serves the shared X search-plan tool', async () => {
   assert.equal(body.id, 2);
   assert.equal(body.result.structuredContent.type, 'hyperxosist.search_plan.v1');
   assert.ok(body.result.structuredContent.searchUrls.every((url) => url.startsWith('https://x.com/search')));
+  assert.ok(body.result.structuredContent.mission.steps.every((step) => step.paidRequest.endpoint === 'https://api.kgninja.dev/hyperxosist-query'));
+  assert.doesNotMatch(JSON.stringify(body.result.structuredContent), /workers\.dev|mainnet-staging/);
+});
+
+test('Cloudflare Worker keeps staging payment URLs in the staging environment', async () => {
+  const response = await worker.fetch(request('/mcp', { method: 'POST', headers: { Authorization: 'Bearer test-token', Accept: 'application/json, text/event-stream', 'Content-Type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'hyperxosist_search_plan', arguments: { intent: 'Find bug reports about HyperXosist-Agent' } } }) }), { ...env, HYPERXOSIST_PAYMENT_ENVIRONMENT: 'staging' });
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.ok(body.result.structuredContent.mission.steps.every((step) => step.paidRequest.endpoint.includes('mainnet-staging.fuwafuwow.workers.dev')));
 });

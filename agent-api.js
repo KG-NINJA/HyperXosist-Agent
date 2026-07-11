@@ -25,10 +25,24 @@
   /** Default agent mode: universal for all LLMs. Pass mode:'grok' for optional Grok Build emphasis. */
   const DEFAULT_AGENT_MODE = 'universal';
 
-  const PAYMENT_ENDPOINT =
-    'https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/hyperxosist-query';
-  const PAYMENT_OPTIONS_ENDPOINT =
-    'https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/payment-options.json';
+  const PaymentEndpoints =
+    root.HyperXosistPaymentEndpoints ||
+    (typeof module === 'object' && module.exports ? require('./payment-endpoints.js') : null);
+
+  function resolvePaymentEndpoints(options) {
+    if (!PaymentEndpoints || typeof PaymentEndpoints.resolve !== 'function') {
+      throw new Error('Load payment-endpoints.js before agent-api.js in browser environments.');
+    }
+    const environment =
+      options && (options.paymentEnvironment || options.paymentEndpointEnvironment)
+        ? options.paymentEnvironment || options.paymentEndpointEnvironment
+        : PaymentEndpoints.defaultEnvironment;
+    return PaymentEndpoints.resolve(environment);
+  }
+
+  const DEFAULT_PAYMENT_ENDPOINTS = resolvePaymentEndpoints();
+  const PAYMENT_ENDPOINT = DEFAULT_PAYMENT_ENDPOINTS.paymentEndpoint;
+  const PAYMENT_OPTIONS_ENDPOINT = DEFAULT_PAYMENT_ENDPOINTS.paymentOptionsEndpoint;
 
   /** Common high-volume repost / engagement-bait phrases (synced with top30_repost_blacklist.json). */
   const repostBlacklistTerms = [
@@ -1571,7 +1585,7 @@
       if (mapped.toUser) input.toUser = mapped.toUser;
 
       const scoring = scoreQuery(input);
-      const paid = buildPaidRequest(input);
+      const paid = buildPaidRequest(input, ctx);
       return {
         index,
         angleId: angle.id,
@@ -1652,6 +1666,7 @@
       entity: opts.entity || opts.fromUser,
       lang: opts.lang || (/日本語|japan|lang:\s*ja|\bja\b/i.test(text) ? 'ja' : opts.lang || ''),
       keywords: opts.keywords,
+      paymentEnvironment: opts.paymentEnvironment || opts.paymentEndpointEnvironment,
       overrides: opts.overrides || {}
     };
 
@@ -2229,7 +2244,8 @@
       subject: product,
       product,
       lang: ctx.lang,
-      overrides: ctx.overrides
+      overrides: ctx.overrides,
+      paymentEnvironment: ctx.paymentEnvironment || ctx.paymentEndpointEnvironment
     });
 
     const emptyPrompt = buildGrokBuildPrompt({
@@ -2281,7 +2297,8 @@
    * Agents call this to get an executable step list + optional handoff.
    * Humans follow humanManual steps in the UI (free browser path).
    */
-  function getSignalToFixLinks() {
+  function getSignalToFixLinks(options) {
+    const payment = resolvePaymentEndpoints(options);
     return {
       signalToFixHumanUi: SIGNAL_TO_FIX_URL,
       signalToFixAgentUse: SIGNAL_TO_FIX_AGENT_USE,
@@ -2290,8 +2307,8 @@
       hyperxosistAgentsMd: PUBLIC_BASE + '/AGENTS.md',
       hyperxosistLlms: PUBLIC_BASE + '/llms.txt',
       paymentManifest: PUBLIC_BASE + '/x402-payment.json',
-      paymentEndpoint: PAYMENT_ENDPOINT,
-      paymentOptionsEndpoint: PAYMENT_OPTIONS_ENDPOINT
+      paymentEndpoint: payment.paymentEndpoint,
+      paymentOptionsEndpoint: payment.paymentOptionsEndpoint
     };
   }
 
@@ -2315,7 +2332,7 @@
     });
     const step = plan.primaryStep || (plan.mission && plan.mission.steps && plan.mission.steps[0]) || null;
     const score = step && step.input ? scoreQuery(step.input) : null;
-    const paidRequest = step && step.input ? buildPaidRequest(step.input) : null;
+    const paidRequest = step && step.input ? buildPaidRequest(step.input, opts) : null;
 
     const feedback = Array.isArray(opts.feedback)
       ? opts.feedback.map(String).map((s) => s.trim()).filter(Boolean)
@@ -2339,7 +2356,7 @@
       });
     }
 
-    const links = getSignalToFixLinks();
+    const links = getSignalToFixLinks(opts);
 
     const humanManual = {
       title: '人間向け — 手動で Signal-to-Fix 連携する（ブラウザ無料）',
@@ -2376,6 +2393,7 @@
       noteEn: 'Human browser use is free. x402 is required only when AI agents automate production use of search URLs.'
     };
 
+    const payment = resolvePaymentEndpoints(opts);
     const agentAuto = {
       title: 'AI Agent — linked auto execution',
       requiresPaymentForSearchUrl: true,
@@ -2406,7 +2424,7 @@
         {
           id: 'pay',
           method: 'buildPaidRequest',
-          endpoint: PAYMENT_ENDPOINT,
+          endpoint: payment.paymentEndpoint,
           body: paidRequest && paidRequest.body,
           free: false,
           on402: 'Complete x402 via paymentOptionsEndpoint, retry POST'
@@ -2535,7 +2553,7 @@
       payment: {
         required: true,
         completed: opts.paymentCompleted === true,
-        endpoint: PAYMENT_ENDPOINT,
+        endpoint: resolvePaymentEndpoints(opts).paymentEndpoint,
         amountUsd: opts.amountUsd != null ? opts.amountUsd : 0.01
       },
       missionId: opts.missionId || null,
@@ -2996,7 +3014,8 @@
           result = buildMission(args.missionId, {
             subject: args.subject,
             lang: args.lang,
-            mode: args.mode
+            mode: args.mode,
+            paymentEnvironment: args.paymentEnvironment || args.paymentEndpointEnvironment
           });
           break;
         case 'hyperxosist_build_query': {
@@ -3020,7 +3039,7 @@
           });
           break;
         case 'hyperxosist_build_paid_request':
-          result = buildPaidRequest(args.input || args);
+          result = buildPaidRequest(args.input || args, args);
           break;
         case 'hyperxosist_build_handoff':
           result = buildHandoffPackage(args);
@@ -3295,8 +3314,8 @@
       templates: listTemplates(),
       noise: exportNoiseCatalog(),
       payment: {
-        endpoint: PAYMENT_ENDPOINT,
-        paymentOptionsEndpoint: PAYMENT_OPTIONS_ENDPOINT,
+        endpoint: resolvePaymentEndpoints(opts).paymentEndpoint,
+        paymentOptionsEndpoint: resolvePaymentEndpoints(opts).paymentOptionsEndpoint,
         expectedUnpaidStatus: 402,
         amountUsd: 0.01
       }
@@ -3316,7 +3335,8 @@
     return session;
   }
 
-  function buildPaidRequest(input) {
+  function buildPaidRequest(input, options) {
+    const payment = resolvePaymentEndpoints(options);
     const validation = validateInput(input);
     const query = buildQuery(input);
     const searchUrl = buildSearchUrl(input);
@@ -3324,8 +3344,8 @@
     return {
       paymentRequired: true,
       method: 'POST',
-      endpoint: PAYMENT_ENDPOINT,
-      paymentOptionsEndpoint: PAYMENT_OPTIONS_ENDPOINT,
+      endpoint: payment.paymentEndpoint,
+      paymentOptionsEndpoint: payment.paymentOptionsEndpoint,
       expectedUnpaidStatus: 402,
       expectedPaidStatus: 200,
       body: input || {},
@@ -3348,7 +3368,7 @@
     };
   }
 
-  function buildBatch(inputs) {
+  function buildBatch(inputs, options) {
     if (!Array.isArray(inputs)) {
       throw new Error('buildBatch expects an array of inputs');
     }
@@ -3362,7 +3382,7 @@
         searchUrl: buildSearchUrl(input),
         validation,
         score: scoring,
-        paidRequest: buildPaidRequest(input)
+        paidRequest: buildPaidRequest(input, options)
       };
     });
   }
@@ -3420,6 +3440,7 @@
     paymentManifest: 'x402-payment.json',
     paymentEndpoint: PAYMENT_ENDPOINT,
     paymentOptionsEndpoint: PAYMENT_OPTIONS_ENDPOINT,
+    paymentEndpoints: PaymentEndpoints,
     publicBase: PUBLIC_BASE,
     MAX_QUERY_LENGTH,
     WARN_QUERY_LENGTH,
