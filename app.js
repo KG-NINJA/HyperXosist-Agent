@@ -36,6 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const historyList = document.getElementById('historyList');
   const templateGrid = document.getElementById('templateGrid');
   const versionBadge = document.getElementById('versionBadge');
+  const footerVersion = document.getElementById('footerVersion');
   const toastEl = document.getElementById('toast');
 
   const btnCopy = document.getElementById('btnCopy');
@@ -87,6 +88,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (versionBadge) {
     versionBadge.textContent = `v${Agent.version}`;
+  }
+  if (footerVersion) {
+    footerVersion.textContent = Agent.version;
   }
 
   function toast(message, ms = 2000) {
