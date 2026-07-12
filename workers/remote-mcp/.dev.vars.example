@@ -3,3 +3,8 @@ HYPERXOSIST_MCP_TOKEN=replace-with-a-long-random-secret
 HYPERXOSIST_MCP_ALLOWED_ORIGINS=http://localhost:3000
 HYPERXOSIST_MCP_ALLOWED_HOSTS=localhost
 HYPERXOSIST_PAYMENT_ENVIRONMENT=staging
+# Optional: SHA-256 token registry JSON. Store this as a secret in deployed environments.
+# HYPERXOSIST_MCP_TOKEN_USERS={"sha256-token-hash":{"userId":"agent-a","plan":"pro","status":"active","dailyLimit":100}}
+HYPERXOSIST_MCP_DEFAULT_USER_ID=default
+HYPERXOSIST_MCP_DEFAULT_PLAN=default
+HYPERXOSIST_MCP_DEFAULT_DAILY_LIMIT=0

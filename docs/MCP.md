@@ -161,6 +161,9 @@ Use a Cloudflare custom domain for production, not a `workers.dev` hostname. Bef
 The checked-in production configuration binds the Worker to `mcp.kgninja.dev`, disables `workers.dev` and version preview URLs, and restricts the Host allowlist to that hostname. It deliberately leaves browser origins empty because Remote MCP clients are server-to-server by default.
 
 The Worker exposes only `POST /mcp`, CORS preflight for an allowlisted browser origin, and `GET /health`. It enforces Bearer authentication, closed-by-default Origin and Host validation, a 1 MiB body limit, JSON-only requests, generic errors, and `no-store` responses. Production returns x402 execution URLs under `https://api.kgninja.dev`; staging preserves the existing `workers.dev` payment origin. Run `npm run test:mcp:cloudflare` and `npm run cloudflare:mcp:check` before deployment. See [Worker deployment details](../workers/remote-mcp/README.md).
+The production endpoint is `https://mcp.kgninja.dev/mcp` and health is `https://mcp.kgninja.dev/health`. The deployed Worker now supports optional per-user token registry management through `HYPERXOSIST_MCP_TOKEN_USERS` (SHA-256 token hash keys, user ID, plan, status, and daily limit), while keeping the legacy `HYPERXOSIST_MCP_TOKEN` compatible. Authenticated requests emit sanitized request, latency, status, quota, and error events with request IDs to Worker Logs. Optional `MCP_USAGE_KV` enforces daily limits and optional `MCP_ANALYTICS` writes aggregate data points. Raw tokens, prompts, payment headers, and wallet data are never logged.
+
+Payment analysis remains separate: the existing x402 Worker is authoritative for paid API access, D1 revenue/access/funnel summaries, settlement evidence, and Telegram notifications. Remote MCP planning/filtering/handoff requests are free and are recorded with `paid: false`; the MCP Worker does not verify or settle x402 payments.
 
 ## Free planning and x402 boundary
 
@@ -183,7 +186,7 @@ See [CHATGPT_APP.md](CHATGPT_APP.md). A directory submission is intentionally no
 
 ## Limitations
 
-- No hosted Remote MCP URL is deployed by this repository change.
-- Bearer token auth is suitable for controlled deployments; a public multi-user app may require OAuth/account linking.
-- The in-process rate-limit hook needs a shared production implementation.
+- Production Remote MCP is deployed at `https://mcp.kgninja.dev/mcp`; verify `/health` before use.
+- Bearer token registry management is suitable for controlled deployments; a broad public multi-user app may still require OAuth/account linking.
+- Daily quotas require the optional `MCP_USAGE_KV` binding; Cloudflare WAF remains the distributed edge rate limiter.
 - No X scraping or X API integration is included.

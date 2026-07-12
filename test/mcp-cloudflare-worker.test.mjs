@@ -4,6 +4,7 @@ import test from 'node:test';
 
 globalThis.crypto ??= webcrypto;
 const { default: worker } = await import('../workers/remote-mcp/src/index.js');
+const { consumeQuota, identifyUser, sha256Hex } = await import('../workers/remote-mcp/src/telemetry.js');
 const env = { HYPERXOSIST_MCP_TOKEN: 'test-token', HYPERXOSIST_MCP_ALLOWED_ORIGINS: 'https://app.example.com', HYPERXOSIST_MCP_ALLOWED_HOSTS: 'mcp.example.com' };
 function request(path, options = {}) { return new Request(`https://mcp.example.com${path}`, options); }
 test('Cloudflare Worker rejects unauthenticated and disallowed requests', async () => {
@@ -36,4 +37,36 @@ test('Cloudflare Worker keeps staging payment URLs in the staging environment', 
   assert.equal(response.status, 200);
   const body = await response.json();
   assert.ok(body.result.structuredContent.mission.steps.every((step) => step.paidRequest.endpoint.includes('mainnet-staging.fuwafuwow.workers.dev')));
+});
+
+test('Remote MCP exposes request IDs and operational health capabilities', async () => {
+  const health = await worker.fetch(request('/health', { method: 'GET' }), env);
+  assert.equal(health.status, 200);
+  assert.match(health.headers.get('x-request-id') || '', /^[0-9a-f-]{36}$/);
+  const body = await health.json();
+  assert.equal(body.usageTelemetry, true);
+  assert.equal(body.errorMonitoring, true);
+  assert.equal(body.paymentAnalytics, 'external-x402-worker');
+});
+
+test('token registry identifies users without exposing raw tokens', async () => {
+  const hash = await sha256Hex('mapped-token');
+  const identity = await identifyUser(
+    request('/mcp', { headers: { Authorization: 'Bearer mapped-token' } }),
+    { HYPERXOSIST_MCP_TOKEN_USERS: JSON.stringify({ [hash]: { userId: 'agent-a', plan: 'pro', dailyLimit: 2 } }) }
+  );
+  assert.equal(identity.ok, true);
+  assert.deepEqual(identity.user, { userId: 'agent-a', plan: 'pro', status: 'active', dailyLimit: 2 });
+});
+
+test('KV quota blocks a user after the configured daily limit', async () => {
+  const values = new Map();
+  const kv = {
+    async get(key) { return values.get(key) || null; },
+    async put(key, value) { values.set(key, value); },
+  };
+  const user = { userId: 'agent-a', dailyLimit: 2 };
+  assert.equal((await consumeQuota({ MCP_USAGE_KV: kv }, user, new Date('2026-07-12T00:00:00Z'))).allowed, true);
+  assert.equal((await consumeQuota({ MCP_USAGE_KV: kv }, user, new Date('2026-07-12T00:00:00Z'))).allowed, true);
+  assert.equal((await consumeQuota({ MCP_USAGE_KV: kv }, user, new Date('2026-07-12T00:00:00Z'))).allowed, false);
 });
