@@ -4,7 +4,9 @@ This Worker is the public Streamable HTTP adapter. It is separate from GitHub Pa
 
 ## Security model
 
-- `HYPERXOSIST_MCP_TOKEN` is a required Cloudflare secret. Requests to `POST /mcp` without the matching `Authorization: Bearer` header are rejected.
+- `HYPERXOSIST_MCP_TOKEN` is the backwards-compatible default Cloudflare secret. Requests to `POST /mcp` without a matching `Authorization: Bearer` header are rejected.
+- `HYPERXOSIST_MCP_TOKEN_USERS` is an optional secret JSON registry keyed by SHA-256 token hash. Each value may set `userId`, `plan`, `status` (`active` or disabled), and `dailyLimit` (0 means unlimited). Raw tokens are never logged or stored.
+- `HYPERXOSIST_MCP_DEFAULT_USER_ID`, `HYPERXOSIST_MCP_DEFAULT_PLAN`, and `HYPERXOSIST_MCP_DEFAULT_DAILY_LIMIT` identify and limit the legacy default token.
 - `HYPERXOSIST_MCP_ALLOWED_ORIGINS` is a comma-separated allowlist. Browser-originated requests default closed.
 - `HYPERXOSIST_MCP_ALLOWED_HOSTS` is a comma-separated hostname allowlist for the production custom domain.
 - Only `POST /mcp`, CORS preflight, and `GET /health` are exposed. MCP is stateless JSON response mode and has a 1 MiB body limit.
@@ -36,3 +38,25 @@ npx wrangler deploy --env staging
 Production is configured for `mcp.kgninja.dev`. It disables `workers.dev` and preview URLs, sets the Host allowlist to that hostname, leaves browser origins empty, and requires a separate production `HYPERXOSIST_MCP_TOKEN` secret. Add the zone-level WAF/rate-limiting rule before deploying with `--env production` after a staged smoke test.
 
 The Worker keeps planning, filtering, and handoff free. It does not call, replace, or alter the existing x402 payment endpoint.
+## Operations and analytics
+
+Every authenticated MCP request emits a structured `mcp_request` event to Worker logs with a request ID, sanitized user ID, plan, operation/tool, status, latency, client family, and timestamp. Authentication failures, quota blocks, rejected requests, and internal errors emit separate event names. Request bodies, prompts, tokens, payment headers, and wallet data are not logged.
+
+- Cloudflare Observability is enabled in `wrangler.jsonc`; use Worker Logs for error monitoring and usage trends.
+- If an `MCP_ANALYTICS` Analytics Engine binding is added, the same aggregate-safe events are written as data points.
+- If an `MCP_USAGE_KV` KV binding is added, `dailyLimit` is enforced per user and UTC day. Without the binding, identity and logs still work but quotas are not enforced.
+- Payment analysis remains in the existing x402 Worker: its D1 revenue/access/funnel summaries and Telegram notifications are authoritative. Remote MCP requests are free and are recorded with `paid: false`.
+
+### Token registry example
+
+Hash a token without printing the token:
+
+```bash
+printf %s "$AGENT_TOKEN" | sha256sum
+```
+
+Set `HYPERXOSIST_MCP_TOKEN_USERS` to JSON keyed by that hash, for example:
+
+```json
+{"sha256-token-hash":{"userId":"agent-a","plan":"pro","status":"active","dailyLimit":100}}
+```
