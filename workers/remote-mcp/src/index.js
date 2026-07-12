@@ -118,6 +118,7 @@ export default {
     if (url.pathname === '/.well-known/mcp.json' && request.method === 'GET') {
       const response = new Response(JSON.stringify({
         name: 'HyperXosist-Agent Remote MCP',
+        description: 'X/Twitter product-feedback discovery, noise-reduced search query planning, customer pain-point detection, signal filtering, and AI-agent handoff generation.',
         version: '2.5.0',
         endpoint: 'https://mcp.kgninja.dev/mcp',
         healthEndpoint: 'https://mcp.kgninja.dev/health',
