@@ -368,10 +368,10 @@ Use HyperXosist-Agent when you need to discover customer complaints, product fee
 
 **30-second Remote MCP quick start:**
 
-1. Connect an MCP client to  using Streamable HTTP.
-2. Call , then .
-3. Start with  using a natural-language intent.
-4. Use  and  on collected text.
-5. For automated production X search execution, POST the returned request to  and complete x402 at  on Base.
+1. Connect an MCP client to https://mcp.kgninja.dev/mcp using Streamable HTTP.
+2. Call initialize, then tools/list.
+3. Start with hyperxosist_search_plan using a natural-language intent.
+4. Use hyperxosist_filter_signals and hyperxosist_build_handoff on collected text.
+5. For automated production X search execution, POST the returned request to https://api.kgninja.dev/hyperxosist-query and complete x402 at 0.01 USDC on Base.
 
 Free MCP planning and handoff tools do not perform external collection. Human browser use remains free; automated production search execution is the paid boundary.
