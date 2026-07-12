@@ -349,3 +349,7 @@ No build step. CI runs tests on every push/PR to `main`.
 
 - [Signal-to-Fix](https://kg-ninja.github.io/Signal-to-Fix/) — keep-only PR specs from feedback  
 - [CHANGELOG](CHANGELOG.md) · [CONTRIBUTING](CONTRIBUTING.md) · [SECURITY](SECURITY.md)
+
+## MCP discovery and catalog
+
+Machine-readable catalog metadata: https://kg-ninja.github.io/HyperXosist-Agent/mcp-catalog.json

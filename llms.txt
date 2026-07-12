@@ -22,6 +22,7 @@
 
 ## Machine discovery
 - Remote MCP metadata: https://mcp.kgninja.dev/.well-known/mcp.json
+- Catalog metadata: https://kg-ninja.github.io/HyperXosist-Agent/mcp-catalog.json
 - Static metadata: https://kg-ninja.github.io/HyperXosist-Agent/agent-use.json
 
 ## Start here (any agent)
