@@ -11,7 +11,6 @@
     "HYPERXOSIST_MCP_ALLOWED_ORIGINS": "",
     "HYPERXOSIST_MCP_ALLOWED_HOSTS": "",
     "HYPERXOSIST_PAYMENT_ENVIRONMENT": "production"
-        "HYPERXOSIST_MCP_PUBLIC_FREE_ACCESS": "true",
   },
   "env": {
     "staging": {
@@ -19,8 +18,8 @@
       "vars": {
         "HYPERXOSIST_MCP_ALLOWED_ORIGINS": "",
         "HYPERXOSIST_MCP_ALLOWED_HOSTS": "",
-        "HYPERXOSIST_PAYMENT_ENVIRONMENT": "staging"
-        "HYPERXOSIST_MCP_PUBLIC_FREE_ACCESS": "false",
+        "HYPERXOSIST_PAYMENT_ENVIRONMENT": "staging",
+        "HYPERXOSIST_MCP_PUBLIC_FREE_ACCESS": "false"
       },
       "workers_dev": true,
       "preview_urls": false
@@ -30,8 +29,8 @@
       "vars": {
         "HYPERXOSIST_MCP_ALLOWED_ORIGINS": "",
         "HYPERXOSIST_MCP_ALLOWED_HOSTS": "mcp.kgninja.dev",
-        "HYPERXOSIST_PAYMENT_ENVIRONMENT": "production"
-        "HYPERXOSIST_MCP_PUBLIC_FREE_ACCESS": "true",
+        "HYPERXOSIST_PAYMENT_ENVIRONMENT": "production",
+        "HYPERXOSIST_MCP_PUBLIC_FREE_ACCESS": "true"
       },
       "workers_dev": false,
       "preview_urls": false,
