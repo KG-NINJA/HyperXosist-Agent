@@ -123,7 +123,8 @@ export default {
         userManagement: Boolean(env.HYPERXOSIST_MCP_TOKEN_USERS || env.HYPERXOSIST_MCP_TOKEN),
         usageTelemetry: true,
         errorMonitoring: true,
-        paymentAnalytics: 'external-x402-worker',
+        paymentAnalytics: "external-x402-worker",
+        publicFreeAccess: String(env.HYPERXOSIST_MCP_PUBLIC_FREE_ACCESS || "").toLowerCase() === "true",
       }), {
         headers: { 'Cache-Control': 'no-store', 'Content-Type': 'application/json; charset=utf-8', 'X-Content-Type-Options': 'nosniff' },
       });
@@ -145,12 +146,13 @@ export default {
       headers.set('Allow', 'POST, OPTIONS');
       return withRequestId(jsonError(405, -32000, 'Method not allowed.', null, Object.fromEntries(headers)), requestId);
     }
-    if (!env.HYPERXOSIST_MCP_TOKEN && !env.HYPERXOSIST_MCP_TOKEN_USERS) {
+    const publicFreeAccess = String(env.HYPERXOSIST_MCP_PUBLIC_FREE_ACCESS || "").toLowerCase() === "true";
+    if (!publicFreeAccess && !env.HYPERXOSIST_MCP_TOKEN && !env.HYPERXOSIST_MCP_TOKEN_USERS) {
       observe('mcp_configuration_error', 503, null, 'auth', 'service_not_configured');
       return withRequestId(jsonError(503, -32603, 'Service not configured.'), requestId);
     }
 
-    const identity = await identifyUser(request, env);
+    const identity = publicFreeAccess ? { ok: true, user: { userId: "public", plan: "free-public", status: "active", dailyLimit: 0 } } : await identifyUser(request, env);
     if (!identity.ok) {
       observe('mcp_auth_failure', identity.status, null, 'auth', identity.reason);
       if (identity.status === 401) headers.set('WWW-Authenticate', 'Bearer realm="hyperxosist-mcp"');
