@@ -104,3 +104,14 @@ filterKeepSignals → buildGrokBuildPrompt → paste into Grok Build (one small 
 
 ## Tests
 node test/agent-api.test.js
+
+## Agent operator discovery terms
+- X/Twitter product-feedback discovery
+- customer complaints and pain-point detection
+- social listening query planning
+- noise-reduced signal filtering
+- AI-agent handoff generation
+- market research and product research agents
+
+## 30-second Remote MCP quickstart
+Connect a Streamable HTTP MCP client to https://mcp.kgninja.dev/mcp, call initialize and tools/list, then call hyperxosist_search_plan with a natural-language intent. Free tools plan, filter, and hand off; automated production X search execution uses the existing x402 endpoint at 0.01 USDC on Base.
