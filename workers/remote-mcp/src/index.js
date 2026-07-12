@@ -115,6 +115,31 @@ export default {
       errorCode,
     });
 
+    if (url.pathname === '/.well-known/mcp.json' && request.method === 'GET') {
+      const response = new Response(JSON.stringify({
+        name: 'HyperXosist-Agent Remote MCP',
+        version: '2.5.0',
+        endpoint: 'https://mcp.kgninja.dev/mcp',
+        healthEndpoint: 'https://mcp.kgninja.dev/health',
+        transport: 'Streamable HTTP',
+        authentication: 'public-free',
+        freeTools: [
+          'hyperxosist_search_plan',
+          'hyperxosist_filter_signals',
+          'hyperxosist_build_handoff',
+        ],
+        paidExecution: {
+          protocol: 'x402',
+          endpoint: 'https://api.kgninja.dev/hyperxosist-query',
+          price: '0.01 USDC',
+          network: 'eip155:8453',
+        },
+      }), {
+        headers: { 'Cache-Control': 'public, max-age=300', 'Content-Type': 'application/json; charset=utf-8', 'X-Content-Type-Options': 'nosniff' },
+      });
+      return withRequestId(response, requestId);
+    }
+
     if (url.pathname === '/health' && request.method === 'GET') {
       const response = new Response(JSON.stringify({
         ok: true,
