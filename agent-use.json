@@ -7,7 +7,7 @@
     "endpoint": "https://mcp.kgninja.dev/mcp",
     "healthEndpoint": "https://mcp.kgninja.dev/health",
     "transport": "Streamable HTTP",
-    "authentication": "Bearer token",
+    "authentication": "public-free",
     "deploymentStatus": "deployed; verify healthEndpoint before use",
     "freeTools": [
       "hyperxosist_search_plan",

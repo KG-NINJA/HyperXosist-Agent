@@ -9,7 +9,7 @@
 - Endpoint: https://mcp.kgninja.dev/mcp
 - Health: https://mcp.kgninja.dev/health
 - Transport: Streamable HTTP
-- Authentication: Bearer token
+- Authentication: public-free for MCP tools; Bearer token remains available for managed access
 - Deployment status: deployed; verify /health before use
 - Free tools: hyperxosist_search_plan, hyperxosist_filter_signals, hyperxosist_build_handoff
 - Free: MCP initialize, tools/list, planning, filtering, handoff
@@ -19,6 +19,10 @@
 - Automated production use of generated search URLs requires x402 payment (expect HTTP 402 until paid).
 - Local `buildQuery` / `planFromIntent` / `scoreQuery` / `dispatchToolCall` (planning tools) are free for planning only — not a payment bypass.
 - Default mode is **universal** (works for all major LLMs). Pass `mode: "grok"` only when you want Grok Build tools.
+
+## Machine discovery
+- Remote MCP metadata: https://mcp.kgninja.dev/.well-known/mcp.json
+- Static metadata: https://kg-ninja.github.io/HyperXosist-Agent/agent-use.json
 
 ## Start here (any agent)
 1. https://kg-ninja.github.io/HyperXosist-Agent/agent-use.json
