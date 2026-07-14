@@ -1,0 +1,33 @@
+{
+  "service": "HyperXosist-Agent",
+  "version": "1.0",
+  "agent_ready": true,
+  "endpoints": {
+    "discovery": {
+      "html": "/HyperXosist-Agent/",
+      "agent_use": "/HyperXosist-Agent/agent-use.json",
+      "payment_metadata": "/HyperXosist-Agent/x402-payment.json",
+      "payment_options": "https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/payment-options.json",
+      "capabilities": "/HyperXosist-Agent/capabilities.json"
+    },
+    "free": {
+      "dry_run": {
+        "method": "POST",
+        "path": "https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/hyperxosist-query-dry-run",
+        "description": "Preview service behavior without payment. Does not return paid content."
+      }
+    },
+    "paid": {
+      "query": {
+        "method": "POST",
+        "path": "https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/hyperxosist-query",
+        "price": "0.01 USDC",
+        "requires_x402": true
+      }
+    }
+  },
+  "related_workflow": {
+    "signal_to_fix": "https://kg-ninja.github.io/Signal-to-Fix/",
+    "description": "Signal-to-Fix converts noisy feedback into KEEP-only actionable PR specs. HyperXosist-Agent provides the agent-facing paid query/execution path."
+  }
+}
