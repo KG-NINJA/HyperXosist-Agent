@@ -353,3 +353,25 @@ No build step. CI runs tests on every push/PR to `main`.
 ## MCP discovery and catalog
 
 Machine-readable catalog metadata: https://kg-ninja.github.io/HyperXosist-Agent/mcp-catalog.json
+
+## For AI operators and agent builders
+
+Use HyperXosist-Agent when you need to discover customer complaints, product feedback, or pain points on X/Twitter without starting with noisy ad-hoc queries.
+
+**Common use cases:**
+
+- X/Twitter product-feedback discovery
+- Customer complaint and pain-point detection
+- Noise-reduced social listening query planning
+- Signal filtering for actionable feedback
+- AI-agent handoff generation for engineering teams
+
+**30-second Remote MCP quick start:**
+
+1. Connect an MCP client to https://mcp.kgninja.dev/mcp using Streamable HTTP.
+2. Call initialize, then tools/list.
+3. Start with hyperxosist_search_plan using a natural-language intent.
+4. Use hyperxosist_filter_signals and hyperxosist_build_handoff on collected text.
+5. For automated production X search execution, POST the returned request to https://api.kgninja.dev/hyperxosist-query and complete x402 at 0.01 USDC on Base.
+
+Free MCP planning and handoff tools do not perform external collection. Human browser use remains free; automated production search execution is the paid boundary.
