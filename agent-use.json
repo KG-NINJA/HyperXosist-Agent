@@ -3,18 +3,88 @@
   "version": "1.0.0",
   "description": "Machine-readable entrypoint for AI agents that generate X search URLs with HyperXosist noise reduction.",
   "requiresPaymentForAgentUse": true,
+  "freeCapabilities": ["mcp_connection", "tool_discovery", "planning", "filtering", "handoff", "dry_run_preview"],
+  "paidCapabilities": ["production_search_url_automation", "external_collection", "hyperxosist_query_execution"],
+  "healthCheck": {
+    "endpoint": "https://mcp.kgninja.dev/health",
+    "expectedStatus": 200,
+    "free": true
+  },
+  "servicePurpose": "Agent-facing execution/query layer for building noise-reduced X/Twitter search queries before handing candidate feedback to Signal-to-Fix.",
+  "whenToUse": [
+    "An agent needs to source candidate X/Twitter feedback with spam, promo, and engagement-bait reduction.",
+    "An agent needs a paid query/search execution path before using Signal-to-Fix for keep-only PR spec generation."
+  ],
+  "whenNotToUse": [
+    "Do not use for free access to paid execution output.",
+    "Do not use as proof that paid execution completed unless POST /hyperxosist-query returned HTTP 200 after x402 payment.",
+    "Do not use to bypass X/Twitter terms, authentication requirements, or payment."
+  ],
+  "agentConversionSummary": {
+    "problemSolved": "Builds noise-reduced X/Twitter search queries and search URLs for agents that need better candidate feedback discovery.",
+    "whenToUse": "Use before Signal-to-Fix when an agent needs to source relevant X/Twitter feedback with spam, promo, and engagement-bait reduction.",
+    "inputToSend": "keywords, exactPhrase, fromUser, excludeWords, date filters, minimum engagement filters, language, media filters, mode, and noise settings.",
+    "expectedOutput": "A paid query/search result from the x402 endpoint, including an X search query or search URL suitable for gathering candidate feedback.",
+    "paidAction": "POST the same query input to the configured x402 payment endpoint.",
+    "nextUrl": "https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/hyperxosist-query",
+    "on402": "Read x402-payment.json and paymentOptionsEndpoint, complete the x402 payment, then retry the same POST with payment proof."
+  },
+  "agent_flow": [
+    "Read /agent-use.json",
+    "Read /capabilities.json",
+    "POST /hyperxosist-query-dry-run for free preview",
+    "Read /x402-payment.json",
+    "If value is sufficient, POST /hyperxosist-query with x402 payment",
+    "If HTTP 402 is returned, complete x402 payment before retrying"
+  ],
+  "claim_policy": {
+    "can_claim": [
+      "discovery completed",
+      "dry-run completed",
+      "payment metadata parsed"
+    ],
+    "cannot_claim_without_payment": [
+      "paid execution completed",
+      "full result generated",
+      "paid content accessed"
+    ],
+    "dry_run_is_not_paid_execution": true
+  },
+  "dryRun": {
+    "endpoint": "https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/hyperxosist-query-dry-run",
+    "method": "POST",
+    "free": true,
+    "returnsPaidContent": false
+  },
   "payment": {
     "scheme": "x402",
     "manifest": "x402-payment.json",
     "endpoint": "https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/hyperxosist-query",
+    "paymentOptionsEndpoint": "https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/payment-options.json",
     "method": "POST",
     "expectedUnpaidStatus": 402,
-    "instruction": "AI agents must complete the configured x402 payment before using generated search URLs commercially or at scale. Human browser use remains available through index.html."
+    "expectedPaidStatus": 200,
+    "paidEndpoint": "https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/hyperxosist-query",
+    "instruction": "AI agents must POST input to the configured x402 endpoint and complete payment before using generated search URLs. Human browser use remains available through index.html."
   },
   "entrypoints": {
     "humanUi": "index.html",
     "agentApiScript": "agent-api.js",
-    "paymentManifest": "x402-payment.json"
+    "paymentManifest": "x402-payment.json",
+    "capabilities": "capabilities.json",
+    "linkedSignalToFix": "https://kg-ninja.github.io/Signal-to-Fix/agent-use.json"
+  },
+  "agentUsePolicy": {
+    "humanBrowserUse": "free",
+    "aiAgentUse": "paid-via-existing-x402-worker",
+    "mustNotBypassPayment": true,
+    "unpaidDryRunIsNotEquivalentToPaidExecution": true,
+    "paymentVerifier": "https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/hyperxosist-query"
+  },
+  "complementaryPositioning": {
+    "hyperxosist": "Agent-facing execution/query layer with x402 payment flow.",
+    "signalToFix": "Feedback/noise -> actionable issue, PR spec, and implementation prompt.",
+    "whyTogether": "HyperXosist produces cleaner paid search execution for candidate feedback; Signal-to-Fix turns the resulting feedback into keep-only implementation artifacts."
   },
   "inputSchema": {
     "type": "object",
@@ -47,5 +117,10 @@
     "lang": "en",
     "mode": "live",
     "noise": { "enabled": true, "preset": "medium", "removed": [] }
+  },
+  "linkedServices": {
+    "signalToFix": "https://kg-ninja.github.io/Signal-to-Fix/",
+    "signalToFixAgentUse": "https://kg-ninja.github.io/Signal-to-Fix/agent-use.json",
+    "handoff": "Use paid HyperXosist query generation to collect candidate X/Twitter feedback, then analyze it in Signal-to-Fix. Signal-to-Fix downstream outputs use only decision === \"keep\" items."
   }
 }

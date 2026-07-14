@@ -129,8 +129,8 @@
         </section>
         <!-- Agent Access -->
         <section class="agent-section" aria-labelledby="agentTitle">
-          <h2 id="agentTitle">Agent Access</h2>
-          <p>AI agents should read <code>agent-use.json</code> and <code>x402-payment.json</code>, then POST to the paid <code>/hyperxosist-query</code> endpoint before automated use.</p>
+          <h2 id="agentTitle">Agent path</h2>
+          <p>Humans use this page to build X search queries in the browser. Agents may use free planning, filtering, and dry-run capabilities, but those do not return paid production results. Read <a href="agent-use.json"><code>agent-use.json</code></a>, check <a href="capabilities.json"><code>capabilities.json</code></a>, then use <a href="x402-payment.json"><code>x402-payment.json</code></a> for paid execution at <code>POST /hyperxosist-query</code>. Before using the public MCP, confirm <a href="https://mcp.kgninja.dev/health"><code>/health</code></a> returns HTTP 200. Price: 0.01 USDC on Base mainnet. Related workflow: send gathered feedback to <a href="https://kg-ninja.github.io/Signal-to-Fix/">Signal-to-Fix</a>.</p>
         </section>
 
         <!-- クエリプレビューエリア -->
