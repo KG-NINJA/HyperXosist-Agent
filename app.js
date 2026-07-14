@@ -1,117 +1,109 @@
-// X Search Launcher Core Logic
-
+// HyperXosist UI — uses agent-api.js as single source of truth
 document.addEventListener('DOMContentLoaded', () => {
-  // DOM要素の取得
-  const fields = {
-    keywords: document.getElementById('keywords'),
-    exactPhrase: document.getElementById('exactPhrase'),
-    fromUser: document.getElementById('fromUser'),
-    excludeWords: document.getElementById('excludeWords'),
-    sinceDate: document.getElementById('sinceDate'),
-    untilDate: document.getElementById('untilDate'),
-    minFaves: document.getElementById('minFaves'),
-    lang: document.getElementById('lang'),
-    hasImages: document.getElementById('hasImages'),
-    hasVideos: document.getElementById('hasVideos'),
-    excludeLinks: document.getElementById('excludeLinks'),
-  };
+  const Agent = window.HyperXosistAgent;
+  if (!Agent) {
+    console.error('HyperXosistAgent not loaded');
+    return;
+  }
+
+  const FIELD_KEYS = [
+    'keywords', 'anyOf', 'exactPhrase', 'hashtags', 'fromUser', 'toUser', 'mentionUser',
+    'excludeWords', 'sinceDate', 'untilDate', 'minFaves', 'minRetweets', 'minReplies',
+    'lang', 'urlDomain', 'rawOperators',
+    'hasImages', 'hasVideos', 'hasMedia', 'nativeVideo', 'excludeLinks', 'hasLinks',
+    'excludeReplies', 'onlyReplies', 'verifiedOnly', 'quoteOnly', 'safeOnly'
+  ];
+
+  const CHECKBOX_KEYS = new Set([
+    'hasImages', 'hasVideos', 'hasMedia', 'nativeVideo', 'excludeLinks', 'hasLinks',
+    'excludeReplies', 'onlyReplies', 'verifiedOnly', 'quoteOnly', 'safeOnly'
+  ]);
+
+  const fields = {};
+  FIELD_KEYS.forEach((key) => {
+    fields[key] = document.getElementById(key);
+  });
 
   const noiseFields = {
     enabled: document.getElementById('noiseEnabled'),
-    preset: document.getElementById('noisePreset'),
+    preset: document.getElementById('noisePreset')
   };
 
   const queryPreview = document.getElementById('queryPreview');
+  const queryMeta = document.getElementById('queryMeta');
+  const queryExplain = document.getElementById('queryExplain');
+  const noiseChips = document.getElementById('noiseChips');
+  const historyList = document.getElementById('historyList');
+  const templateGrid = document.getElementById('templateGrid');
+  const versionBadge = document.getElementById('versionBadge');
+  const footerVersion = document.getElementById('footerVersion');
+  const toastEl = document.getElementById('toast');
+
   const btnCopy = document.getElementById('btnCopy');
+  const btnCopyUrl = document.getElementById('btnCopyUrl');
+  const btnShare = document.getElementById('btnShare');
+  const btnExplain = document.getElementById('btnExplain');
   const btnReset = document.getElementById('btnReset');
   const btnResetNoise = document.getElementById('btnResetNoise');
   const btnSearchLive = document.getElementById('btnSearchLive');
   const btnSearchTop = document.getElementById('btnSearchTop');
-  const historyList = document.getElementById('historyList');
-  const noiseChips = document.getElementById('noiseChips');
+  const btnClearHistory = document.getElementById('btnClearHistory');
+  const btnClearDates = document.getElementById('btnClearDates');
+  const btnGrokPrompt = document.getElementById('btnGrokPrompt');
+  const btnSendToGrok = document.getElementById('btnSendToGrok');
+  const btnGrokFromKeywords = document.getElementById('btnGrokFromKeywords');
+  const btnAgentPrompt = document.getElementById('btnAgentPrompt');
+  const btnCopyAgentPrompt = document.getElementById('btnCopyAgentPrompt');
+  const btnExportNoise = document.getElementById('btnExportNoise');
+  const grokModeEnabled = document.getElementById('grokModeEnabled');
+  const grokModePanel = document.getElementById('grokModePanel');
+  const noiseExtraTerms = document.getElementById('noiseExtraTerms');
+  const grokProduct = document.getElementById('grokProduct');
+  const grokTargetArea = document.getElementById('grokTargetArea');
+  const grokContext = document.getElementById('grokContext');
+  const grokFeedback = document.getElementById('grokFeedback');
+  const grokPromptPreview = document.getElementById('grokPromptPreview');
+  const grokFocusMeta = document.getElementById('grokFocusMeta');
+  const handoffPreview = document.getElementById('handoffPreview');
+  const s2fPipelineMeta = document.getElementById('s2fPipelineMeta');
+  const btnS2fPipeline = document.getElementById('btnS2fPipeline');
+  const btnBuildHandoff = document.getElementById('btnBuildHandoff');
+  const btnCopyS2fInput = document.getElementById('btnCopyS2fInput');
+  const btnOpenS2f = document.getElementById('btnOpenS2f');
+  const btnCopyHandoffJson = document.getElementById('btnCopyHandoffJson');
 
   const NOISE_STORAGE_KEY = 'hyperxosist_noise_filter';
-  const repostBlacklistTerms = [
-    "what do you think",
-    "do you agree",
-    "agree or disagree",
-    "thoughts on this",
-    "your thoughts",
-    "thoughts?",
-    "comment below",
-    "drop a comment",
-    "tag someone who",
-    "tag your friends",
-    "tag a friend",
-    "rt if you agree",
-    "retweet if you agree",
-    "retweet if",
-    "save this post",
-    "save for later",
-    "share this with",
-    "share if you agree",
-    "this is insane",
-    "this is crazy",
-    "you won't believe",
-    "wait for it",
-    "wait till the end",
-    "the ending is",
-    "mind blown",
-    "mind-blowing",
-    "unbelievable",
-    "shocking",
-    "insane video",
-    "crazy video",
-    "going viral",
-    "viral video",
-    "internet is losing it",
-    "people are losing it",
-    "everyone needs to see this",
-    "you need to see this",
-    "breaking:",
-    "just in:",
-    "update:",
-    "live update",
-    "developing",
-    "developing story",
-    "exclusive:",
-    "pov:",
-    "me when",
-    "when the",
-    "the way he",
-    "the way she",
-    "no words",
-    "speechless",
-    "hits different",
-    "this hits hard",
-    "double tap if",
-    "like if you agree",
-    "follow for more",
-    "meanwhile...",
-    "writer:",
-    "sources:",
-    "this is why",
-    "the reason is",
-    "this video is",
-    "wait until you see"
-  ];
-
-  const noiseRules = {
-    low: [
-      'giveaway', 'airdrop', 'claim', 'reward', 'referral', 'free money', 'limited offer', 'click here', 'sign up',
-      '無料配布', 'エアドロップ', 'プレゼント企画', '抽選'
-    ],
-    medium: [
-      'thoughts', 'agree', 'bookmark', 'insane', 'game changer', 'big if true', 'must read', 'hot take', 'thread below', 'you need to see this',
-      'ブクマ推奨', 'やばい', '革命', 'これはすごい', '知らないと損'
-    ],
-    high: [
-      'gm', 'wagmi', 'alpha', '100x', 'promo', 'presale', 'whitelist', 'pump', 'moonshot', 'paid partnership', 'sponsored', 'follow for more', 'retweet to win',
-      '固定ポスト', '完全攻略', 'フォローで', 'リポストで'
-    ]
-  };
+  const HISTORY_STORAGE_KEY = 'x_search_history';
+  const GROK_STORAGE_KEY = 'hyperxosist_grok_build';
+  const GROK_MODE_KEY = 'hyperxosist_grok_mode';
+  const MAX_HISTORY = 15;
+  let lastGrokMarkdown = '';
+  let lastHandoff = null;
+  let lastPipeline = null;
+  let grokModeOn = false;
 
   let noiseState = loadNoiseState();
+  let explainVisible = false;
+  let toastTimer = null;
+
+  if (versionBadge) {
+    versionBadge.textContent = `v${Agent.version}`;
+  }
+  if (footerVersion) {
+    footerVersion.textContent = Agent.version;
+  }
+
+  function toast(message, ms = 2000) {
+    if (!toastEl) return;
+    toastEl.textContent = message;
+    toastEl.hidden = false;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      toastEl.classList.remove('show');
+      toastEl.hidden = true;
+    }, ms);
+  }
 
   function loadNoiseState() {
     try {
@@ -119,81 +111,101 @@ document.addEventListener('DOMContentLoaded', () => {
       return {
         enabled: !!saved.enabled,
         preset: ['low', 'medium', 'high'].includes(saved.preset) ? saved.preset : 'medium',
-        removed: Array.isArray(saved.removed) ? saved.removed : []
+        removed: Array.isArray(saved.removed) ? saved.removed : [],
+        extraTerms: Array.isArray(saved.extraTerms)
+          ? saved.extraTerms
+          : typeof saved.extraTerms === 'string'
+            ? Agent.parseExcludeInput(saved.extraTerms)
+            : []
       };
     } catch (e) {
-      console.error('Noise filter設定読み込み失敗:', e);
-      return { enabled: false, preset: 'medium', removed: [] };
+      return { enabled: false, preset: 'medium', removed: [], extraTerms: [] };
     }
   }
 
   function saveNoiseState() {
     try {
+      if (noiseExtraTerms) {
+        noiseState.extraTerms = Agent.parseExcludeInput(noiseExtraTerms.value);
+      }
       localStorage.setItem(NOISE_STORAGE_KEY, JSON.stringify(noiseState));
     } catch (e) {
-      console.error('Noise filter設定保存失敗:', e);
+      console.error('Noise save failed', e);
     }
   }
 
-  function getPresetTerms(preset) {
-    if (preset === 'high') {
-      return [...noiseRules.low, ...noiseRules.medium, ...repostBlacklistTerms, ...noiseRules.high];
-    }
-    if (preset === 'medium') {
-      return [...noiseRules.low, ...noiseRules.medium, ...repostBlacklistTerms];
-    }
-    return [...noiseRules.low];
-  }
-
-  function normalizeTerm(term) {
-    return term.trim().replace(/^[-]+/, '').replace(/^"|"$/g, '').toLowerCase();
-  }
-
-  function parseExcludeInput(value) {
-    const matches = value.match(/"[^"]+"|\S+/g) || [];
-    return matches.map(term => term.replace(/^"|"$/g, '').trim()).filter(Boolean);
-  }
-
-  function formatExcludeTerm(term) {
-    const cleaned = term.trim();
-    const needsQuote = /\s/.test(cleaned) || (/[ぁ-んァ-ン一-龯]/.test(cleaned) && cleaned.length >= 5);
-    return `-${needsQuote ? `"${cleaned}"` : cleaned}`;
-  }
-
-  // Noise filterは投稿本文をAI判定せず、検索前に除外演算子だけを軽量追加する。
-  function getActiveNoiseTerms() {
-    if (!noiseState.enabled) return [];
-    const removed = new Set(noiseState.removed.map(normalizeTerm));
-    return getPresetTerms(noiseState.preset).filter(term => !removed.has(normalizeTerm(term)));
-  }
-
-  function getMergedExcludeTerms() {
-    const merged = [];
-    const seen = new Set();
-    [...parseExcludeInput(fields.excludeWords.value), ...getActiveNoiseTerms()].forEach(term => {
-      const key = normalizeTerm(term);
-      if (key && !seen.has(key)) {
-        seen.add(key);
-        merged.push(term);
+  function captureInput() {
+    const input = {};
+    FIELD_KEYS.forEach((key) => {
+      const el = fields[key];
+      if (!el) return;
+      if (CHECKBOX_KEYS.has(key)) {
+        input[key] = !!el.checked;
+      } else {
+        const v = el.value;
+        if (v !== '' && v !== undefined && v !== null) input[key] = v;
       }
     });
-    return merged;
+    const extras = noiseExtraTerms
+      ? Agent.parseExcludeInput(noiseExtraTerms.value)
+      : noiseState.extraTerms || [];
+    if (noiseState.enabled || extras.length) {
+      input.noise = {
+        enabled: noiseState.enabled || extras.length > 0,
+        preset: noiseState.preset,
+        removed: noiseState.removed.slice(),
+        extraTerms: extras
+      };
+    }
+    return input;
+  }
+
+  function applyInputToForm(input, options) {
+    const opts = options || {};
+    if (!input) return;
+
+    FIELD_KEYS.forEach((key) => {
+      const el = fields[key];
+      if (!el) return;
+      if (CHECKBOX_KEYS.has(key)) {
+        el.checked = !!input[key];
+      } else if (Object.prototype.hasOwnProperty.call(input, key)) {
+        el.value = input[key] == null ? '' : input[key];
+      } else if (opts.clearMissing) {
+        el.value = key === 'lang' ? '' : '';
+      }
+    });
+
+    if (input.noise) {
+      noiseState.enabled = !!input.noise.enabled;
+      if (['low', 'medium', 'high'].includes(input.noise.preset)) {
+        noiseState.preset = input.noise.preset;
+      }
+      if (Array.isArray(input.noise.removed)) {
+        noiseState.removed = input.noise.removed.slice();
+      }
+      noiseFields.enabled.checked = noiseState.enabled;
+      noiseFields.preset.value = noiseState.preset;
+      saveNoiseState();
+    }
   }
 
   function renderNoiseChips() {
     noiseChips.innerHTML = '';
-    const activeTerms = getActiveNoiseTerms();
+    const terms = Agent.getActiveNoiseTerms(noiseState);
 
     if (!noiseState.enabled) {
       noiseChips.innerHTML = '<span class="noise-empty">Noise filter is off</span>';
       return;
     }
-    if (activeTerms.length === 0) {
+    if (terms.length === 0) {
       noiseChips.innerHTML = '<span class="noise-empty">適用中の除外語はありません</span>';
       return;
     }
 
-    activeTerms.forEach(term => {
+    // Cap visual chips for performance; full set still applied in query
+    const shown = terms.slice(0, 48);
+    shown.forEach((term) => {
       const chip = document.createElement('span');
       chip.className = 'noise-chip';
       chip.append(document.createTextNode(term));
@@ -203,194 +215,708 @@ document.addEventListener('DOMContentLoaded', () => {
       button.textContent = '×';
       button.setAttribute('aria-label', `${term} を削除`);
       button.addEventListener('click', () => {
-        const key = normalizeTerm(term);
-        if (!noiseState.removed.map(normalizeTerm).includes(key)) {
+        const key = Agent.normalizeTerm(term);
+        if (!noiseState.removed.map(Agent.normalizeTerm).includes(key)) {
           noiseState.removed.push(term);
         }
         saveNoiseState();
         renderNoiseChips();
-        buildQuery();
+        refreshPreview();
       });
-
       chip.appendChild(button);
       noiseChips.appendChild(chip);
     });
+
+    if (terms.length > shown.length) {
+      const more = document.createElement('span');
+      more.className = 'noise-empty';
+      more.textContent = `+${terms.length - shown.length} more applied`;
+      noiseChips.appendChild(more);
+    }
   }
 
-  // クエリ生成ロジック
-  function buildQuery() {
-    const parts = [];
+  function refreshPreview() {
+    const input = captureInput();
+    const query = Agent.buildQuery(input);
+    const analysis = Agent.analyzeQuery(input);
+    const validation = Agent.validateInput(input);
 
-    // 1. キーワード
-    const keywordsVal = fields.keywords.value.trim();
-    if (keywordsVal) {
-      parts.push(keywordsVal);
+    queryPreview.value = query;
+
+    const metaParts = [];
+    metaParts.push(`${analysis.length} chars`);
+    if (analysis.excludeCount) metaParts.push(`${analysis.excludeCount} excludes`);
+    if (analysis.operatorCount) metaParts.push(`${analysis.operatorCount} ops`);
+
+    queryMeta.textContent = metaParts.join(' · ');
+    queryMeta.className = 'query-meta';
+    if (analysis.severity === 'warn' || validation.warnings.length) {
+      queryMeta.classList.add('meta-warn');
+    }
+    if (analysis.severity === 'error' || !validation.valid) {
+      queryMeta.classList.add('meta-error');
+    }
+    if (analysis.severity === 'empty') {
+      queryMeta.classList.add('meta-muted');
     }
 
-    // 2. 完全一致フレーズ
-    const exactVal = fields.exactPhrase.value.trim();
-    if (exactVal) {
-      parts.push(`"${exactVal}"`);
+    if (explainVisible) {
+      queryExplain.hidden = false;
+      const lines = [Agent.explainQuery(input)];
+      if (validation.errors.length) lines.push('\nErrors:\n- ' + validation.errors.join('\n- '));
+      if (validation.warnings.length) lines.push('\nWarnings:\n- ' + validation.warnings.join('\n- '));
+      queryExplain.textContent = lines.join('\n');
     }
+  }
 
-    // 3. from:ユーザー
-    let userVal = fields.fromUser.value.trim();
-    if (userVal) {
-      // @マークが最初についている場合は除去
-      if (userVal.startsWith('@')) {
-        userVal = userVal.substring(1);
-      }
-      parts.push(`from:${userVal}`);
-    }
-
-    // 4. 除外ワード
-    getMergedExcludeTerms().forEach(word => {
-      parts.push(formatExcludeTerm(word));
+  function renderTemplates() {
+    const templates = Agent.listTemplates();
+    templateGrid.innerHTML = '';
+    templates.forEach((t) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'template-card';
+      btn.setAttribute('role', 'listitem');
+      btn.innerHTML = `<strong>${escapeHtml(t.labelJa || t.label)}</strong><span>${escapeHtml(t.description)}</span>`;
+      btn.addEventListener('click', () => {
+        try {
+          const current = captureInput();
+          // Keep user keywords if already typed; template fills gaps
+          const merged = Agent.applyTemplate(t.id, {
+            keywords: current.keywords || undefined,
+            exactPhrase: current.exactPhrase || undefined,
+            fromUser: current.fromUser || undefined
+          });
+          // Template wins on filters/noise/engagement defaults
+          applyInputToForm(merged, { clearMissing: false });
+          // Explicitly set template default fields that may be empty in form
+          Object.keys(merged).forEach((key) => {
+            if (key === 'noise' || key === '_templateId') return;
+            if (fields[key]) {
+              if (CHECKBOX_KEYS.has(key)) fields[key].checked = !!merged[key];
+              else if (merged[key] !== undefined) fields[key].value = merged[key];
+            }
+          });
+          if (merged.noise) {
+            noiseState = {
+              enabled: !!merged.noise.enabled,
+              preset: merged.noise.preset || 'medium',
+              removed: Array.isArray(merged.noise.removed) ? merged.noise.removed.slice() : []
+            };
+            noiseFields.enabled.checked = noiseState.enabled;
+            noiseFields.preset.value = noiseState.preset;
+            saveNoiseState();
+          }
+          renderNoiseChips();
+          refreshPreview();
+          toast(`Template: ${t.labelJa || t.label}`);
+          document.getElementById('keywords')?.focus();
+        } catch (e) {
+          toast('Template failed');
+          console.error(e);
+        }
+      });
+      templateGrid.appendChild(btn);
     });
-
-    // 5. since:日付
-    const sinceVal = fields.sinceDate.value;
-    if (sinceVal) {
-      parts.push(`since:${sinceVal}`);
-    }
-
-    // 6. until:日付
-    const untilVal = fields.untilDate.value;
-    if (untilVal) {
-      parts.push(`until:${untilVal}`);
-    }
-
-    // 7. min_faves
-    const minFavesVal = fields.minFaves.value.trim();
-    if (minFavesVal) {
-      parts.push(`min_faves:${minFavesVal}`);
-    }
-
-    // 8. lang
-    const langVal = fields.lang.value;
-    if (langVal) {
-      parts.push(`lang:${langVal}`);
-    }
-
-    // 9. フィルター群
-    if (fields.hasImages.checked) {
-      parts.push('filter:images');
-    }
-    if (fields.hasVideos.checked) {
-      parts.push('filter:videos');
-    }
-    if (fields.excludeLinks.checked) {
-      parts.push('-filter:links');
-    }
-
-    const finalQuery = parts.join(' ');
-    queryPreview.value = finalQuery;
-    return finalQuery;
   }
 
-  // リアルタイム反映のイベントリスナー設定
-  Object.values(fields).forEach(element => {
-    if (element) {
-      element.addEventListener('input', buildQuery);
-      element.addEventListener('change', buildQuery);
-    }
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  // Live update
+  FIELD_KEYS.forEach((key) => {
+    const el = fields[key];
+    if (!el) return;
+    el.addEventListener('input', refreshPreview);
+    el.addEventListener('change', refreshPreview);
   });
 
   noiseFields.enabled.addEventListener('change', () => {
     noiseState.enabled = noiseFields.enabled.checked;
     saveNoiseState();
     renderNoiseChips();
-    buildQuery();
+    refreshPreview();
   });
 
   noiseFields.preset.addEventListener('change', () => {
     noiseState.preset = noiseFields.preset.value;
     saveNoiseState();
     renderNoiseChips();
-    buildQuery();
+    refreshPreview();
   });
 
   btnResetNoise.addEventListener('click', () => {
     noiseState = { enabled: true, preset: 'medium', removed: [] };
-    noiseFields.enabled.checked = noiseState.enabled;
-    noiseFields.preset.value = noiseState.preset;
+    noiseFields.enabled.checked = true;
+    noiseFields.preset.value = 'medium';
     saveNoiseState();
     renderNoiseChips();
-    buildQuery();
+    refreshPreview();
+    toast('Noise reset');
   });
 
-  // クリップボードへコピー
-  btnCopy.addEventListener('click', () => {
-    const query = queryPreview.value.trim();
-    if (!query) {
-      alert('コピーするクエリがありません。');
-      return;
-    }
-    navigator.clipboard.writeText(query)
-      .then(() => {
-        const originalText = btnCopy.textContent;
-        btnCopy.textContent = 'コピー完了！';
-        btnCopy.style.borderColor = 'var(--accent-teal)';
-        btnCopy.style.color = 'var(--accent-teal)';
-        setTimeout(() => {
-          btnCopy.textContent = originalText;
-          btnCopy.style.borderColor = 'var(--border-color)';
-          btnCopy.style.color = 'var(--text-primary)';
-        }, 1500);
-      })
-      .catch(err => {
-        console.error('コピー失敗:', err);
-        alert('コピーに失敗しました。手動でコピーしてください。');
-      });
-  });
-
-  // フォームリセット
-  btnReset.addEventListener('click', () => {
-    Object.keys(fields).forEach(key => {
-      if (fields[key].type === 'checkbox') {
-        fields[key].checked = false;
-      } else if (key === 'lang') {
-        fields[key].value = ''; // 初期値はグローバル検索
-      } else {
-        fields[key].value = '';
+  document.querySelectorAll('[data-date-preset]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const key = btn.getAttribute('data-date-preset');
+      const range = Agent.applyDatePreset(key);
+      if (range) {
+        fields.sinceDate.value = range.sinceDate;
+        fields.untilDate.value = range.untilDate;
+        refreshPreview();
+        toast(`Date: ${key}`);
       }
     });
-    buildQuery();
   });
 
-  // 履歴保存と再表示
+  btnClearDates.addEventListener('click', () => {
+    fields.sinceDate.value = '';
+    fields.untilDate.value = '';
+    refreshPreview();
+  });
+
+  async function copyText(text, successMsg) {
+    if (!text) {
+      toast('コピーする内容がありません');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      toast(successMsg || 'コピーしました');
+    } catch (e) {
+      // Fallback
+      queryPreview.select();
+      try {
+        document.execCommand('copy');
+        toast(successMsg || 'コピーしました');
+      } catch (e2) {
+        toast('コピーに失敗しました');
+      }
+    }
+  }
+
+  function parseFeedbackLines(raw) {
+    return String(raw || '')
+      .split(/\n+/)
+      .map((s) => s.replace(/^[-*•]\s*/, '').trim())
+      .filter(Boolean);
+  }
+
+  function saveGrokFields() {
+    try {
+      localStorage.setItem(
+        GROK_STORAGE_KEY,
+        JSON.stringify({
+          product: (grokProduct && grokProduct.value) || '',
+          targetArea: (grokTargetArea && grokTargetArea.value) || '',
+          context: (grokContext && grokContext.value) || '',
+          feedback: (grokFeedback && grokFeedback.value) || ''
+        })
+      );
+      localStorage.setItem(GROK_MODE_KEY, grokModeOn ? '1' : '0');
+    } catch (e) { /* ignore */ }
+  }
+
+  function loadGrokFields() {
+    try {
+      const data = JSON.parse(localStorage.getItem(GROK_STORAGE_KEY) || '{}');
+      if (grokProduct && data.product) grokProduct.value = data.product;
+      if (grokTargetArea && data.targetArea) grokTargetArea.value = data.targetArea;
+      if (grokContext && data.context) grokContext.value = data.context;
+      if (grokFeedback && data.feedback) grokFeedback.value = data.feedback;
+      // Default OFF — only restore if user previously enabled
+      grokModeOn = localStorage.getItem(GROK_MODE_KEY) === '1';
+      if (grokModeEnabled) grokModeEnabled.checked = grokModeOn;
+      if (grokModePanel) grokModePanel.hidden = !grokModeOn;
+    } catch (e) { /* ignore */ }
+  }
+
+  function setGrokMode(on) {
+    grokModeOn = !!on;
+    if (grokModeEnabled) grokModeEnabled.checked = grokModeOn;
+    if (grokModePanel) grokModePanel.hidden = !grokModeOn;
+    saveGrokFields();
+  }
+
+  function promptContextFromUi() {
+    const product =
+      (grokProduct && grokProduct.value.trim()) ||
+      (fields.keywords && fields.keywords.value.trim()) ||
+      'product';
+    const targetArea = (grokTargetArea && grokTargetArea.value.trim()) || 'general';
+    const context = (grokContext && grokContext.value.trim()) || '';
+    const feedback = parseFeedbackLines(grokFeedback && grokFeedback.value);
+    return { productName: product, targetArea, context, feedback };
+  }
+
+  function buildAgentFromUi() {
+    return Agent.buildAgentPrompt(promptContextFromUi());
+  }
+
+  function buildGrokFromUi() {
+    return Agent.buildGrokBuildPrompt(promptContextFromUi());
+  }
+
+  function buildHandoffFromUi() {
+    const ctx = promptContextFromUi();
+    const input = captureInput();
+    const query = Agent.buildQuery(input);
+    const searchUrl = Agent.buildSearchUrl(input);
+    return Agent.buildHandoffPackage({
+      productName: ctx.productName,
+      productUrl: 'https://kg-ninja.github.io/HyperXosist-Agent/',
+      targetArea: ctx.targetArea,
+      context: ctx.context,
+      feedback: ctx.feedback,
+      query: query,
+      searchUrl: searchUrl,
+      missionId: 'signal_to_fix_pipeline',
+      mode: grokModeOn ? 'grok' : 'universal'
+    });
+  }
+
+  function buildPipelineFromUi(withFeedback) {
+    const ctx = promptContextFromUi();
+    const opts = {
+      productName: ctx.productName,
+      productUrl: 'https://kg-ninja.github.io/HyperXosist-Agent/',
+      targetArea: ctx.targetArea,
+      context: ctx.context,
+      intent: 'Find product feedback about ' + ctx.productName + ' for PR specs via Signal-to-Fix',
+      missionId: 'signal_to_fix_pipeline',
+      mode: grokModeOn ? 'grok' : 'universal'
+    };
+    if (withFeedback) opts.feedback = ctx.feedback;
+    return Agent.buildSignalToFixPipeline(opts);
+  }
+
+  function formatS2fPasteText(handoff) {
+    if (!handoff || !handoff.signalToFix || !handoff.signalToFix.input) return '';
+    const input = handoff.signalToFix.input;
+    const lines = [
+      '=== Signal-to-Fix 手動貼り付け用（人間向け） ===',
+      '',
+      '【Product name】',
+      input.productName || '',
+      '',
+      '【Product URL】',
+      input.productUrl || 'https://kg-ninja.github.io/HyperXosist-Agent/',
+      '',
+      '【Target area】',
+      input.targetArea || '',
+      '',
+      '【Feedback posts — 1行1投稿。下を Feedback Paste Box にそのまま貼る】',
+      ...(Array.isArray(input.feedback) ? input.feedback : []),
+      '',
+      '【次の操作】',
+      '1. https://kg-ninja.github.io/Signal-to-Fix/ を開く',
+      '2. Product name / URL / Target area を上から転記',
+      '3. Feedback posts を貼る',
+      '4. Analyze Feedback を押す',
+      '5. decision === "keep" の項目だけを Codex / 実装に使う',
+      '6. reduce / discard は実装プロンプトに入れない'
+    ];
+    return lines.join('\n');
+  }
+
+  function renderHandoff(handoff, pipeline) {
+    lastHandoff = handoff || null;
+    lastPipeline = pipeline || null;
+    const parts = [];
+    if (pipeline && pipeline.markdown) {
+      parts.push(pipeline.markdown);
+    }
+    if (handoff && handoff.markdown) {
+      parts.push(handoff.markdown);
+    }
+    if (handoff) {
+      parts.push('', '### Paste pack for Signal-to-Fix', '```', formatS2fPasteText(handoff), '```');
+    }
+    const text = parts.filter(Boolean).join('\n\n');
+    if (handoffPreview) handoffPreview.value = text;
+    if (s2fPipelineMeta) {
+      if (handoff && handoff.ready) {
+        const keepN = (handoff.keepFilter && handoff.keepFilter.keepCount) || 0;
+        s2fPipelineMeta.innerHTML =
+          '<span class="meta-ok">Handoff ready</span> feedback ' +
+          (handoff.feedbackCount || 0) +
+          ' · Keep filter ' +
+          keepN +
+          ' · 次: Signal-to-Fix 用をコピー → 開く';
+      } else if (pipeline && pipeline.plan && pipeline.plan.primaryStep) {
+        const sc = pipeline.plan.primaryStep.score || {};
+        s2fPipelineMeta.innerHTML =
+          '<span class="meta-ok">Pipeline planned</span> mission <code>' +
+          escapeHtml(pipeline.missionId || '') +
+          '</code> · score ' +
+          (sc.score != null ? sc.score : '?') +
+          ' · 投稿を収集して Handoff 生成へ';
+      } else {
+        s2fPipelineMeta.innerHTML =
+          '<span class="meta-warn">未生成</span> Collected signals を貼って Handoff 生成';
+      }
+    }
+    saveGrokFields();
+  }
+
+  if (btnS2fPipeline) {
+    btnS2fPipeline.addEventListener('click', () => {
+      const pipeline = buildPipelineFromUi(false);
+      renderHandoff(null, pipeline);
+      // Apply primary step query to form for convenience
+      const step = pipeline.plan && pipeline.plan.primaryStep;
+      if (step && step.query) {
+        // best-effort: set keywords from product if empty
+        if (fields.keywords && !fields.keywords.value.trim() && pipeline.productName) {
+          fields.keywords.value = pipeline.productName;
+        }
+        refreshPreview();
+      }
+      toast('Signal-to-Fix 連携パイプラインを計画しました（人間手順も表示）');
+    });
+  }
+
+  if (btnBuildHandoff) {
+    btnBuildHandoff.addEventListener('click', () => {
+      const ctx = promptContextFromUi();
+      if (!ctx.feedback.length) {
+        toast('Collected signals に投稿を 1 行 1 本で貼ってください');
+        if (s2fPipelineMeta) {
+          s2fPipelineMeta.innerHTML =
+            '<span class="meta-warn">投稿がありません</span> 検索して Collected signals に貼ってから再実行';
+        }
+        return;
+      }
+      const pipeline = buildPipelineFromUi(true);
+      const handoff = pipeline.handoff || buildHandoffFromUi();
+      renderHandoff(handoff, pipeline);
+      if (!handoff.ready) {
+        toast('Handoff に使える投稿が不足しています');
+      } else {
+        toast('Handoff 生成完了 — Signal-to-Fix 用をコピーできます');
+      }
+    });
+  }
+
+  if (btnCopyS2fInput) {
+    btnCopyS2fInput.addEventListener('click', async () => {
+      let handoff = lastHandoff;
+      if (!handoff || !handoff.ready) {
+        const ctx = promptContextFromUi();
+        if (!ctx.feedback.length) {
+          toast('先に投稿を貼って Handoff 生成してください');
+          return;
+        }
+        handoff = buildHandoffFromUi();
+        renderHandoff(handoff, lastPipeline);
+      }
+      const paste = formatS2fPasteText(handoff);
+      await copyText(paste, 'Signal-to-Fix 手動貼り付け用テキストをコピーしました');
+    });
+  }
+
+  if (btnOpenS2f) {
+    btnOpenS2f.addEventListener('click', async () => {
+      // Copy paste pack first so human can paste immediately
+      let handoff = lastHandoff;
+      if (!handoff || !handoff.ready) {
+        const ctx = promptContextFromUi();
+        if (ctx.feedback.length) {
+          handoff = buildHandoffFromUi();
+          renderHandoff(handoff, lastPipeline);
+        }
+      }
+      if (handoff && handoff.ready) {
+        await copyText(formatS2fPasteText(handoff), '貼り付け用をコピー済み — Signal-to-Fix を開きます');
+      } else {
+        toast('Signal-to-Fix を開きます（投稿があれば先に Handoff 生成を推奨）');
+      }
+      window.open('https://kg-ninja.github.io/Signal-to-Fix/', '_blank', 'noopener,noreferrer');
+    });
+  }
+
+  if (btnCopyHandoffJson) {
+    btnCopyHandoffJson.addEventListener('click', async () => {
+      let handoff = lastHandoff;
+      if (!handoff) {
+        const ctx = promptContextFromUi();
+        if (!ctx.feedback.length) {
+          toast('先に Handoff 生成してください');
+          return;
+        }
+        handoff = buildHandoffFromUi();
+        renderHandoff(handoff, lastPipeline);
+      }
+      const json = JSON.stringify(handoff.asJson ? handoff.asJson() : handoff, null, 2);
+      await copyText(json, 'Handoff JSON をコピーしました（エージェント向け）');
+    });
+  }
+
+
+  function renderGrokPrompt(result) {
+    if (!result) return;
+    lastGrokMarkdown = result.markdown || '';
+    if (grokPromptPreview) grokPromptPreview.value = lastGrokMarkdown;
+    if (grokFocusMeta) {
+      const focus = result.focusSummary || {};
+      const keepN = (result.keepSignals || []).length;
+      const flavor = result.flavor === 'grok' ? 'Grok' : 'Agent';
+      grokFocusMeta.innerHTML = focus.headline
+        ? `<span class="meta-ok">${flavor} Keep ${keepN}</span> ${escapeHtml(focus.headline)}`
+        : keepN
+          ? `<span class="meta-ok">Keep ${keepN}</span>`
+          : '<span class="meta-warn">Keep 0 — 具体的な不満・要望を追加</span>';
+    }
+    saveGrokFields();
+  }
+
+  if (grokModeEnabled) {
+    grokModeEnabled.addEventListener('change', () => {
+      setGrokMode(grokModeEnabled.checked);
+      toast(grokModeOn ? 'Grok Build モード ON' : '汎用モード（Grok OFF）');
+    });
+  }
+
+  if (btnAgentPrompt) {
+    btnAgentPrompt.addEventListener('click', () => {
+      const result = buildAgentFromUi();
+      renderGrokPrompt(result);
+      if (!result.ready) {
+        toast('Keep 信号が少ないです。具体的な投稿を追加してください');
+      } else {
+        toast(`Agent Prompt 生成 (Keep ${result.keepSignals.length})`);
+      }
+    });
+  }
+
+  if (btnCopyAgentPrompt) {
+    btnCopyAgentPrompt.addEventListener('click', async () => {
+      let md = lastGrokMarkdown || (grokPromptPreview && grokPromptPreview.value.trim());
+      if (!md) {
+        const result = buildAgentFromUi();
+        renderGrokPrompt(result);
+        md = result.markdown;
+      }
+      await copyText(md, 'Agent プロンプトをコピーしました（任意の LLM に貼り付け可）');
+    });
+  }
+
+  if (btnExportNoise) {
+    btnExportNoise.addEventListener('click', async () => {
+      const cat = Agent.exportNoiseCatalog();
+      const text = cat.markdown + '\n\n```json\n' + JSON.stringify(cat.rules, null, 2) + '\n```';
+      if (grokPromptPreview) grokPromptPreview.value = text;
+      lastGrokMarkdown = text;
+      await copyText(text, 'Noise カタログをコピーしました');
+    });
+  }
+
+  if (btnGrokPrompt) {
+    btnGrokPrompt.addEventListener('click', () => {
+      if (!grokModeOn) {
+        toast('先に Grok Build モードを ON にしてください');
+        return;
+      }
+      const result = buildGrokFromUi();
+      renderGrokPrompt(result);
+      if (!result.ready) {
+        toast('Keep 信号が少ないです。具体的な投稿を追加してください');
+      } else {
+        toast(`Grok Build Prompt 生成 (Keep ${result.keepSignals.length})`);
+      }
+    });
+  }
+
+  if (btnSendToGrok) {
+    btnSendToGrok.addEventListener('click', async () => {
+      if (!grokModeOn) {
+        toast('先に Grok Build モードを ON にしてください');
+        return;
+      }
+      let md = lastGrokMarkdown || (grokPromptPreview && grokPromptPreview.value.trim());
+      if (!md || !md.includes('Grok Build')) {
+        const result = buildGrokFromUi();
+        renderGrokPrompt(result);
+        md = result.markdown;
+      }
+      await copyText(md, 'Grok 用プロンプトをコピーしました — Grok Build に貼り付けてください');
+    });
+  }
+
+  if (btnGrokFromKeywords) {
+    btnGrokFromKeywords.addEventListener('click', () => {
+      if (!grokModeOn) {
+        toast('先に Grok Build モードを ON にしてください');
+        return;
+      }
+      const keywords = (fields.keywords && fields.keywords.value.trim()) || '';
+      const product =
+        (grokProduct && grokProduct.value.trim()) || keywords || 'product';
+      if (grokProduct && !grokProduct.value.trim() && keywords) {
+        grokProduct.value = keywords;
+      }
+      const intent = keywords
+        ? `Grok Build code improvement for ${keywords}`
+        : `Grok Build code improvement for ${product}`;
+      const session = Agent.createGrokBuildSession(intent, {
+        product,
+        targetArea: (grokTargetArea && grokTargetArea.value.trim()) || 'general',
+        context: (grokContext && grokContext.value.trim()) || '',
+        feedback: parseFeedbackLines(grokFeedback && grokFeedback.value)
+      });
+      if (session.grokBuild && session.grokBuild.prompt) {
+        renderGrokPrompt(session.grokBuild.prompt);
+      } else if (session.grokBuild && session.grokBuild.promptTemplate) {
+        lastGrokMarkdown = session.grokBuild.promptTemplate;
+        if (grokPromptPreview) grokPromptPreview.value = lastGrokMarkdown;
+      }
+      const step =
+        session.plan &&
+        session.plan.mission &&
+        session.plan.mission.steps &&
+        session.plan.mission.steps[0];
+      if (step && step.input) {
+        applyInputToForm(step.input);
+        toast(`Grok セッション: ${session.plan.missionId || 'ready'} — 検索して投稿を収集`);
+      } else {
+        toast('Grok Build セッションを作成しました');
+      }
+    });
+  }
+
+  if (noiseExtraTerms) {
+    noiseExtraTerms.addEventListener('change', () => {
+      noiseState.extraTerms = Agent.parseExcludeInput(noiseExtraTerms.value);
+      saveNoiseState();
+      refreshPreview();
+    });
+    noiseExtraTerms.addEventListener('input', () => {
+      refreshPreview();
+    });
+  }
+
+  function applyInputToForm(input) {
+    if (!input) return;
+    FIELD_KEYS.forEach((key) => {
+      const el = fields[key];
+      if (!el) return;
+      if (CHECKBOX_KEYS.has(key)) {
+        el.checked = !!input[key];
+      } else if (input[key] != null && input[key] !== '') {
+        el.value = Array.isArray(input[key]) ? input[key].join(', ') : input[key];
+      }
+    });
+    if (input.noise) {
+      noiseState = {
+        enabled: !!input.noise.enabled,
+        preset: input.noise.preset || 'medium',
+        removed: Array.isArray(input.noise.removed) ? input.noise.removed.slice() : []
+      };
+      if (noiseFields.enabled) noiseFields.enabled.checked = noiseState.enabled;
+      if (noiseFields.preset) noiseFields.preset.value = noiseState.preset;
+      saveNoiseState();
+      renderNoiseChips();
+    }
+    refreshPreview();
+  }
+
+  [grokProduct, grokTargetArea, grokContext, grokFeedback].forEach((el) => {
+    if (el) el.addEventListener('change', saveGrokFields);
+  });
+
+  loadGrokFields();
+  if (noiseExtraTerms && noiseState.extraTerms && noiseState.extraTerms.length) {
+    noiseExtraTerms.value = noiseState.extraTerms
+      .map((t) => (/\s/.test(t) ? `"${t}"` : t))
+      .join(' ');
+  }
+
+  // Restore shareable state from ?s= as well as #s=
+  try {
+    const params = new URLSearchParams(location.search);
+    const qState = params.get('s');
+    if (qState && !location.hash.includes('s=')) {
+      const decoded = Agent.decodeState(qState);
+      if (decoded) applyInputToForm(decoded);
+    }
+  } catch (e) { /* ignore */ }
+
+  btnCopy.addEventListener('click', () => {
+    copyText(queryPreview.value.trim(), 'クエリをコピーしました');
+  });
+
+  btnCopyUrl.addEventListener('click', () => {
+    const input = captureInput();
+    input.mode = 'live';
+    const url = Agent.buildSearchUrl(input);
+    if (!Agent.buildQuery(input)) {
+      toast('クエリが空です');
+      return;
+    }
+    copyText(url, '検索URLをコピーしました');
+  });
+
+  btnShare.addEventListener('click', () => {
+    const input = captureInput();
+    const encoded = Agent.encodeState(input);
+    if (!encoded) {
+      toast('共有リンクの生成に失敗');
+      return;
+    }
+    const url = `${location.origin}${location.pathname}#s=${encoded}`;
+    copyText(url, '状態共有リンクをコピー');
+    try {
+      history.replaceState(null, '', `#s=${encoded}`);
+    } catch (e) { /* ignore */ }
+  });
+
+  btnExplain.addEventListener('click', () => {
+    explainVisible = !explainVisible;
+    queryExplain.hidden = !explainVisible;
+    btnExplain.textContent = explainVisible ? '解説を隠す' : '解説';
+    refreshPreview();
+  });
+
+  btnReset.addEventListener('click', () => {
+    FIELD_KEYS.forEach((key) => {
+      const el = fields[key];
+      if (!el) return;
+      if (CHECKBOX_KEYS.has(key)) el.checked = false;
+      else el.value = '';
+    });
+    explainVisible = false;
+    queryExplain.hidden = true;
+    btnExplain.textContent = '解説';
+    refreshPreview();
+    toast('リセットしました');
+  });
+
   function getHistory() {
     try {
-      const data = localStorage.getItem('x_search_history');
+      const data = localStorage.getItem(HISTORY_STORAGE_KEY);
       return data ? JSON.parse(data) : [];
     } catch (e) {
-      console.error('履歴読み込み失敗:', e);
       return [];
     }
   }
 
   function saveHistory(query, state) {
     if (!query) return;
-    let history = getHistory();
-
-    // 既に同じクエリが存在する場合は一旦削除し、先頭（最新）に追加し直す
-    history = history.filter(item => item.query !== query);
-
+    let history = getHistory().filter((item) => item.query !== query);
     history.unshift({
-      query: query,
-      state: state,
+      query,
+      state,
       timestamp: new Date().toLocaleString('ja-JP')
     });
-
-    // 最大10件
-    if (history.length > 10) {
-      history = history.slice(0, 10);
-    }
-
+    if (history.length > MAX_HISTORY) history = history.slice(0, MAX_HISTORY);
     try {
-      localStorage.setItem('x_search_history', JSON.stringify(history));
+      localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history));
     } catch (e) {
-      console.error('履歴書き込み失敗:', e);
+      console.error('History write failed', e);
     }
     renderHistory();
   }
@@ -398,91 +924,130 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderHistory() {
     const history = getHistory();
     historyList.innerHTML = '';
-
     if (history.length === 0) {
       historyList.innerHTML = '<li class="empty-message">履歴はありません</li>';
       return;
     }
-
-    history.forEach(item => {
+    history.forEach((item) => {
       const li = document.createElement('li');
       li.className = 'history-item';
-
       const queryDiv = document.createElement('div');
       queryDiv.className = 'history-item-query';
       queryDiv.textContent = item.query;
       queryDiv.title = item.query;
-
       const dateDiv = document.createElement('div');
       dateDiv.className = 'history-item-date';
-      dateDiv.textContent = item.timestamp.split(' ')[0]; // 日付のみ簡易表示
-
+      dateDiv.textContent = (item.timestamp || '').split(' ')[0] || '';
       li.appendChild(queryDiv);
       li.appendChild(dateDiv);
-
-      // 履歴クリックで復元
       li.addEventListener('click', () => {
-        restoreState(item.state);
+        if (item.state) {
+          // Prefer full input snapshot if present
+          if (item.state._v >= 2 || item.state.keywords !== undefined || item.state.anyOf !== undefined) {
+            applyInputToForm(item.state, { clearMissing: true });
+            // Reset checkboxes not in state
+            CHECKBOX_KEYS.forEach((k) => {
+              if (fields[k] && item.state[k] === undefined) fields[k].checked = false;
+            });
+            if (item.state.noise) {
+              noiseState = {
+                enabled: !!item.state.noise.enabled,
+                preset: item.state.noise.preset || 'medium',
+                removed: Array.isArray(item.state.noise.removed) ? item.state.noise.removed : []
+              };
+            }
+            noiseFields.enabled.checked = noiseState.enabled;
+            noiseFields.preset.value = noiseState.preset;
+            renderNoiseChips();
+          } else {
+            // Legacy history shape
+            Object.keys(fields).forEach((key) => {
+              if (!fields[key]) return;
+              if (CHECKBOX_KEYS.has(key)) fields[key].checked = !!item.state[key];
+              else if (item.state[key] !== undefined) fields[key].value = item.state[key] || '';
+            });
+          }
+          refreshPreview();
+          toast('履歴を復元');
+        }
       });
-
       historyList.appendChild(li);
     });
   }
 
-  function restoreState(state) {
-    if (!state) return;
-    Object.keys(fields).forEach(key => {
-      if (fields[key]) {
-        if (fields[key].type === 'checkbox') {
-          fields[key].checked = !!state[key];
-        } else {
-          fields[key].value = state[key] || '';
-        }
-      }
-    });
-    buildQuery();
-  }
+  btnClearHistory.addEventListener('click', () => {
+    try {
+      localStorage.removeItem(HISTORY_STORAGE_KEY);
+    } catch (e) { /* ignore */ }
+    renderHistory();
+    toast('履歴を削除しました');
+  });
 
-  function captureCurrentState() {
-    const state = {};
-    Object.keys(fields).forEach(key => {
-      if (fields[key].type === 'checkbox') {
-        state[key] = fields[key].checked;
-      } else {
-        state[key] = fields[key].value;
-      }
-    });
-    return state;
-  }
-
-  // 検索実行
   function launchSearch(mode) {
-    const query = buildQuery();
+    const input = captureInput();
+    input.mode = mode === 'top' ? 'top' : 'live';
+    const validation = Agent.validateInput(input);
+    const query = Agent.buildQuery(input);
+
     if (!query) {
-      alert('検索クエリが空です。検索条件を入力してください。');
+      toast('検索条件を入力してください');
+      return;
+    }
+    if (!validation.valid) {
+      toast(validation.errors[0] || '入力エラー');
       return;
     }
 
-    // 履歴に保存
-    const state = captureCurrentState();
+    const state = { ...input, _v: 2 };
     saveHistory(query, state);
 
-    // URL生成と遷移
-    const encodedQuery = encodeURIComponent(query);
-    const baseUrl = 'https://x.com/search';
-    const finalUrl = `${baseUrl}?q=${encodedQuery}&src=typed_query&f=${mode}`;
-
-    window.open(finalUrl, '_blank');
+    const url = Agent.buildSearchUrl(input);
+    window.open(url, '_blank', 'noopener,noreferrer');
   }
 
   btnSearchLive.addEventListener('click', () => launchSearch('live'));
   btnSearchTop.addEventListener('click', () => launchSearch('top'));
 
-  // 初期化時の実行
+  // Keyboard shortcuts
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      if (e.shiftKey) launchSearch('top');
+      else launchSearch('live');
+    }
+  });
+
+  // Restore shared state from hash
+  function restoreFromHash() {
+    const hash = location.hash || '';
+    const m = hash.match(/[#&]s=([^&]+)/);
+    if (!m) return;
+    const decoded = Agent.decodeState(decodeURIComponent(m[1]));
+    if (decoded && typeof decoded === 'object') {
+      applyInputToForm(decoded, { clearMissing: true });
+      CHECKBOX_KEYS.forEach((k) => {
+        if (fields[k] && decoded[k] === undefined) fields[k].checked = false;
+      });
+      if (decoded.noise) {
+        noiseState = {
+          enabled: !!decoded.noise.enabled,
+          preset: decoded.noise.preset || 'medium',
+          removed: Array.isArray(decoded.noise.removed) ? decoded.noise.removed : []
+        };
+        noiseFields.enabled.checked = noiseState.enabled;
+        noiseFields.preset.value = noiseState.preset;
+        saveNoiseState();
+      }
+      toast('共有状態を復元しました');
+    }
+  }
+
+  // Init
   noiseFields.enabled.checked = noiseState.enabled;
   noiseFields.preset.value = noiseState.preset;
+  renderTemplates();
+  restoreFromHash();
   renderNoiseChips();
-  buildQuery();
+  refreshPreview();
   renderHistory();
 });
-

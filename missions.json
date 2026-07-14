@@ -1,0 +1,102 @@
+{
+  "name": "HyperXosist Missions",
+  "version": "2.3.0",
+  "description": "Multi-angle search campaigns for any AI agent. Includes optional Grok Build harvest missions. Noise excludes are priority-capped.",
+  "whySticky": [
+    "Deterministic multi-angle missions beat one-off keyword guesses.",
+    "scoreQuery prevents wasting x402 on weak queries.",
+    "suggestRefinements self-heals empty/noisy runs without human help.",
+    "buildHandoffPackage chains into Signal-to-Fix PR specs in one hop.",
+    "buildGrokBuildPrompt turns Keep signals into one-small-change Grok Build tasks.",
+    "filterKeepSignals drops praise/ragebait before coding.",
+    "Receipts + encodeState make weekly monitors and audits trivial.",
+    "Tool definitions drop into OpenAI/Anthropic tool-calling with zero inventing."
+  ],
+  "noiseTermLimits": {
+    "low": 14,
+    "medium": 26,
+    "high": 36
+  },
+  "missions": [
+    {
+      "id": "product_feedback_radar",
+      "label": "Product feedback radar",
+      "whyAgentsUseIt": "Multi-angle complaints + feature requests + bugs in one deterministic campaign. Highest reuse rate for shipping loops.",
+      "recommendedNext": "signal_to_fix",
+      "defaultBudgetUsd": 0.03,
+      "angleCount": 3
+    },
+    {
+      "id": "competitive_intel",
+      "label": "Competitive intelligence",
+      "whyAgentsUseIt": "Compare subject vs alternatives with noise cut — good for weekly monitoring jobs.",
+      "recommendedNext": null,
+      "defaultBudgetUsd": 0.03,
+      "angleCount": 3
+    },
+    {
+      "id": "launch_pulse",
+      "label": "Launch / news pulse",
+      "whyAgentsUseIt": "Time-boxed discourse snapshot for launches and incidents.",
+      "recommendedNext": null,
+      "defaultBudgetUsd": 0.02,
+      "angleCount": 2
+    },
+    {
+      "id": "signal_to_fix_pipeline",
+      "label": "Signal-to-Fix pipeline",
+      "whyAgentsUseIt": "End-to-end: clean X candidates → handoff package → keep-only PR specs. The sticky agent habit loop.",
+      "recommendedNext": "signal_to_fix",
+      "defaultBudgetUsd": 0.03,
+      "angleCount": 3
+    },
+    {
+      "id": "osint_entity",
+      "label": "Entity / person OSINT",
+      "whyAgentsUseIt": "Structured from/to/mention angles without engagement-bait noise.",
+      "recommendedNext": null,
+      "defaultBudgetUsd": 0.03,
+      "angleCount": 3
+    },
+    {
+      "id": "weekly_monitor",
+      "label": "Weekly monitor (7d)",
+      "whyAgentsUseIt": "Cron-friendly 7-day window with stable operators — ideal recurring agent jobs.",
+      "recommendedNext": "signal_to_fix",
+      "defaultBudgetUsd": 0.02,
+      "angleCount": 2
+    },
+    {
+      "id": "grok_code_improvement_radar",
+      "label": "Grok Build code improvement radar",
+      "whyAgentsUseIt": "Harvest concrete bugs/feature asks → technical-depth Keep filter → Grok Build Prompt for one small code change.",
+      "recommendedNext": "grok_build",
+      "defaultBudgetUsd": 0.03,
+      "angleCount": 3
+    },
+    {
+      "id": "ui_ux_feedback_harvest",
+      "label": "UI/UX feedback harvest",
+      "whyAgentsUseIt": "Frontend-oriented angles for Grok Build UI patches and layout fixes.",
+      "recommendedNext": "grok_build",
+      "defaultBudgetUsd": 0.02,
+      "angleCount": 2
+    },
+    {
+      "id": "performance_complaint_detector",
+      "label": "Performance complaint detector",
+      "whyAgentsUseIt": "Latency/jank/memory complaints for Grok Build perf-focused micro-improvements.",
+      "recommendedNext": "grok_build",
+      "defaultBudgetUsd": 0.02,
+      "angleCount": 2
+    }
+  ],
+  "usage": {
+    "list": "HyperXosistAgent.listMissions()",
+    "run": "HyperXosistAgent.buildMission('grok_code_improvement_radar', { subject: 'Acme' })",
+    "fromIntent": "HyperXosistAgent.planFromIntent('Grok Build code improvement for Acme')",
+    "session": "HyperXosistAgent.createGrokBuildSession('Find bugs about Acme', { product: 'Acme' })",
+    "prompt": "HyperXosistAgent.buildGrokBuildPrompt({ productName: 'Acme', feedback: ['...'] })"
+  },
+  "costHintUsdPerStep": 0.01
+}

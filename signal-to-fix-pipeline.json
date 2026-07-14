@@ -1,0 +1,87 @@
+{
+  "name": "HyperXosist → Signal-to-Fix Linked Pipeline",
+  "version": "2.5.0",
+  "type": "hyperxosist.signal_to_fix_pipeline.manifest",
+  "description": "Machine-readable linked workflow so AI agents chain HyperXosist-Agent search/handoff into Signal-to-Fix keep-only PR specs. Humans use the free browser path documented in humanManual.",
+  "requiresPaymentForAgentSearchUse": true,
+  "humanBrowserUse": "free",
+  "links": {
+    "hyperxosistHumanUi": "https://kg-ninja.github.io/HyperXosist-Agent/",
+    "hyperxosistAgentUse": "https://kg-ninja.github.io/HyperXosist-Agent/agent-use.json",
+    "hyperxosistAgentsMd": "https://kg-ninja.github.io/HyperXosist-Agent/AGENTS.md",
+    "hyperxosistLlms": "https://kg-ninja.github.io/HyperXosist-Agent/llms.txt",
+    "hyperxosistApi": "https://kg-ninja.github.io/HyperXosist-Agent/agent-api.js",
+    "paymentManifest": "https://kg-ninja.github.io/HyperXosist-Agent/x402-payment.json",
+    "paymentEndpoint": "https://api.kgninja.dev/hyperxosist-query",
+    "paymentOptionsEndpoint": "https://api.kgninja.dev/payment-options.json",
+    "signalToFixHumanUi": "https://kg-ninja.github.io/Signal-to-Fix/",
+    "signalToFixAgentUse": "https://kg-ninja.github.io/Signal-to-Fix/agent-use.json"
+  },
+  "api": {
+    "bootstrap": "HyperXosistAgent.buildSignalToFixPipeline({ productName: 'Acme', intent: 'Find product feedback about Acme for PR specs' })",
+    "withFeedback": "HyperXosistAgent.buildSignalToFixPipeline({ productName: 'Acme', feedback: ['...'], targetArea: 'auth' })",
+    "handoffOnly": "HyperXosistAgent.buildHandoffPackage({ productName: 'Acme', feedback: ['...'] })",
+    "links": "HyperXosistAgent.getSignalToFixLinks()"
+  },
+  "humanManual": {
+    "titleJa": "人間向け — 手動で Signal-to-Fix 連携する（ブラウザ無料）",
+    "titleEn": "Humans — manual Signal-to-Fix handoff (browser free)",
+    "free": true,
+    "steps": [
+      {
+        "n": 1,
+        "ja": "HyperXosist UI でキーワード / テンプレート / Noise を設定し、「最新で検索」または「話題で検索」を押す（無料）。",
+        "en": "Set keywords / template / noise on HyperXosist UI, then open Latest or Top search (free)."
+      },
+      {
+        "n": 2,
+        "ja": "X の検索結果から有用そうな投稿をコピーし、「Collected signals」に 1 行 1 投稿で貼る。",
+        "en": "Copy useful posts into Collected signals (one post per line)."
+      },
+      {
+        "n": 3,
+        "ja": "Product / Target area を埋め、「Handoff 生成」→「Signal-to-Fix 用をコピー」を押す。",
+        "en": "Fill Product / Target area, click Build Handoff → Copy for Signal-to-Fix."
+      },
+      {
+        "n": 4,
+        "ja": "「Signal-to-Fix を開く」で https://kg-ninja.github.io/Signal-to-Fix/ を開き、Product 欄と Feedback 欄に貼り付けて Analyze Feedback。",
+        "en": "Open Signal-to-Fix, paste product + feedback, then Analyze Feedback."
+      },
+      {
+        "n": 5,
+        "ja": "結果の keep だけを使う。reduce / discard は実装に入れない。Copy Codex Prompt で 1 つの小さい改善を依頼する。",
+        "en": "Use decision===keep only. Copy Codex Prompt for one small improvement PR."
+      }
+    ],
+    "noteJa": "人間のブラウザ利用は無料です。x402 は AI エージェントが検索 URL を自動利用するときだけ必要です。",
+    "noteEn": "Human browser use is free. x402 is required only for automated agent use of search URLs."
+  },
+  "agentAuto": {
+    "title": "AI Agent — linked auto execution",
+    "order": [
+      "Read this manifest and HyperXosist agent-use.json",
+      "Call buildSignalToFixPipeline({ productName, intent? })",
+      "scoreQuery gate (skip poor band unless intentional)",
+      "POST paidRequest to paymentEndpoint; on 402 complete x402 and retry until 200",
+      "Open primaryStep.searchUrl; collect candidate post texts (no scrape claim — use official search)",
+      "suggestRefinements if sparse/noisy",
+      "buildSignalToFixPipeline({ productName, feedback }) or buildHandoffPackage",
+      "Pass handoff.signalToFix.input to Signal-to-Fix; keep-only policy",
+      "Export Codex / implementation prompt for one small PR",
+      "buildRunReceipt"
+    ],
+    "policy": {
+      "downstreamSourceOfTruth": "decision === \"keep\"",
+      "mustNotUseReduceOrDiscardDownstream": true,
+      "localPlanningAllowedWithoutPayment": true,
+      "automatedSearchUrlRequiresX402": true
+    }
+  },
+  "stickyWhy": [
+    "One discovery file for the full harvest → PR loop",
+    "Human path stays free and explicit",
+    "Agents get ordered steps + payment endpoint without inventing operators",
+    "Keep-only handoff prevents spam from becoming code"
+  ]
+}

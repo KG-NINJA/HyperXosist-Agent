@@ -1,0 +1,85 @@
+{
+  "version": "1.0.0",
+  "cases": [
+    {
+      "prompt": "Find complaints on X about Acme",
+      "expected": "selected"
+    },
+    {
+      "prompt": "Search feature requests on Twitter for Acme",
+      "expected": "selected"
+    },
+    {
+      "prompt": "Investigate bug reports from X about Acme",
+      "expected": "selected"
+    },
+    {
+      "prompt": "Monitor social media product feedback for Acme",
+      "expected": "selected"
+    },
+    {
+      "prompt": "Build engineering tasks from collected tweets",
+      "expected": "selected"
+    },
+    {
+      "prompt": "Plan official X searches for Safari crash reports",
+      "expected": "selected"
+    },
+    {
+      "prompt": "Filter spam from these collected X posts",
+      "expected": "selected"
+    },
+    {
+      "prompt": "Find recurring UX complaints in collected tweets",
+      "expected": "selected"
+    },
+    {
+      "prompt": "Create a coding handoff from X product feedback",
+      "expected": "selected"
+    },
+    {
+      "prompt": "Monitor Twitter mentions for feature requests",
+      "expected": "selected"
+    },
+    {
+      "prompt": "What is the weather in Osaka",
+      "expected": "not_selected"
+    },
+    {
+      "prompt": "Summarize this PDF",
+      "expected": "not_selected"
+    },
+    {
+      "prompt": "Translate this sentence into Japanese",
+      "expected": "not_selected"
+    },
+    {
+      "prompt": "Search the general web for OpenAI news",
+      "expected": "not_selected"
+    },
+    {
+      "prompt": "Calculate 12*7",
+      "expected": "not_selected"
+    },
+    {
+      "prompt": "Write a short poem about summer",
+      "expected": "not_selected"
+    },
+    {
+      "prompt": "Summarize our meeting notes",
+      "expected": "not_selected"
+    },
+    {
+      "prompt": "Query the customer database for invoices",
+      "expected": "not_selected"
+    },
+    {
+      "prompt": "Send an email to the support team",
+      "expected": "not_selected"
+    },
+    {
+      "prompt": "Fix this JavaScript unit test",
+      "expected": "not_selected"
+    }
+  ]
+}

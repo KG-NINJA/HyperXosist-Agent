@@ -1,0 +1,19 @@
+{
+  "name": "HyperXosist-Agent Remote MCP",
+  "version": "2.5.0",
+  "endpoint": "https://mcp.kgninja.dev/mcp",
+  "healthEndpoint": "https://mcp.kgninja.dev/health",
+  "transport": "Streamable HTTP",
+  "authentication": "public-free",
+  "freeTools": [
+    "hyperxosist_search_plan",
+    "hyperxosist_filter_signals",
+    "hyperxosist_build_handoff"
+  ],
+  "paidExecution": {
+    "protocol": "x402",
+    "endpoint": "https://api.kgninja.dev/hyperxosist-query",
+    "price": "0.01 USDC",
+    "network": "eip155:8453"
+  }
+}

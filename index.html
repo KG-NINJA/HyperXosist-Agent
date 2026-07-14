@@ -3,8 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>超軽量 X(Twitter) 検索ランチャー</title>
-  <meta name="description" content="X APIやOAuth認証を一切使用せず、高度な検索コマンドを素早く生成してX公式検索を開く超軽量ランチャー。">
+  <title>HyperXosist Agent — Advanced X Search Launcher</title>
+  <meta name="description" content="API-free advanced X/Twitter search query builder with noise reduction, research templates, AI agent missions, and x402 payment path. 高度なX検索ランチャー。">
+  <meta name="theme-color" content="#0a0e17">
+  <meta name="author" content="KG-NINJA">
+  <meta name="keywords" content="X, Twitter, search, agent, x402, noise reduction, HyperXosist, OSINT">
+  <link rel="canonical" href="https://kg-ninja.github.io/HyperXosist-Agent/">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="HyperXosist Agent — Advanced X Search Launcher">
+  <meta property="og:description" content="API-free X search builder for humans and AI agents. Missions, noise reduction, x402, Signal-to-Fix handoff.">
+  <meta property="og:url" content="https://kg-ninja.github.io/HyperXosist-Agent/">
+  <meta property="og:image" content="https://kg-ninja.github.io/HyperXosist-Agent/favicon.svg">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="HyperXosist Agent">
+  <meta name="twitter:description" content="API-free advanced X search launcher + sticky AI agent loop.">
   <link rel="stylesheet" href="style.css">
   <link rel="alternate" type="application/json" href="agent-use.json" title="HyperXosist Agent Use">
   <link rel="payment" type="application/json" href="x402-payment.json">
@@ -15,58 +28,104 @@
 <body>
   <div class="container">
     <header>
-      <h1>X Search Launcher</h1>
-      <p class="subtitle">API-free X search query builder for Japanese and global research</p>
+      <div class="header-top">
+        <h1>HyperXosist</h1>
+        <span class="version-badge" id="versionBadge">v2.5.0</span>
+      </div>
+      <p class="subtitle">Advanced X search launcher — API-free query builder with noise reduction &amp; agent path</p>
     </header>
 
     <main>
+      <!-- Research templates -->
+      <section class="templates-section" aria-labelledby="templatesTitle">
+        <div class="section-head">
+          <h2 id="templatesTitle">Research templates</h2>
+          <p>ワンクリックで調査シナリオを適用。キーワードはあとから上書きできます。</p>
+        </div>
+        <div id="templateGrid" class="template-grid" role="list"></div>
+      </section>
+
       <form id="searchForm" onsubmit="return false;">
         <div class="form-grid">
-          <!-- キーワード -->
-          <div class="form-group">
-            <label for="keywords">キーワード</label>
-            <input type="text" id="keywords" placeholder="例: 猫 癒やし">
+          <div class="form-group span-2">
+            <label for="keywords">キーワード (AND)</label>
+            <input type="text" id="keywords" placeholder="例: open source agent  OR  猫 癒やし" autocomplete="off">
           </div>
 
-          <!-- 完全一致フレーズ -->
+          <div class="form-group span-2">
+            <label for="anyOf">いずれか (OR グループ)</label>
+            <input type="text" id="anyOf" placeholder="例: bug, broken, 不具合  →  (bug OR broken OR 不具合)" autocomplete="off">
+          </div>
+
           <div class="form-group">
             <label for="exactPhrase">完全一致フレーズ</label>
-            <input type="text" id="exactPhrase" placeholder="例: 美味しいラーメン">
+            <input type="text" id="exactPhrase" placeholder="例: delicious ramen" autocomplete="off">
           </div>
 
-          <!-- from:ユーザー -->
           <div class="form-group">
-            <label for="fromUser">from: ユーザー</label>
-            <input type="text" id="fromUser" placeholder="例: twitter (ユーザー名のみ)">
+            <label for="hashtags">ハッシュタグ</label>
+            <input type="text" id="hashtags" placeholder="例: AI agents  または  #AI #agents" autocomplete="off">
           </div>
 
-          <!-- 除外ワード -->
+          <div class="form-group">
+            <label for="fromUser">from: 投稿者</label>
+            <input type="text" id="fromUser" placeholder="username" autocomplete="off">
+          </div>
+
+          <div class="form-group">
+            <label for="toUser">to: 返信先</label>
+            <input type="text" id="toUser" placeholder="username" autocomplete="off">
+          </div>
+
+          <div class="form-group">
+            <label for="mentionUser">@ メンション</label>
+            <input type="text" id="mentionUser" placeholder="username" autocomplete="off">
+          </div>
+
           <div class="form-group">
             <label for="excludeWords">除外ワード</label>
-            <input type="text" id="excludeWords" placeholder="例: PR 広告">
+            <input type="text" id="excludeWords" placeholder='例: PR 広告 "paid partnership"' autocomplete="off">
           </div>
 
-          <!-- since: 日付 -->
           <div class="form-group">
             <label for="sinceDate">since: 開始日</label>
             <input type="date" id="sinceDate">
           </div>
 
-          <!-- until: 日付 -->
           <div class="form-group">
             <label for="untilDate">until: 終了日</label>
             <input type="date" id="untilDate">
           </div>
 
-          <!-- 最小いいね数 -->
+          <div class="form-group span-2">
+            <label>日付プリセット</label>
+            <div class="chip-row" id="datePresets" role="group" aria-label="Date presets">
+              <button type="button" class="chip-btn" data-date-preset="24h">24h</button>
+              <button type="button" class="chip-btn" data-date-preset="7d">7d</button>
+              <button type="button" class="chip-btn" data-date-preset="30d">30d</button>
+              <button type="button" class="chip-btn" data-date-preset="90d">90d</button>
+              <button type="button" class="chip-btn" data-date-preset="1y">1y</button>
+              <button type="button" class="chip-btn chip-btn-muted" id="btnClearDates">Clear dates</button>
+            </div>
+          </div>
+
           <div class="form-group">
-            <label for="minFaves">min_faves: 最小いいね数</label>
+            <label for="minFaves">min_faves</label>
             <input type="number" id="minFaves" min="0" placeholder="例: 100">
           </div>
 
-          <!-- 言語 -->
           <div class="form-group">
-            <label for="lang">lang: 言語 / Language</label>
+            <label for="minRetweets">min_retweets</label>
+            <input type="number" id="minRetweets" min="0" placeholder="例: 10">
+          </div>
+
+          <div class="form-group">
+            <label for="minReplies">min_replies</label>
+            <input type="number" id="minReplies" min="0" placeholder="例: 5">
+          </div>
+
+          <div class="form-group">
+            <label for="lang">lang: 言語</label>
             <select id="lang">
               <option value="" selected>Global / 指定なし</option>
               <option value="en">English (en)</option>
@@ -78,38 +137,93 @@
               <option value="zh">中文 (zh)</option>
             </select>
           </div>
+
+          <div class="form-group">
+            <label for="urlDomain">url: ドメイン</label>
+            <input type="text" id="urlDomain" placeholder="例: github.com" autocomplete="off">
+          </div>
         </div>
 
-        <!-- フィルターチェックボックス群 -->
-        <div class="filter-group">
+        <!-- Filters -->
+        <div class="filter-group" role="group" aria-label="Media and content filters">
           <label class="checkbox-container">
             <input type="checkbox" id="hasImages">
             <span class="checkmark"></span>
-            画像あり (filter:images)
+            画像 (filter:images)
           </label>
           <label class="checkbox-container">
             <input type="checkbox" id="hasVideos">
             <span class="checkmark"></span>
-            動画あり (filter:videos)
+            動画 (filter:videos)
+          </label>
+          <label class="checkbox-container">
+            <input type="checkbox" id="hasMedia">
+            <span class="checkmark"></span>
+            メディア (filter:media)
+          </label>
+          <label class="checkbox-container">
+            <input type="checkbox" id="nativeVideo">
+            <span class="checkmark"></span>
+            ネイティブ動画
           </label>
           <label class="checkbox-container">
             <input type="checkbox" id="excludeLinks">
             <span class="checkmark"></span>
-            リンク除外 (-filter:links)
+            リンク除外
+          </label>
+          <label class="checkbox-container">
+            <input type="checkbox" id="hasLinks">
+            <span class="checkmark"></span>
+            リンクのみ
+          </label>
+          <label class="checkbox-container">
+            <input type="checkbox" id="excludeReplies">
+            <span class="checkmark"></span>
+            返信を除外
+          </label>
+          <label class="checkbox-container">
+            <input type="checkbox" id="onlyReplies">
+            <span class="checkmark"></span>
+            返信のみ
+          </label>
+          <label class="checkbox-container">
+            <input type="checkbox" id="verifiedOnly">
+            <span class="checkmark"></span>
+            認証済みのみ
+          </label>
+          <label class="checkbox-container">
+            <input type="checkbox" id="quoteOnly">
+            <span class="checkmark"></span>
+            引用のみ
+          </label>
+          <label class="checkbox-container">
+            <input type="checkbox" id="safeOnly">
+            <span class="checkmark"></span>
+            Safe only
           </label>
         </div>
+
+        <!-- Advanced raw -->
+        <details class="advanced-panel">
+          <summary>Advanced / 生演算子</summary>
+          <div class="form-group">
+            <label for="rawOperators">追加演算子 (そのまま結合)</label>
+            <input type="text" id="rawOperators" placeholder='例: list:slug  OR  "exact more"  -is:retweet' autocomplete="off">
+            <p class="hint">X の高度な演算子を自由に足せます。生成クエリの末尾に追加されます。</p>
+          </div>
+        </details>
 
         <!-- Noise Reduction -->
         <section class="noise-section" aria-labelledby="noiseTitle">
           <div class="noise-header">
             <div>
               <h2 id="noiseTitle">Noise Reduction</h2>
-              <p>Filters obvious spam, engagement bait, and promo noise before search. / 明らかなスパム・釣り・宣伝ノイズを検索前に除外します。</p>
+              <p>スパム・engagement bait・宣伝ノイズを検索前に除外。英語圏リポスト定型句も Medium 以上で除外。</p>
             </div>
             <label class="toggle-container">
               <input type="checkbox" id="noiseEnabled">
               <span class="toggle-track"></span>
-              Enable noise filter
+              Enable
             </label>
           </div>
 
@@ -117,42 +231,199 @@
             <div class="form-group noise-preset">
               <label for="noisePreset">Preset</label>
               <select id="noisePreset">
-                <option value="low">Low: obvious spam only</option>
-                <option value="medium" selected>Medium: spam + engagement bait</option>
-                <option value="high">High: aggressive noise reduction</option>
+                <option value="low">Low: obvious spam</option>
+                <option value="medium" selected>Medium: spam + bait + repost phrases</option>
+                <option value="high">High: aggressive</option>
               </select>
             </div>
-            <button type="button" id="btnResetNoise" class="btn btn-secondary btn-compact">Reset noise rules</button>
+            <button type="button" id="btnResetNoise" class="btn btn-secondary btn-compact">Reset noise</button>
           </div>
 
           <div id="noiseChips" class="noise-chips" aria-live="polite"></div>
         </section>
+
         <!-- Agent Access -->
         <section class="agent-section" aria-labelledby="agentTitle">
-          <h2 id="agentTitle">Agent path</h2>
-          <p>Humans use this page to build X search queries in the browser. Agents may use free planning, filtering, and dry-run capabilities, but those do not return paid production results. Read <a href="agent-use.json"><code>agent-use.json</code></a>, check <a href="capabilities.json"><code>capabilities.json</code></a>, then use <a href="x402-payment.json"><code>x402-payment.json</code></a> for paid execution at <code>POST /hyperxosist-query</code>. Before using the public MCP, confirm <a href="https://mcp.kgninja.dev/health"><code>/health</code></a> returns HTTP 200. Price: 0.01 USDC on Base mainnet. Related workflow: send gathered feedback to <a href="https://kg-ninja.github.io/Signal-to-Fix/">Signal-to-Fix</a>.</p>
+          <h2 id="agentTitle">Agent path <span class="pill">x402</span></h2>
+          <p>
+            人間のブラウザ利用は無料。エージェントは
+            <a href="llms.txt"><code>llms.txt</code></a> /
+            <a href="AGENTS.md"><code>AGENTS.md</code></a> /
+            <a href="agent-use.json"><code>agent-use.json</code></a> から入り、
+            <a href="agent-tools.json"><code>agent-tools.json</code></a> の tool-calling 定義と
+            <a href="missions.json"><code>missions.json</code></a> のマルチアングル任務を使い、
+            <a href="x402-payment.json"><code>x402-payment.json</code></a> 経由で x402 支払い後に検索 URL を利用します。
+            ループ: <code>planFromIntent</code> → score → pay → collect → refine →
+            <code>buildSignalToFixPipeline</code> /
+            <code>buildHandoffPackage</code> →
+            <a href="https://kg-ninja.github.io/Signal-to-Fix/">Signal-to-Fix</a>
+            （keep only）。詳細は
+            <a href="signal-to-fix-pipeline.json"><code>signal-to-fix-pipeline.json</code></a>。
+            Grok Build はオプション。
+          </p>
         </section>
 
-        <!-- クエリプレビューエリア -->
+        <!-- Remote MCP production -->
+        <section class="agent-section remote-mcp-section" aria-labelledby="remoteMcpTitle">
+          <h2 id="remoteMcpTitle">Remote MCP <span class="pill">production</span></h2>
+          <p>AIエージェント向けに、initialize、tools/list、planning、filtering、handoffを無料で提供しています。これらは本番検索結果の自動取得を含みません。本番の検索URL自動利用・外部収集・有料query実行にはx402決済が必要です。利用前にHealth endpointがHTTP 200であることを確認してください。</p>
+          <dl class="remote-mcp-details">
+            <dt>MCP endpoint</dt><dd><a href="https://mcp.kgninja.dev/mcp">https://mcp.kgninja.dev/mcp</a></dd>
+            <dt>Health endpoint</dt><dd><a href="https://mcp.kgninja.dev/health">https://mcp.kgninja.dev/health</a></dd>
+            <dt>Transport</dt><dd>Streamable HTTP</dd>
+            <dt>Authentication</dt><dd>Bearer token</dd>
+            <dt>Deployment status</dt><dd id="remoteMcpStatus">Deployed; verify Health before use</dd>
+          </dl>
+          <p><strong>無料:</strong> <code>hyperxosist_search_plan</code> / <code>hyperxosist_filter_signals</code> / <code>hyperxosist_build_handoff</code>、initialize、tools/list、planning、filtering、handoff。</p>
+          <p><strong>有料:</strong> production search URL usage、automated external collection、<a href="https://api.kgninja.dev/hyperxosist-query">paid execution endpoint</a>。</p>
+        </section>
+        <!-- Signal-to-Fix linked pipeline (human manual + agent auto) -->
+        <section class="s2f-pipeline-section" aria-labelledby="s2fPipelineTitle">
+          <div class="section-head">
+            <h2 id="s2fPipelineTitle">Signal-to-Fix 連携 <span class="pill pill-s2f">linked</span></h2>
+            <p>
+              X フィードバック → ノイズ除去 handoff →
+              <a href="https://kg-ninja.github.io/Signal-to-Fix/" target="_blank" rel="noopener">Signal-to-Fix</a>
+              の keep-only PR / Codex プロンプトへ。
+            </p>
+          </div>
+
+          <div class="audience-grid">
+            <article class="audience-card audience-human" aria-labelledby="humanManualTitle">
+              <h3 id="humanManualTitle">🧑 人間向け — 手動実行（無料）</h3>
+              <p class="audience-note">ブラウザだけで完結します。支払い不要です。</p>
+              <ol class="manual-steps">
+                <li>上のフォームでキーワード / テンプレート / Noise を設定し、<strong>最新で検索</strong> または <strong>話題で検索</strong> を押す。</li>
+                <li>X の結果から有用な投稿をコピーし、下の <strong>Collected signals</strong> に <strong>1行1投稿</strong> で貼る。</li>
+                <li><strong>Product / Target area</strong> を埋め、<strong>Handoff 生成</strong> → <strong>Signal-to-Fix 用をコピー</strong> を押す。</li>
+                <li><strong>Signal-to-Fix を開く</strong> を押し、Product 欄と Feedback 欄に貼り付けて <strong>Analyze Feedback</strong>。</li>
+                <li>結果の <code>keep</code> だけを使う。<code>reduce</code> / <code>discard</code> は実装に入れない。<strong>Copy Codex Prompt</strong> で 1 つの小さい改善を依頼する。</li>
+              </ol>
+            </article>
+
+            <article class="audience-card audience-agent" aria-labelledby="agentAutoTitle">
+              <h3 id="agentAutoTitle">🤖 AI Agent 向け — 自動連携</h3>
+              <p class="audience-note">本番の検索 URL 自動利用は x402（$0.01）が必要です。計画・スコア・handoff は無料。</p>
+              <ol class="manual-steps">
+                <li>読む: <a href="signal-to-fix-pipeline.json"><code>signal-to-fix-pipeline.json</code></a> + <a href="agent-use.json"><code>agent-use.json</code></a></li>
+                <li>呼ぶ: <code>buildSignalToFixPipeline({ productName, intent? })</code></li>
+                <li><code>scoreQuery</code> → x402 pay → <code>searchUrl</code> で投稿収集</li>
+                <li><code>buildHandoffPackage</code> / pipeline + feedback → Signal-to-Fix</li>
+                <li>下流は <code>decision === "keep"</code> のみ</li>
+              </ol>
+              <p class="agent-code-hint">
+                <code>HyperXosistAgent.buildSignalToFixPipeline({ productName: 'Acme', feedback: ['...'] })</code>
+              </p>
+            </article>
+          </div>
+
+          <div class="preview-actions s2f-actions">
+            <button type="button" id="btnS2fPipeline" class="btn btn-secondary">Pipeline 計画</button>
+            <button type="button" id="btnBuildHandoff" class="btn btn-primary">Handoff 生成</button>
+            <button type="button" id="btnCopyS2fInput" class="btn btn-accent">Signal-to-Fix 用をコピー</button>
+            <button type="button" id="btnOpenS2f" class="btn btn-secondary">Signal-to-Fix を開く</button>
+            <button type="button" id="btnCopyHandoffJson" class="btn btn-secondary">Handoff JSON</button>
+          </div>
+          <div id="s2fPipelineMeta" class="query-meta s2f-meta" aria-live="polite"></div>
+          <textarea id="handoffPreview" class="grok-prompt-preview" readonly rows="8" placeholder="「Handoff 生成」または「Pipeline 計画」で、Signal-to-Fix 向けパッケージ / 手動手順がここに出ます"></textarea>
+        </section>
+
+        <!-- Universal agent handoff (any LLM) -->
+        <section class="agent-prompt-section" aria-labelledby="agentPromptTitle">
+          <div class="section-head">
+            <h2 id="agentPromptTitle">Agent prompt <span class="pill pill-universal">any LLM</span></h2>
+            <p>
+              収集した投稿を貼り付け → Keep フィルタ → どの AI（Claude / GPT / Grok / Llama…）にも貼れる
+              実装プロンプトを生成します。
+            </p>
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="grokProduct">Product</label>
+              <input type="text" id="grokProduct" placeholder="例: HyperXosist / Acme" autocomplete="off">
+            </div>
+            <div class="form-group">
+              <label for="grokTargetArea">Target Area</label>
+              <input type="text" id="grokTargetArea" placeholder="例: auth UI / search noise / perf" autocomplete="off">
+            </div>
+            <div class="form-group span-2">
+              <label for="grokContext">Product context</label>
+              <input type="text" id="grokContext" placeholder="短い製品コンテキスト（スタック、制約など）" autocomplete="off">
+            </div>
+            <div class="form-group span-2">
+              <label for="noiseExtraTerms">追加除外語 (noise.extraTerms)</label>
+              <input type="text" id="noiseExtraTerms" placeholder='例: spammybrand "always free" 宣伝' autocomplete="off">
+            </div>
+            <div class="form-group span-2">
+              <label for="grokFeedback">Collected signals（1行1投稿）</label>
+              <textarea id="grokFeedback" rows="5" placeholder="X から集めた不満・要望・バグ報告を貼り付け&#10;例: login button does nothing on Safari&#10;例: ダークモードが欲しい"></textarea>
+            </div>
+          </div>
+          <div id="grokFocusMeta" class="query-meta grok-focus-meta" aria-live="polite"></div>
+          <textarea id="grokPromptPreview" class="grok-prompt-preview" readonly rows="10" placeholder="「Agent Prompt」を押すと構造化プロンプトがここに出ます"></textarea>
+          <div class="preview-actions">
+            <button type="button" id="btnAgentPrompt" class="btn btn-primary">Agent Prompt</button>
+            <button type="button" id="btnCopyAgentPrompt" class="btn btn-secondary">プロンプトをコピー</button>
+            <button type="button" id="btnExportNoise" class="btn btn-secondary">Noise カタログ</button>
+          </div>
+
+          <!-- Optional Grok Build mode (default OFF) -->
+          <div class="grok-mode-bar">
+            <label class="toggle-container grok-toggle-label" for="grokModeEnabled">
+              <input type="checkbox" id="grokModeEnabled">
+              <span class="toggle-slider"></span>
+              <span>Grok Build モード（オプション・デフォルトOFF）</span>
+            </label>
+          </div>
+          <div id="grokModePanel" class="grok-mode-panel" hidden>
+            <p class="grok-mode-hint">
+              有効時: Grok 向け見出しのプロンプト生成と Grok セッション（mission）を使えます。
+              汎用エージェント利用には不要です。
+            </p>
+            <div class="preview-actions">
+              <button type="button" id="btnGrokPrompt" class="btn btn-accent">Grok Build Prompt</button>
+              <button type="button" id="btnSendToGrok" class="btn btn-secondary">Send to Grok</button>
+              <button type="button" id="btnGrokFromKeywords" class="btn btn-secondary">Grok セッション</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Query preview -->
         <div class="preview-area">
-          <label>生成されたクエリ</label>
-          <textarea id="queryPreview" readonly placeholder="入力に基づいてクエリが自動生成されます..."></textarea>
+          <div class="preview-head">
+            <label for="queryPreview">生成されたクエリ</label>
+            <div id="queryMeta" class="query-meta" aria-live="polite"></div>
+          </div>
+          <textarea id="queryPreview" readonly placeholder="入力に基づいてクエリが自動生成されます..." rows="4"></textarea>
+          <pre id="queryExplain" class="query-explain" hidden></pre>
           <div class="preview-actions">
             <button type="button" id="btnCopy" class="btn btn-secondary">コピー</button>
+            <button type="button" id="btnCopyUrl" class="btn btn-secondary">URLコピー</button>
+            <button type="button" id="btnShare" class="btn btn-secondary">状態を共有</button>
+            <button type="button" id="btnExplain" class="btn btn-secondary">解説</button>
             <button type="button" id="btnReset" class="btn btn-danger">リセット</button>
           </div>
         </div>
 
-        <!-- アクションボタン -->
+        <!-- Actions -->
         <div class="action-buttons">
-          <button type="button" id="btnSearchLive" class="btn btn-primary btn-large">最新で検索</button>
-          <button type="button" id="btnSearchTop" class="btn btn-accent btn-large">話題で検索</button>
+          <button type="button" id="btnSearchLive" class="btn btn-primary btn-large" title="Ctrl+Enter">
+            最新で検索
+            <kbd class="kbd">⌃↵</kbd>
+          </button>
+          <button type="button" id="btnSearchTop" class="btn btn-accent btn-large" title="Ctrl+Shift+Enter">
+            話題で検索
+            <kbd class="kbd">⌃⇧↵</kbd>
+          </button>
         </div>
       </form>
 
-      <!-- 履歴セクション -->
+      <!-- History -->
       <section class="history-section">
-        <h2>最近使ったクエリ</h2>
+        <div class="history-head">
+          <h2>最近使ったクエリ</h2>
+          <button type="button" id="btnClearHistory" class="btn btn-secondary btn-tiny">履歴クリア</button>
+        </div>
         <ul id="historyList" class="history-list">
           <li class="empty-message">履歴はありません</li>
         </ul>
@@ -160,16 +431,20 @@
     </main>
 
     <footer>
-      <p>© 2026 X Search Launcher. This tool is not affiliated with X Corp.</p>
+      <p>
+        © 2026 HyperXosist Agent v<span id="footerVersion">2.5.0</span> · MIT · Not affiliated with X Corp. ·
+        <a href="https://github.com/KG-NINJA/HyperXosist-Agent">GitHub</a> ·
+        <a href="llms.txt">llms.txt</a> ·
+        <a href="AGENTS.md">AGENTS.md</a> ·
+        <a href="signal-to-fix-pipeline.json">Signal-to-Fix pipeline</a>
+      </p>
     </footer>
   </div>
 
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <script src="payment-endpoints.js"></script>
   <script src="agent-api.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
-
-
-
-
-

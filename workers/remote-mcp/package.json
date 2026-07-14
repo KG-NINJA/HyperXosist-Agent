@@ -1,0 +1,17 @@
+{
+  "name": "hyperxosist-remote-mcp-worker",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "check": "wrangler deploy --dry-run",
+    "dev": "wrangler dev --local",
+    "types": "wrangler types ./src/worker-configuration.d.ts"
+  },
+  "devDependencies": {
+    "wrangler": "^4.110.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

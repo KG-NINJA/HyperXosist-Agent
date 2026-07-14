@@ -1,0 +1,88 @@
+{
+  "name": "hyperxosist-agent",
+  "version": "2.5.0",
+  "description": "Universal API-free X/Twitter search toolkit for any AI agent (GPT/Claude/Grok/Llama): missions, noise reduction, x402, Signal-to-Fix handoff, tool dispatch, CLI, optional Grok Build mode.",
+  "keywords": [
+    "twitter",
+    "x",
+    "search",
+    "agent",
+    "x402",
+    "noise-reduction",
+    "osint",
+    "signal-to-fix",
+    "query-builder",
+    "openai-tools",
+    "anthropic-tools",
+    "cli"
+  ],
+  "homepage": "https://kg-ninja.github.io/HyperXosist-Agent/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KG-NINJA/HyperXosist-Agent.git"
+  },
+  "bugs": {
+    "url": "https://github.com/KG-NINJA/HyperXosist-Agent/issues"
+  },
+  "license": "MIT",
+  "author": "KG-NINJA",
+  "main": "agent-api.js",
+  "browser": "agent-api.js",
+  "bin": {
+    "hyperxosist": "bin/hyperxosist.js"
+  },
+  "files": [
+    "agent-api.js",
+    "payment-endpoints.js",
+    "agent-use.json",
+    "agent-tools.json",
+    "missions.json",
+    "signal-to-fix-pipeline.json",
+    "x402-payment.json",
+    "llms.txt",
+    "AGENTS.md",
+    "index.html",
+    "app.js",
+    "style.css",
+    "top30_repost_blacklist.json",
+    "bin/",
+    "examples/",
+    "LICENSE",
+    "README.md",
+    "mcp/",
+    "docs/",
+    "test/tool-selection-cases.json"
+  ],
+  "scripts": {
+    "test": "node test/agent-api.test.js && node test/mcp.test.js && node test/mcp-core.test.js && node test/mcp-remote.test.js && node test/mcp-security.test.js && node test/mcp-schema.test.js && node test/mcp-consistency.test.js && node --test test/mcp-cloudflare-worker.test.mjs && node test/payment-endpoints.test.js",
+    "test:agent": "node test/agent-api.test.js",
+    "test:mcp": "node test/mcp.test.js",
+    "quickstart": "node examples/quickstart.mjs",
+    "serve": "npx --yes serve -l 5173 .",
+    "agent-handoff-dryrun": "node examples/agent-handoff-dryrun.mjs",
+    "cli": "node bin/hyperxosist.js",
+    "multi-runtime": "node examples/multi-runtime.mjs",
+    "tools:openai": "node bin/hyperxosist.js tools --format openai --json",
+    "tools:anthropic": "node bin/hyperxosist.js tools --format anthropic --json",
+    "mcp": "node mcp/server.js",
+    "test:mcp:core": "node test/mcp-core.test.js",
+    "test:mcp:remote": "node test/mcp-remote.test.js",
+    "test:mcp:security": "node test/mcp-security.test.js",
+    "test:mcp:schema": "node test/mcp-schema.test.js",
+    "test:tool-selection": "node examples/evaluate-tool-selection.mjs",
+    "openai:remote-check": "node examples/openai-remote-mcp.mjs --check",
+    "mcp:remote": "node mcp/remote-server.js",
+    "test:mcp:consistency": "node test/mcp-consistency.test.js",
+    "test:mcp:cloudflare": "node --test test/mcp-cloudflare-worker.test.mjs",
+    "cloudflare:mcp:check": "npm --prefix workers/remote-mcp run check",
+    "sync:payment-metadata": "node scripts/sync-payment-metadata.mjs",
+    "test:payment-endpoints": "node test/payment-endpoints.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "private": false,
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.29.0"
+  }
+}

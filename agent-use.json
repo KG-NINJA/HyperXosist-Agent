@@ -1,113 +1,364 @@
 {
   "name": "HyperXosist Agent Use",
-  "version": "1.0.0",
-  "description": "Machine-readable entrypoint for AI agents that generate X search URLs with HyperXosist noise reduction.",
+  "version": "2.5.0",
+  "description": "Universal agent-first X search mission engine for GPT/Claude/Grok/Llama: noise-reduced operators, multi-angle campaigns, score-before-pay, dual JSON+Markdown outputs, x402 execution, Signal-to-Fix handoff, real tool dispatch, Anthropic/OpenAI schema adapters, shell CLI. Optional Grok Build mode (default off).",
   "requiresPaymentForAgentUse": true,
-  "freeCapabilities": ["mcp_connection", "tool_discovery", "planning", "filtering", "handoff", "dry_run_preview"],
-  "paidCapabilities": ["production_search_url_automation", "external_collection", "hyperxosist_query_execution"],
-  "healthCheck": {
-    "endpoint": "https://mcp.kgninja.dev/health",
-    "expectedStatus": 200,
-    "free": true
+  "remoteMcp": {
+    "endpoint": "https://mcp.kgninja.dev/mcp",
+    "healthEndpoint": "https://mcp.kgninja.dev/health",
+    "transport": "Streamable HTTP",
+    "authentication": "public-free",
+    "deploymentStatus": "deployed; verify healthEndpoint before use",
+    "freeTools": [
+      "hyperxosist_search_plan",
+      "hyperxosist_filter_signals",
+      "hyperxosist_build_handoff"
+    ],
+    "freeOperations": [
+      "initialize",
+      "tools/list",
+      "query planning",
+      "signal filtering",
+      "handoff generation"
+    ],
+    "paidOperations": [
+      "production search URL usage",
+      "automated external collection",
+      "paid execution endpoint"
+    ]
   },
-  "servicePurpose": "Agent-facing execution/query layer for building noise-reduced X/Twitter search queries before handing candidate feedback to Signal-to-Fix.",
-  "whenToUse": [
-    "An agent needs to source candidate X/Twitter feedback with spam, promo, and engagement-bait reduction.",
-    "An agent needs a paid query/search execution path before using Signal-to-Fix for keep-only PR spec generation."
+  "whyAgentsKeepUsingThis": [
+    "dispatchToolCall(name, args) — real multi-runtime tool dispatch (OpenAI / Anthropic / Grok call shapes). No hand-written mapping.",
+    "toOpenAITools() / toAnthropicTools() — drop-in schema adapters for any major tool-calling runtime.",
+    "CLI bin/hyperxosist.js — shell agents can plan/dispatch/keep/handoff with --json without embedding JS.",
+    "exportKeepOnlyJson — keep-only machine export for Codex/Claude/GPT/Llama handoff.",
+    "buildSignalToFixPipeline + signal-to-fix-pipeline.json: one-shot linked harvest → keep-only PR path for any LLM agent.",
+    "Works with any major tool-calling LLM — default mode is universal, not Grok-only.",
+    "planFromIntent turns vague goals into multi-angle missions — fewer wasted searches.",
+    "scoreQuery (0–100) gates weak queries before spending $0.01 x402; dual .markdown output.",
+    "suggestRefinements self-heals empty or noisy runs without a human in the loop.",
+    "buildHandoffPackage + buildAgentPrompt chain into Signal-to-Fix or any coding model.",
+    "exportNoiseCatalog makes exclude blacklists transparent and editable.",
+    "buildRunReceipt + encodeState / buildShareUrl make weekly monitors copy-pasteable.",
+    "agent-tools.json is OpenAI tools schema — portable to Claude/Grok/Llama runtimes.",
+    "Deterministic outputs: same input → same query → reliable agent memory."
   ],
-  "whenNotToUse": [
-    "Do not use for free access to paid execution output.",
-    "Do not use as proof that paid execution completed unless POST /hyperxosist-query returned HTTP 200 after x402 payment.",
-    "Do not use to bypass X/Twitter terms, authentication requirements, or payment."
+  "timeToFirstValueSeconds": 30,
+  "stickyLoop": [
+    "Discover agent-use.json + llms.txt",
+    "startAgentSession({ intent }) — default mode universal",
+    "Score-gate each step (skip band=poor unless intentional)",
+    "POST buildPaidRequest → x402 pay on 402 → open searchUrl",
+    "Collect candidate post texts",
+    "suggestRefinements if sparse/noisy",
+    "filterKeepSignals (optional) → buildSignalToFixPipeline / buildHandoffPackage / buildAgentPrompt",
+    "Signal-to-Fix keep-only or any coding LLM; optional mode:grok for Grok Build",
+    "buildRunReceipt for memory/cron reuse"
   ],
   "agentConversionSummary": {
-    "problemSolved": "Builds noise-reduced X/Twitter search queries and search URLs for agents that need better candidate feedback discovery.",
-    "whenToUse": "Use before Signal-to-Fix when an agent needs to source relevant X/Twitter feedback with spam, promo, and engagement-bait reduction.",
-    "inputToSend": "keywords, exactPhrase, fromUser, excludeWords, date filters, minimum engagement filters, language, media filters, mode, and noise settings.",
-    "expectedOutput": "A paid query/search result from the x402 endpoint, including an X search query or search URL suitable for gathering candidate feedback.",
-    "paidAction": "POST the same query input to the configured x402 payment endpoint.",
-    "nextUrl": "https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/hyperxosist-query",
-    "on402": "Read x402-payment.json and paymentOptionsEndpoint, complete the x402 payment, then retry the same POST with payment proof."
+    "problemSolved": "Turns research goals into paid, noise-reduced, multi-angle X search execution with scorable quality and PR-pipeline handoff.",
+    "whenToUse": "Anytime an agent needs high-signal X/Twitter candidates: product feedback, competitive intel, launch pulse, OSINT entity angles, or weekly monitors — especially before Signal-to-Fix.",
+    "inputToSend": "Prefer natural-language intent via planFromIntent, or structured inputSchema fields / missionId+subject. For payment POST, send the same structured input as paidRequest.body.",
+    "expectedOutput": "Mission steps with query, searchUrl, score, and x402 paidRequest; after payment, use search results; optionally handoff package for Signal-to-Fix.",
+    "paidAction": "POST paidRequest.body to payment endpoint; complete x402 on 402; retry until 200.",
+    "nextUrl": "https://api.kgninja.dev/hyperxosist-query",
+    "on402": "Read x402-payment.json and paymentOptionsEndpoint, complete x402 payment, retry same POST with payment proof.",
+    "onEmptyResults": "Call suggestRefinements(input, { tooSparse: true }) and re-run best.variant with payment.",
+    "onNoisyResults": "Call suggestRefinements(input, { tooNoisy: true }) or raise noise preset / min_faves."
   },
-  "agent_flow": [
-    "Read /agent-use.json",
-    "Read /capabilities.json",
-    "POST /hyperxosist-query-dry-run for free preview",
-    "Read /x402-payment.json",
-    "If value is sufficient, POST /hyperxosist-query with x402 payment",
-    "If HTTP 402 is returned, complete x402 payment before retrying"
-  ],
-  "claim_policy": {
-    "can_claim": [
-      "discovery completed",
-      "dry-run completed",
-      "payment metadata parsed"
-    ],
-    "cannot_claim_without_payment": [
-      "paid execution completed",
-      "full result generated",
-      "paid content accessed"
-    ],
-    "dry_run_is_not_paid_execution": true
+  "quickstartForAgents": {
+    "bootstrap": "HyperXosistAgent.startAgentSession({ intent: 'Find product feedback about Acme for PR specs' })",
+    "dispatch": "HyperXosistAgent.dispatchToolCall('hyperxosist_plan_from_intent', { intent: 'Find feedback about Acme' })",
+    "openaiTools": "HyperXosistAgent.toOpenAITools()",
+    "anthropicTools": "HyperXosistAgent.toAnthropicTools()",
+    "cli": "npx hyperxosist plan \"Find product feedback about Acme\" --json",
+    "cliDispatch": "npx hyperxosist dispatch hyperxosist_plan_from_intent --args '{\"intent\":\"Find feedback about Acme\"}' --json",
+    "universalPrompt": "HyperXosistAgent.buildAgentPrompt({ productName: 'Acme', feedback: ['...'] })",
+    "exportKeepOnly": "HyperXosistAgent.exportKeepOnlyJson(feedbackTexts, { productName: 'Acme' })",
+    "grokBuildOptional": "HyperXosistAgent.createGrokBuildSession('...', { product: 'Acme' }) // mode optional",
+    "oneShotMission": "HyperXosistAgent.buildMission('signal_to_fix_pipeline', { subject: 'Acme' })",
+    "scoreBeforePay": "HyperXosistAgent.scoreQuery(input)",
+    "pay": "HyperXosistAgent.buildPaidRequest(input)",
+    "keepFilter": "HyperXosistAgent.filterKeepSignals(feedbackTexts)",
+    "noise": "HyperXosistAgent.exportNoiseCatalog()",
+    "handoff": "HyperXosistAgent.buildHandoffPackage({ productName: 'Acme', feedback: ['...'] })",
+    "toolsFile": "agent-tools.json",
+    "playbook": "AGENTS.md",
+    "llms": "llms.txt",
+    "signalToFixPipeline": "HyperXosistAgent.buildSignalToFixPipeline({ productName: 'Acme', feedback: ['...'] })",
+    "pipelineManifest": "signal-to-fix-pipeline.json"
   },
-  "dryRun": {
-    "endpoint": "https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/hyperxosist-query-dry-run",
-    "method": "POST",
-    "free": true,
-    "returnsPaidContent": false
+  "costModel": {
+    "currency": "USD",
+    "perPaidQuery": 0.01,
+    "humanBrowserUi": "free",
+    "localPreviewMethods": "free for planning only",
+    "typicalMissionUsd": "0.02–0.03",
+    "budgetTip": "Run scoreQuery first; skip poor bands; use missions instead of 10 ad-hoc guesses."
   },
   "payment": {
     "scheme": "x402",
     "manifest": "x402-payment.json",
-    "endpoint": "https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/hyperxosist-query",
-    "paymentOptionsEndpoint": "https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/payment-options.json",
+    "endpoint": "https://api.kgninja.dev/hyperxosist-query",
+    "paymentOptionsEndpoint": "https://api.kgninja.dev/payment-options.json",
     "method": "POST",
     "expectedUnpaidStatus": 402,
     "expectedPaidStatus": 200,
-    "paidEndpoint": "https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/hyperxosist-query",
-    "instruction": "AI agents must POST input to the configured x402 endpoint and complete payment before using generated search URLs. Human browser use remains available through index.html."
+    "instruction": "AI agents must POST input to the configured x402 endpoint and complete payment before using generated search URLs in automated production workflows. Human browser use remains free via index.html. Local preview via buildQuery/buildSearchUrl/planFromIntent is free for planning."
   },
   "entrypoints": {
     "humanUi": "index.html",
     "agentApiScript": "agent-api.js",
+    "cli": "bin/hyperxosist.js",
     "paymentManifest": "x402-payment.json",
-    "capabilities": "capabilities.json",
-    "linkedSignalToFix": "https://kg-ninja.github.io/Signal-to-Fix/agent-use.json"
+    "llmsTxt": "llms.txt",
+    "agentsMd": "AGENTS.md",
+    "tools": "agent-tools.json",
+    "missions": "missions.json",
+    "linkedSignalToFix": "https://kg-ninja.github.io/Signal-to-Fix/agent-use.json",
+    "testSuite": "test/agent-api.test.js",
+    "signalToFixPipeline": "signal-to-fix-pipeline.json"
   },
   "agentUsePolicy": {
     "humanBrowserUse": "free",
     "aiAgentUse": "paid-via-existing-x402-worker",
     "mustNotBypassPayment": true,
-    "unpaidDryRunIsNotEquivalentToPaidExecution": true,
-    "paymentVerifier": "https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/hyperxosist-query"
+    "paymentVerifier": "https://api.kgninja.dev/hyperxosist-query",
+    "localPlanningAllowed": true
+  },
+  "apiSurface": {
+    "version": "2.5.0",
+    "methods": [
+      "startAgentSession(options?)",
+      "dispatchToolCall(nameOrCall, args?)",
+      "runTool(nameOrCall, args?)",
+      "normalizeToolCall(nameOrCall, args?)",
+      "toOpenAITools(options?)",
+      "toAnthropicTools(options?)",
+      "exportKeepOnlyJson(feedback, options?)",
+      "createGrokBuildSession(intent, productContext?)",
+      "planFromIntent(intent, options?)",
+      "buildMission(missionId, context)",
+      "listMissions()",
+      "composeCampaign(options)",
+      "scoreQuery(input)",
+      "scoreTechnicalDepth(text)",
+      "filterKeepSignals(feedback, options?)",
+      "summarizeGrokFocus(keepItems)",
+      "suggestRefinements(input, signals?)",
+      "buildQuery(input)",
+      "buildSearchUrl(input)",
+      "buildPaidRequest(input)",
+      "buildBatch(inputs[])",
+      "buildHandoffPackage(options)",
+      "buildSignalToFixPipeline(options?)",
+      "getSignalToFixLinks()",
+      "buildGrokBuildPrompt(options)",
+      "buildRunReceipt(options)",
+      "getToolDefinitions(options?)",
+      "getAgentPlaybook()",
+      "validateInput(input)",
+      "analyzeQuery(input|string)",
+      "explainQuery(input)",
+      "applyTemplate(templateId, overrides?)",
+      "applyDatePreset(presetKey)",
+      "listTemplates()",
+      "encodeState(input)",
+      "decodeState(encoded)",
+      "buildAgentPrompt(options)",
+      "exportNoiseCatalog()",
+      "customizeNoiseRules(partial)",
+      "resetNoiseRules()",
+      "importNoiseCatalog(catalog)",
+      "buildShareUrl(input, baseUrl?)",
+      "withDualFormat(payload, mdFn)"
+    ],
+    "templates": [
+      "product_feedback",
+      "competitor_watch",
+      "news_pulse",
+      "ai_discourse",
+      "japanese_trend",
+      "media_only",
+      "clean_original",
+      "signal_to_fix",
+      "grok_code_improvement",
+      "ui_ux_feedback",
+      "performance_complaint"
+    ],
+    "missions": [
+      "product_feedback_radar",
+      "competitive_intel",
+      "launch_pulse",
+      "signal_to_fix_pipeline",
+      "osint_entity",
+      "weekly_monitor",
+      "grok_code_improvement_radar",
+      "ui_ux_feedback_harvest",
+      "performance_complaint_detector"
+    ],
+    "defaultMode": "universal",
+    "optionalMode": "grok"
+  },
+  "failureRecovery": {
+    "emptyQuery": "Provide keywords/anyOf/subject or use planFromIntent with a concrete product name.",
+    "http402": "Complete x402 via paymentOptionsEndpoint and retry.",
+    "zeroSearchHits": "suggestRefinements(input, { tooSparse: true }) → pay best variant.",
+    "spamHeavy": "suggestRefinements(input, { tooNoisy: true }) or noise.preset=high + min_faves.",
+    "validationError": "Read validateInput().errors; fix date order / reply filter conflicts.",
+    "needPrSpecs": "buildHandoffPackage then follow Signal-to-Fix agent-use.json; keep-only only.",
+    "needGrokBuild": "filterKeepSignals then buildGrokBuildPrompt; paste markdown into Grok Build for one small fix.",
+    "weakGrokSignals": "Lower minTechScore or harvest with grok_code_improvement_radar / higher technical language queries."
   },
   "complementaryPositioning": {
-    "hyperxosist": "Agent-facing execution/query layer with x402 payment flow.",
-    "signalToFix": "Feedback/noise -> actionable issue, PR spec, and implementation prompt.",
-    "whyTogether": "HyperXosist produces cleaner paid search execution for candidate feedback; Signal-to-Fix turns the resulting feedback into keep-only implementation artifacts."
+    "hyperxosist": "Universal agent-facing search mission + x402 execution with scoring, dual JSON/Markdown, and self-heal.",
+    "signalToFix": "Feedback → keep-only issue clusters, PR specs, implementation/Codex prompts.",
+    "grokBuild": "Optional: Keep-filtered X signals → Grok Build one-small-change prompt (mode:grok).",
+    "whyTogether": "HyperXosist finds cleaner candidates on a budget; Signal-to-Fix and any coding LLM (or optional Grok Build) turn keep-only items into shippable artifacts."
   },
   "inputSchema": {
     "type": "object",
     "properties": {
-      "keywords": { "type": "string" },
-      "exactPhrase": { "type": "string" },
-      "fromUser": { "type": "string" },
-      "excludeWords": { "type": ["string", "array"] },
-      "sinceDate": { "type": "string", "format": "date" },
-      "untilDate": { "type": "string", "format": "date" },
-      "minFaves": { "type": ["string", "number"] },
-      "minRetweets": { "type": ["string", "number"] },
-      "lang": { "type": "string", "description": "Use empty string for global search, or X language codes such as en, ja, es, fr, de, ko, zh." },
-      "hasImages": { "type": "boolean" },
-      "hasVideos": { "type": "boolean" },
-      "excludeLinks": { "type": "boolean" },
-      "mode": { "type": "string", "enum": ["live", "top"] },
+      "keywords": {
+        "type": "string",
+        "description": "AND keywords (free text)."
+      },
+      "anyOf": {
+        "type": [
+          "string",
+          "array"
+        ],
+        "description": "OR group. String may use commas or ' OR '. Becomes (a OR b OR c)."
+      },
+      "exactPhrase": {
+        "type": "string"
+      },
+      "fromUser": {
+        "type": "string"
+      },
+      "toUser": {
+        "type": "string",
+        "description": "to:username replies destination."
+      },
+      "mentionUser": {
+        "type": "string",
+        "description": "@username mentions."
+      },
+      "hashtags": {
+        "type": [
+          "string",
+          "array"
+        ],
+        "description": "Hashtags with or without #."
+      },
+      "urlDomain": {
+        "type": "string",
+        "description": "url:domain filter."
+      },
+      "excludeWords": {
+        "type": [
+          "string",
+          "array"
+        ]
+      },
+      "sinceDate": {
+        "type": "string",
+        "format": "date"
+      },
+      "untilDate": {
+        "type": "string",
+        "format": "date"
+      },
+      "minFaves": {
+        "type": [
+          "string",
+          "number"
+        ]
+      },
+      "minRetweets": {
+        "type": [
+          "string",
+          "number"
+        ]
+      },
+      "minReplies": {
+        "type": [
+          "string",
+          "number"
+        ]
+      },
+      "lang": {
+        "type": "string",
+        "description": "Use empty string for global search, or X language codes such as en, ja, es, fr, de, ko, zh."
+      },
+      "hasImages": {
+        "type": "boolean"
+      },
+      "hasVideos": {
+        "type": "boolean"
+      },
+      "hasMedia": {
+        "type": "boolean"
+      },
+      "hasLinks": {
+        "type": "boolean"
+      },
+      "excludeLinks": {
+        "type": "boolean"
+      },
+      "onlyReplies": {
+        "type": "boolean"
+      },
+      "excludeReplies": {
+        "type": "boolean"
+      },
+      "verifiedOnly": {
+        "type": "boolean"
+      },
+      "safeOnly": {
+        "type": "boolean"
+      },
+      "quoteOnly": {
+        "type": "boolean"
+      },
+      "nativeVideo": {
+        "type": "boolean"
+      },
+      "rawOperators": {
+        "type": "string",
+        "description": "Raw X operator fragment appended to the query."
+      },
+      "mode": {
+        "type": "string",
+        "enum": [
+          "live",
+          "top"
+        ]
+      },
       "noise": {
         "type": "object",
         "properties": {
-          "enabled": { "type": "boolean" },
-          "preset": { "type": "string", "enum": ["low", "medium", "high"] },
-          "removed": { "type": "array", "items": { "type": "string" } }
+          "enabled": {
+            "type": "boolean"
+          },
+          "preset": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          "removed": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "maxTerms": {
+            "type": "number",
+            "description": "Cap auto noise excludes (defaults: low 14, medium 26, high 36) so X queries stay within length budget."
+          }
         }
       }
     }
@@ -116,11 +367,30 @@
     "keywords": "frontier AI",
     "lang": "en",
     "mode": "live",
-    "noise": { "enabled": true, "preset": "medium", "removed": [] }
+    "minFaves": 20,
+    "excludeReplies": true,
+    "noise": {
+      "enabled": true,
+      "preset": "medium",
+      "removed": []
+    }
+  },
+  "exampleIntent": {
+    "call": "planFromIntent",
+    "intent": "Find product feedback about HyperXosist for PR specs",
+    "expect": "mission signal_to_fix_pipeline or product_feedback_radar with scored paid steps"
+  },
+  "exampleTemplate": {
+    "note": "const input = HyperXosistAgent.applyTemplate('signal_to_fix', { keywords: 'my-product' }); then POST buildPaidRequest(input).body",
+    "templateId": "signal_to_fix",
+    "overrides": {
+      "keywords": "HyperXosist"
+    }
   },
   "linkedServices": {
     "signalToFix": "https://kg-ninja.github.io/Signal-to-Fix/",
     "signalToFixAgentUse": "https://kg-ninja.github.io/Signal-to-Fix/agent-use.json",
-    "handoff": "Use paid HyperXosist query generation to collect candidate X/Twitter feedback, then analyze it in Signal-to-Fix. Signal-to-Fix downstream outputs use only decision === \"keep\" items."
+    "handoff": "Call buildSignalToFixPipeline or buildHandoffPackage after paid search; pass signalToFix.input to Signal-to-Fix. Downstream must use only decision === \"keep\". Humans: free browser steps in humanManual / UI section Signal-to-Fix 連携.",
+    "pipelineManifest": "https://kg-ninja.github.io/HyperXosist-Agent/signal-to-fix-pipeline.json"
   }
 }

@@ -1,0 +1,36 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/
+*.log
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log*
+.npm/
+
+# Local env / secrets (never commit)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials*.json
+secrets/
+
+# Local caches / coverage
+.cache/
+coverage/
+tmp/
+temp/
+dist/
+build/
+
+# Local agent / tool state
+.codex/
+.grok/
+.openclaw/
