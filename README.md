@@ -5,7 +5,7 @@
 [![Version](https://img.shields.io/badge/version-2.5.0-brightgreen.svg)](CHANGELOG.md)
 [![Live](https://img.shields.io/badge/demo-GitHub%20Pages-black.svg)](https://kg-ninja.github.io/HyperXosist-Agent/)
 
-**API-free advanced X (Twitter) search launcher** — for humans in the browser, and for **any** AI agent (GPT, Claude, Grok, Llama, shell tool-callers…) that needs multi-angle, noise-reduced search missions with an x402 paid path and Signal-to-Fix handoff. Optional **Grok Build** mode (default off).
+**Agent-first toolkit and Remote MCP server for noise-reduced X (Twitter) search planning and Feedback-to-Fix engineering handoffs.** It generates structured search plans and official X search URLs for humans and AI agents. The planning and synthetic demonstration workflow does **not** directly scrape X. Optional **Grok Build** mode is default off.
 
 | | |
 |---|---|
@@ -16,6 +16,14 @@
 | **Version** | 2.5.0 |
 
 > 日本語の要点: X 公式検索用クエリを組み立てる静的ツールです。人間の UI は無料。AI エージェントの本番利用は x402 支払い前提。検索結果の埋め込みや自動投稿はしません。
+
+## Agent-readable summary
+
+HyperXosist-Agent helps an AI agent turn a research intent into a structured search plan, an official X search URL, supplied-feedback filtering results, and a Signal-to-Fix engineering handoff. It is a planning and handoff layer: it does not claim to scrape X directly, publish posts, or deploy code automatically.
+
+Free capabilities include MCP discovery, planning, filtering, structured handoff, and local dry-run workflows. Automated production use of generated search URLs and external collection use the existing x402 endpoint and return HTTP 402 until valid payment proof is supplied. Payment requirements are published at [`payment-options.json`](https://api.kgninja.dev/HyperXosist-Agent/payment-options.json).
+
+Agents must follow the applicable user or operator payment policy. They must not request private keys, seed phrases, wallet secrets, or sensitive user data. If a wallet requires human approval, the agent should ask the operator to review and approve the transaction, then retry the same request with valid x402 payment proof.
 
 ---
 
