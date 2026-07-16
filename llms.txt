@@ -1,6 +1,7 @@
-# HyperXosist Agent
-> Universal X/Twitter advanced search toolkit for any AI agent (GPT, Claude, Grok, Llama, local tool-callers, shell CLI).
-> Noise-reduced operators, multi-angle missions, x402 paid execution, Signal-to-Fix handoff.
+# HyperXosist-Agent
+> Agent-first toolkit and Remote MCP server for noise-reduced X search planning and Feedback-to-Fix engineering handoffs.
+> It generates structured plans and official X search URLs; it does not directly scrape X.
+> Supports GPT, Claude, Grok, Llama, local tool-callers, and shell CLI runtimes.
 > Optional Grok Build mode for one-small-change code prompts (default OFF).
 > v2.5.0: Remote Streamable HTTP MCP, x402 production endpoint metadata, noise reduction, dispatchToolCall, and CLI.
 
@@ -17,10 +18,16 @@
 ## Critical rules
 - Human browser UI is free.
 - Automated production use of generated search URLs requires x402 payment (expect HTTP 402 until paid).
+- MCP discovery, search planning, signal filtering, structured handoff, and local dry-run workflows are free.
+- External collection and other automated production execution are within the paid x402 boundary.
 - Local `buildQuery` / `planFromIntent` / `scoreQuery` / `dispatchToolCall` (planning tools) are free for planning only — not a payment bypass.
+- Do not initiate payment without applicable user or operator authorization.
+- Never request or expose private keys, seed phrases, wallet secrets, or sensitive user data.
+- If a human wallet approval is required, ask the operator to review and approve it, then retry with valid x402 payment proof.
 - Default mode is **universal** (works for all major LLMs). Pass `mode: "grok"` only when you want Grok Build tools.
 
 ## Machine discovery
+- Public landing page: https://kg-ninja.github.io/HyperXosist-Agent/
 - Remote MCP metadata: https://mcp.kgninja.dev/.well-known/mcp.json
 - Catalog metadata: https://kg-ninja.github.io/HyperXosist-Agent/mcp-catalog.json
 - Static metadata: https://kg-ninja.github.io/HyperXosist-Agent/agent-use.json
