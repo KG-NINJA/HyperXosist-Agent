@@ -1,124 +1,146 @@
 # HyperXosist-Agent
-> Agent-first toolkit and Remote MCP server for noise-reduced X search planning and Feedback-to-Fix engineering handoffs.
-> It generates structured plans and official X search URLs; it does not directly scrape X.
-> Supports GPT, Claude, Grok, Llama, local tool-callers, and shell CLI runtimes.
-> Optional Grok Build mode for one-small-change code prompts (default OFF).
-> v2.5.0: Remote Streamable HTTP MCP, x402 production endpoint metadata, noise reduction, dispatchToolCall, and CLI.
 
+> Convert noisy X/Twitter discussions into actionable engineering signals.
+> Discover customer pain points and product feedback, reduce low-signal noise, and generate implementation-ready handoffs for AI coding agents.
+> Designed for product research, noise-reduced social listening, market intelligence, and Feedback-to-Fix workflows.
+> Generates search plans, official X search URLs, filtering results, and structured handoffs; it does not directly scrape X.
 
-## Remote MCP (production)
-- Endpoint: https://mcp.kgninja.dev/mcp
-- Health: https://mcp.kgninja.dev/health
+## What it solves
+
+Product teams and coding agents need a reproducible path from public feedback discovery to implementation work. Raw X searches can contain complaints, feature requests, generic praise, engagement bait, giveaways, and other noise. HyperXosist-Agent structures the discovery process, extracts actionable signals from supplied feedback, and packages keep-only evidence for downstream engineering workflows.
+
+## Best for
+
+- Customer pain-point discovery and product-feedback discovery
+- Noise-reduced social listening and market research
+- UX friction, bug-report, feature-request, and product-improvement research
+- AI coding agent workflows that need implementation-ready handoffs
+- Human researchers using the browser and shell-based or tool-calling agents
+- GPT, Claude, Grok, Llama, OpenAI-compatible, Anthropic-compatible, and local runtimes
+
+## Input -> processing -> output
+
+Input may be a natural-language research intent, structured search fields, or feedback text supplied by a user or agent.
+
+Processing follows:
+
+Problem discovery -> search planning -> noise reduction -> signal extraction -> engineering handoff -> Feedback-to-Fix implementation.
+
+Output is structured JSON and, where supported, Markdown containing search plans, scores, official X search URLs, filtering decisions, keep-only signals, Signal-to-Fix inputs, and coding-agent prompts. The system does not claim to scrape X or automatically deploy code.
+
+## Outputs
+
+- Multi-angle search plans for complaints, bugs, feature requests, and product feedback
+- Official `x.com/search` URLs and validated query strings
+- Noise-reduction rules with Low / Medium / High presets and editable custom terms
+- Signal filtering results with keep, reduce, or discard decisions and reasons
+- Keep-only JSON exports for downstream agents
+- Structured Signal-to-Fix and handoff packages
+- Model-agnostic implementation prompts and optional Grok Build prompts
+- JSON and Markdown representations for tool-calling and human review
+
+## Remote MCP
+
+- Endpoint: `https://mcp.kgninja.dev/mcp`
+- Health: `https://mcp.kgninja.dev/health`
 - Transport: Streamable HTTP
-- Authentication: public-free for MCP tools; Bearer token remains available for managed access
-- Deployment status: deployed; verify /health before use
-- Free tools: hyperxosist_search_plan, hyperxosist_filter_signals, hyperxosist_build_handoff
-- Free: MCP initialize, tools/list, planning, filtering, handoff
-- Paid: production search URL usage, automated external collection, paid execution at https://api.kgninja.dev/hyperxosist-query
-## Critical rules
-- Human browser UI is free.
-- Automated production use of generated search URLs requires x402 payment (expect HTTP 402 until paid).
-- MCP discovery, search planning, signal filtering, structured handoff, and local dry-run workflows are free.
-- External collection and other automated production execution are within the paid x402 boundary.
-- Local `buildQuery` / `planFromIntent` / `scoreQuery` / `dispatchToolCall` (planning tools) are free for planning only — not a payment bypass.
-- Do not initiate payment without applicable user or operator authorization.
-- Never request or expose private keys, seed phrases, wallet secrets, or sensitive user data.
-- If a human wallet approval is required, ask the operator to review and approve it, then retry with valid x402 payment proof.
-- Default mode is **universal** (works for all major LLMs). Pass `mode: "grok"` only when you want Grok Build tools.
+- Free tools: `hyperxosist_search_plan`, `hyperxosist_filter_signals`, `hyperxosist_build_handoff`
+- Free MCP operations: `initialize`, `tools/list`, planning, filtering, and handoff
+
+Connect an MCP client to the endpoint, call `initialize`, call `tools/list`, then select the tool matching the current stage: search plan, signal filtering, or engineering handoff.
+
+## Free vs paid boundary
+
+Free:
+
+- Human browser UI and manual use of generated official X URLs
+- MCP discovery, planning, filtering, and handoff
+- Local planning, scoring, noise-rule inspection, and dry-run workflows
+
+Paid:
+
+- Automated production use of generated search URLs
+- Automated external collection
+- Paid execution at `POST https://api.kgninja.dev/hyperxosist-query`
+
+The paid endpoint returns HTTP 402 until valid x402 payment proof is supplied and returns HTTP 200 after successful execution. Current requirements are published at `https://api.kgninja.dev/payment-options.json`.
+
+The documented price is 0.01 USDC on Base (`eip155:8453`) when confirmed by the current payment metadata. Do not assume payment details from this file if `payment-options.json` differs.
+
+## Quickstart
+
+Remote MCP:
+
+```text
+Connect to https://mcp.kgninja.dev/mcp
+Call initialize
+Call tools/list
+Call hyperxosist_search_plan with a natural-language intent
+```
+
+Local CLI:
+
+```bash
+npx hyperxosist plan "Find product feedback about Acme for PR specs" --json
+npx hyperxosist keep --product Acme --feedback '["Users cannot complete onboarding"]' --export-keep-only --json
+npx hyperxosist handoff --product Acme --feedback '["Users cannot complete onboarding"]' --json
+```
+
+Local library:
+
+```js
+const HyperXosistAgent = require('./agent-api.js');
+const plan = HyperXosistAgent.planFromIntent('Find product feedback about Acme for PR specs');
+const filtered = HyperXosistAgent.filterKeepSignals(['Users cannot complete onboarding']);
+const handoff = HyperXosistAgent.buildHandoffPackage({ productName: 'Acme', feedback: filtered.texts });
+```
+
+## Tool calling and CLI
+
+Use `toOpenAITools()` or `toAnthropicTools()` to register local tool schemas, then route calls through `dispatchToolCall(name, args)` or `runTool`. Available local dispatch names include:
+
+- `hyperxosist_plan_from_intent`
+- `hyperxosist_build_query`
+- `hyperxosist_score_query`
+- `hyperxosist_filter_keep_signals`
+- `hyperxosist_export_keep_only`
+- `hyperxosist_build_handoff`
+- `hyperxosist_signal_to_fix_pipeline`
+- `hyperxosist_build_agent_prompt`
+
+## Detailed workflows
+
+The linked Signal-to-Fix workflow converts keep-only feedback into a structured downstream implementation handoff:
+
+```text
+plan -> score -> authorized x402 execution when needed -> official X search -> supplied feedback -> keep-only filter -> handoff -> Signal-to-Fix or coding agent
+```
+
+Use `buildSignalToFixPipeline`, `buildHandoffPackage`, `exportKeepOnlyJson`, and `buildAgentPrompt`. Optional Grok Build helpers are disabled by default and are for one-small-change prompts.
 
 ## Machine discovery
-- Public landing page: https://kg-ninja.github.io/HyperXosist-Agent/
-- Remote MCP metadata: https://mcp.kgninja.dev/.well-known/mcp.json
-- Catalog metadata: https://kg-ninja.github.io/HyperXosist-Agent/mcp-catalog.json
-- Static metadata: https://kg-ninja.github.io/HyperXosist-Agent/agent-use.json
 
-## Start here (any agent)
-1. https://kg-ninja.github.io/HyperXosist-Agent/agent-use.json
-2. https://kg-ninja.github.io/HyperXosist-Agent/AGENTS.md
-3. https://kg-ninja.github.io/HyperXosist-Agent/agent-tools.json
-4. https://kg-ninja.github.io/HyperXosist-Agent/agent-api.js
-5. https://kg-ninja.github.io/HyperXosist-Agent/missions.json
-6. https://kg-ninja.github.io/HyperXosist-Agent/x402-payment.json
-7. https://kg-ninja.github.io/HyperXosist-Agent/signal-to-fix-pipeline.json  ← linked Signal-to-Fix execution
+- Public demo: `https://kg-ninja.github.io/HyperXosist-Agent/`
+- Repository: `https://github.com/KG-NINJA/HyperXosist-Agent`
+- Remote MCP metadata: `https://mcp.kgninja.dev/.well-known/mcp.json`
+- MCP catalog: `https://kg-ninja.github.io/HyperXosist-Agent/mcp-catalog.json`
+- Agent instructions: `https://kg-ninja.github.io/HyperXosist-Agent/AGENTS.md`
+- Agent usage metadata: `https://kg-ninja.github.io/HyperXosist-Agent/agent-use.json`
+- Tool schemas: `https://kg-ninja.github.io/HyperXosist-Agent/agent-tools.json`
+- API library: `https://kg-ninja.github.io/HyperXosist-Agent/agent-api.js`
+- Payment metadata: `https://kg-ninja.github.io/HyperXosist-Agent/x402-payment.json`
+- Pipeline manifest: `https://kg-ninja.github.io/HyperXosist-Agent/signal-to-fix-pipeline.json`
+- Linked Signal-to-Fix metadata: `https://kg-ninja.github.io/Signal-to-Fix/agent-use.json`
 
-## Tool-calling (drop-in)
-```
-// OpenAI / Grok / Llama (openai tools shape)
-tools: HyperXosistAgent.toOpenAITools()
+## Safety and payment rules
 
-// Anthropic Messages API
-tools: HyperXosistAgent.toAnthropicTools()
+- Do not initiate payment without applicable user or operator authorization.
+- If a wallet requires human approval, ask the operator to review and approve it, then retry the same request with valid x402 proof.
+- Never request, expose, or log private keys, seed phrases, wallet secrets, or raw payment credentials.
+- Do not send sensitive user data or treat synthetic demo feedback as real user feedback.
+- GitHub Pages is not the payment verifier; payment verification and settlement remain on the external x402 Worker.
+- Planning tools are not a payment bypass for automated production use.
 
-// On tool call — works for OpenAI {function:{name,arguments}}, Anthropic {name,input}, or plain (name, args)
-HyperXosistAgent.dispatchToolCall(nameOrCall, args?)
-// alias: runTool(...)
-```
-Also: `agent-tools.json` (format openai.tools.v1) and `getToolDefinitions({ format: 'anthropic' })`.
+## Discovery terms
 
-## CLI (shell agents)
-```
-npx hyperxosist plan "Find product feedback about Acme" --json
-npx hyperxosist dispatch hyperxosist_plan_from_intent --args '{"intent":"Find feedback about Acme"}' --json
-npx hyperxosist tools --format openai|anthropic|full --json
-npx hyperxosist keep --product Acme --feedback '["…"]' --export-keep-only --json
-npx hyperxosist handoff --product Acme --feedback '["…"]' --json
-```
-
-## One-call bootstrap
-```
-HyperXosistAgent.startAgentSession({ intent: "Find product feedback about Acme for PR specs" })
-// mode defaults to "universal"
-```
-Optional Grok mode:
-```
-HyperXosistAgent.startAgentSession({ intent: "...", mode: "grok" })
-// or createGrokBuildSession(...)
-```
-
-## Sticky agent loop (universal)
-planFromIntent → scoreQuery → x402 pay + search → collect posts → suggestRefinements → filterKeepSignals / exportKeepOnlyJson → buildSignalToFixPipeline / buildHandoffPackage → Signal-to-Fix (keep-only) or any coding LLM → buildRunReceipt
-
-## Linked Signal-to-Fix (agents)
-```
-HyperXosistAgent.buildSignalToFixPipeline({ productName: "Acme", feedback: ["..."] })
-// humanManual = free browser steps for humans
-// agentAuto = ordered paid search → handoff → keep-only PR path
-// handoff.signalToFix.input → https://kg-ninja.github.io/Signal-to-Fix/
-```
-Keep-only machine export:
-```
-HyperXosistAgent.exportKeepOnlyJson(feedback, { productName: "Acme" })
-// → .texts, .signalToFixInput, .agentPrompt
-```
-Manifest: signal-to-fix-pipeline.json
-
-## Noise (transparent + editable)
-```
-exportNoiseCatalog()
-customizeNoiseRules({ low: ["term"], mode: "merge" })
-// per query:
-{ noise: { enabled: true, preset: "medium", extraTerms: ["my spam"], removed: [], customRules: { high: [...] } } }
-```
-
-## Optional Grok Build
-Only when mode is grok or you call Grok helpers explicitly:
-filterKeepSignals → buildGrokBuildPrompt → paste into Grok Build (one small code change).
-
-## Linked
-- Signal-to-Fix: https://kg-ninja.github.io/Signal-to-Fix/agent-use.json
-- Human UI: https://kg-ninja.github.io/HyperXosist-Agent/
-- Repo: https://github.com/KG-NINJA/HyperXosist-Agent
-
-## Tests
-node test/agent-api.test.js
-
-## Agent operator discovery terms
-- X/Twitter product-feedback discovery
-- customer complaints and pain-point detection
-- social listening query planning
-- noise-reduced signal filtering
-- AI-agent handoff generation
-- market research and product research agents
-
-## 30-second Remote MCP quickstart
-Connect a Streamable HTTP MCP client to https://mcp.kgninja.dev/mcp, call initialize and tools/list, then call hyperxosist_search_plan with a natural-language intent. Free tools plan, filter, and hand off; automated production X search execution uses the existing x402 endpoint at 0.01 USDC on Base.
+customer pain-point discovery; product-feedback discovery; X/Twitter search planning; noise-reduced social listening; actionable engineering signals; UX friction detection; bug-report discovery; feature-request discovery; keep-only feedback filtering; implementation-ready handoff; Signal-to-Fix; AI coding agent workflow; Remote MCP; x402 agent payments.
