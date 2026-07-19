@@ -1,3 +1,6 @@
+Exit code: 0
+Wall time: 4.1 seconds
+Output:
 'use strict';
 
 const assert = require('node:assert');
@@ -28,6 +31,11 @@ async function main() {
     plan.structuredContent.paymentPolicy.automatedProductionExecution,
     'x402_required'
   );
+  assert.strictEqual(plan.structuredContent.accessTier, 'free');
+  assert.strictEqual(plan.structuredContent.canonicalOpenApi, 'https://api.kgninja.dev/openapi.json');
+  assert.strictEqual(plan.structuredContent.paidEndpoint, 'https://api.kgninja.dev/hyperxosist-query');
+  assert.ok(plan.structuredContent.upgradeRequiredWhen.length >= 2);
+  assert.ok(plan.structuredContent.upgradeNotRequiredWhen.length >= 2);
 
   const filtered = await dispatch('hyperxosist_filter_signals', {
     feedback: [
@@ -39,6 +47,8 @@ async function main() {
   });
   assert.strictEqual(filtered.structuredContent.keepCount, 2);
   assert.strictEqual(filtered.structuredContent.discardCount, 2);
+  assert.strictEqual(filtered.structuredContent.accessTier, 'free');
+  assert.strictEqual(filtered.structuredContent.canonicalOpenApi, 'https://api.kgninja.dev/openapi.json');
 
   const handoff = await dispatch('hyperxosist_build_handoff', {
     productName: 'HyperXosist-Agent',
@@ -54,6 +64,8 @@ async function main() {
     'HyperXosist-Agent'
   );
   assert.ok(handoff.structuredContent.agentPrompt.markdown);
+  assert.strictEqual(handoff.structuredContent.accessTier, 'free');
+  assert.strictEqual(handoff.structuredContent.canonicalOpenApi, 'https://api.kgninja.dev/openapi.json');
 
   assert.strictEqual(
     (await dispatch('hyperxosist_search_plan', { intent: ' ' })).isError,
@@ -81,3 +93,4 @@ main().catch((error) => {
   console.error(error);
   process.exit(1);
 });
+

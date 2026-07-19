@@ -1,3 +1,6 @@
+Exit code: 0
+Wall time: 3.3 seconds
+Output:
 {
   "name": "HyperXosist → Signal-to-Fix Linked Pipeline",
   "version": "2.5.0",
@@ -83,5 +86,34 @@
     "Human path stays free and explicit",
     "Agents get ordered steps + payment endpoint without inventing operators",
     "Keep-only handoff prevents spam from becoming code"
-  ]
+  ],
+  "sourceOfTruth": "openapi",
+  "canonicalOpenApi": "https://api.kgninja.dev/openapi.json",
+  "paymentOptions": "https://api.kgninja.dev/payment-options.json",
+  "lastSynced": "2026-07-19",
+  "paymentEndpoint": "https://api.kgninja.dev/hyperxosist-query",
+  "freeToPaidFlow": {
+    "free": [
+      "MCP discovery, planning, filtering, and handoff",
+      "Local preview and dry-run requests",
+      "A human opening an official X search URL in a browser"
+    ],
+    "upgrade_required_when": [
+      "An agent automates production use of a generated search URL",
+      "An agent performs automated external collection or paid execution",
+      "A client requests a paid route result"
+    ],
+    "upgrade_not_required_when": [
+      "The client is only discovering tools or reading schemas",
+      "The client is using planning, filtering, handoff, preview, or dry-run features",
+      "A human manually opens the official X URL"
+    ],
+    "steps": [
+      "Read /openapi.json and /payment-options.json.",
+      "POST the paid operation without proof to receive HTTP 402 and PAYMENT-REQUIRED.",
+      "Obtain x402 payment proof through the client wallet/facilitator.",
+      "Retry the same POST with payment proof and expect HTTP 200."
+    ]
+  }
 }
+

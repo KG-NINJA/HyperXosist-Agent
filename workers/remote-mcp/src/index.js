@@ -1,3 +1,6 @@
+Exit code: 0
+Wall time: 3 seconds
+Output:
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
 import core from '../../../mcp/core.js';
 import {
@@ -122,6 +125,10 @@ export default {
         version: '2.5.0',
         endpoint: 'https://mcp.kgninja.dev/mcp',
         healthEndpoint: 'https://mcp.kgninja.dev/health',
+        canonicalOpenApi: 'https://api.kgninja.dev/openapi.json',
+        paymentOptions: 'https://api.kgninja.dev/payment-options.json',
+        sourceOfTruth: 'openapi',
+        lastSynced: '2026-07-19',
         transport: 'Streamable HTTP',
         authentication: 'public-free',
         freeTools: [
@@ -134,6 +141,17 @@ export default {
           endpoint: 'https://api.kgninja.dev/hyperxosist-query',
           price: '0.01 USDC',
           network: 'eip155:8453',
+        },
+        freeToPaidFlow: {
+          upgradeRequiredWhen: [
+            'Automated production use of a generated X search URL',
+            'Automated external collection or paid execution',
+          ],
+          upgradeNotRequiredWhen: [
+            'MCP discovery, planning, filtering, or handoff',
+            'Local preview or dry-run',
+            'A human manually opens the official X search URL',
+          ],
         },
       }), {
         headers: { 'Cache-Control': 'public, max-age=300', 'Content-Type': 'application/json; charset=utf-8', 'X-Content-Type-Options': 'nosniff' },
@@ -234,3 +252,4 @@ export default {
 };
 
 export { MAX_BODY_BYTES, readJson, requestOriginAllowed, splitCsv, tokenMatches, withRequestId };
+

@@ -1,7 +1,10 @@
+Exit code: 0
+Wall time: 4.2 seconds
+Output:
 'use strict';
 
 const HyperXosistAgent = require('../agent-api.js');
-const { PAYMENT_POLICY, TOOL_DEFINITIONS } = require('./tools.js');
+const { COMMERCE_GUIDANCE, PAYMENT_POLICY, TOOL_DEFINITIONS } = require('./tools.js');
 
 function errorResult(message) {
   return {
@@ -73,8 +76,13 @@ function createToolDispatcher(agent = HyperXosistAgent, options = {}) {
           queries,
           searchUrls,
           qualityScores,
-          estimatedCostUsd,
-          requiresPaymentForAutomatedProductionUse: true,
+           estimatedCostUsd,
+          accessTier: 'free',
+          canonicalOpenApi: COMMERCE_GUIDANCE.canonicalOpenApi,
+          paidEndpoint: String(steps[0]?.paidRequest?.endpoint || COMMERCE_GUIDANCE.paidEndpoint),
+          upgradeRequiredWhen: COMMERCE_GUIDANCE.upgradeRequiredWhen,
+          upgradeNotRequiredWhen: COMMERCE_GUIDANCE.upgradeNotRequiredWhen,
+           requiresPaymentForAutomatedProductionUse: true,
           paymentPolicy: PAYMENT_POLICY,
         });
       }
@@ -92,9 +100,11 @@ function createToolDispatcher(agent = HyperXosistAgent, options = {}) {
           keep,
           discard,
           summary: filtered.focusSummary || {},
-          keepCount: keep.length,
-          discardCount: discard.length,
-        });
+           keepCount: keep.length,
+           discardCount: discard.length,
+          accessTier: 'free',
+          canonicalOpenApi: COMMERCE_GUIDANCE.canonicalOpenApi,
+         });
       }
 
       if (name === 'hyperxosist_build_handoff') {
@@ -111,9 +121,11 @@ function createToolDispatcher(agent = HyperXosistAgent, options = {}) {
         return successResult({
           type: 'hyperxosist.handoff.v1',
           handoff,
-          signalToFixInput: (handoff.signalToFix && handoff.signalToFix.input) || {},
-          agentPrompt: handoff.agentPrompt || {},
-        });
+           signalToFixInput: (handoff.signalToFix && handoff.signalToFix.input) || {},
+           agentPrompt: handoff.agentPrompt || {},
+          accessTier: 'free',
+          canonicalOpenApi: COMMERCE_GUIDANCE.canonicalOpenApi,
+         });
       }
 
       return errorResult(`Unknown tool '${String(name)}'.`);
@@ -153,3 +165,4 @@ module.exports = {
   errorResult,
   successResult,
 };
+

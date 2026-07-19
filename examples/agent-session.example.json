@@ -1,3 +1,6 @@
+Exit code: 0
+Wall time: 3.6 seconds
+Output:
 {
   "_comment": "Example sticky agent session shape returned by startAgentSession / planFromIntent. Not a paid result.",
   "type": "hyperxosist.session.example",
@@ -55,5 +58,10 @@
       ]
     },
     "then": "https://kg-ninja.github.io/Signal-to-Fix/agent-use.json"
-  }
+  },
+  "sourceOfTruth": "openapi",
+  "canonicalOpenApi": "https://api.kgninja.dev/openapi.json",
+  "paymentOptions": "https://api.kgninja.dev/payment-options.json",
+  "lastSynced": "2026-07-19"
 }
+
