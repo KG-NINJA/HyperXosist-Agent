@@ -1,6 +1,3 @@
-Exit code: 0
-Wall time: 3 seconds
-Output:
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
 import core from '../../../mcp/core.js';
 import {

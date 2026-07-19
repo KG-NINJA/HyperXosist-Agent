@@ -1,6 +1,3 @@
-Exit code: 0
-Wall time: 3.7 seconds
-Output:
 import assert from 'node:assert/strict';
 import { webcrypto } from 'node:crypto';
 import test from 'node:test';

@@ -1,6 +1,3 @@
-Exit code: 0
-Wall time: 4.1 seconds
-Output:
 'use strict';
 
 const assert = require('node:assert');
