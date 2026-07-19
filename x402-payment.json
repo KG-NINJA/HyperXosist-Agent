@@ -3,6 +3,9 @@
   "x402Version": 2,
   "scheme": "exact",
   "service": "HyperXosist",
+  "sourceOfTruth": "openapi",
+  "canonicalOpenApi": "https://api.kgninja.dev/openapi.json",
+  "lastSynced": "2026-07-19",
   "apiVersion": "2.1.0",
   "usageType": "ai-agent-search-query-generation",
   "status": "payment-required-for-agent-use",
@@ -25,6 +28,29 @@
   "buyEndpoint": "https://api.kgninja.dev/buy",
   "pricingEndpoint": "https://api.kgninja.dev/pricing.json",
   "paymentOptionsEndpoint": "https://api.kgninja.dev/payment-options.json",
+  "freeToPaidFlow": {
+    "free": [
+      "MCP discovery, planning, filtering, and handoff",
+      "Local preview and dry-run requests",
+      "A human opening an official X search URL in a browser"
+    ],
+    "upgrade_required_when": [
+      "An agent automates production use of a generated search URL",
+      "An agent performs automated external collection or paid execution",
+      "A client requests a paid route result"
+    ],
+    "upgrade_not_required_when": [
+      "The client is only discovering tools or reading schemas",
+      "The client is using planning, filtering, handoff, preview, or dry-run features",
+      "A human manually opens the official X URL"
+    ],
+    "steps": [
+      "Read /openapi.json and /payment-options.json.",
+      "POST the paid operation without proof to receive HTTP 402 and PAYMENT-REQUIRED.",
+      "Obtain x402 payment proof through the client wallet/facilitator.",
+      "Retry the same POST with payment proof and expect HTTP 200."
+    ]
+  },
   "discoveryEndpoint": "https://api.kgninja.dev/agent.json",
   "x402DiscoveryResourcesEndpoint": "https://api.kgninja.dev/.well-known/x402/discovery/resources",
   "paidResource": "agent-use.json + agent-api.js",
@@ -51,5 +77,7 @@
     "staticSiteCannotVerifyPayment": true,
     "dedicatedHyperXosistPaidRoute": true,
     "note": "GitHub Pages is static, but AI agents can discover and pay the existing x402 Worker directly through paymentEndpoint."
-  }
+  },
+  "paymentOptions": "https://api.kgninja.dev/payment-options.json"
 }
+

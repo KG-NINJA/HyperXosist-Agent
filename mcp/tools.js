@@ -7,6 +7,20 @@ const PAYMENT_POLICY = Object.freeze({
   estimatedCostUsd: 0.01,
 });
 
+const COMMERCE_GUIDANCE = Object.freeze({
+  canonicalOpenApi: 'https://api.kgninja.dev/openapi.json',
+  paidEndpoint: 'https://api.kgninja.dev/hyperxosist-query',
+  upgradeRequiredWhen: Object.freeze([
+    'Automated production use of a generated X search URL',
+    'Automated external collection or paid execution',
+  ]),
+  upgradeNotRequiredWhen: Object.freeze([
+    'MCP discovery, planning, filtering, or handoff',
+    'Local preview or dry-run',
+    'A human manually opens the official X search URL',
+  ]),
+});
+
 const SEARCH_PLAN_OUTPUT_SCHEMA = {
   type: 'object',
   properties: {
@@ -19,6 +33,11 @@ const SEARCH_PLAN_OUTPUT_SCHEMA = {
     estimatedCostUsd: { type: 'number' },
     requiresPaymentForAutomatedProductionUse: { type: 'boolean' },
     paymentPolicy: { type: 'object' },
+    accessTier: { const: 'free' },
+    canonicalOpenApi: { type: 'string', format: 'uri' },
+    paidEndpoint: { type: 'string', format: 'uri' },
+    upgradeRequiredWhen: { type: 'array', items: { type: 'string' } },
+    upgradeNotRequiredWhen: { type: 'array', items: { type: 'string' } },
   },
   required: [
     'type',
@@ -30,6 +49,11 @@ const SEARCH_PLAN_OUTPUT_SCHEMA = {
     'estimatedCostUsd',
     'requiresPaymentForAutomatedProductionUse',
     'paymentPolicy',
+    'accessTier',
+    'canonicalOpenApi',
+    'paidEndpoint',
+    'upgradeRequiredWhen',
+    'upgradeNotRequiredWhen',
   ],
 };
 
@@ -42,8 +66,10 @@ const FILTER_OUTPUT_SCHEMA = {
     summary: { type: 'object' },
     keepCount: { type: 'integer' },
     discardCount: { type: 'integer' },
+    accessTier: { const: 'free' },
+    canonicalOpenApi: { type: 'string', format: 'uri' },
   },
-  required: ['type', 'keep', 'discard', 'summary', 'keepCount', 'discardCount'],
+  required: ['type', 'keep', 'discard', 'summary', 'keepCount', 'discardCount', 'accessTier', 'canonicalOpenApi'],
 };
 
 const HANDOFF_OUTPUT_SCHEMA = {
@@ -53,8 +79,10 @@ const HANDOFF_OUTPUT_SCHEMA = {
     handoff: { type: 'object' },
     signalToFixInput: { type: 'object' },
     agentPrompt: { type: 'object' },
+    accessTier: { const: 'free' },
+    canonicalOpenApi: { type: 'string', format: 'uri' },
   },
-  required: ['type', 'handoff', 'signalToFixInput', 'agentPrompt'],
+  required: ['type', 'handoff', 'signalToFixInput', 'agentPrompt', 'accessTier', 'canonicalOpenApi'],
 };
 
 const READ_ONLY_ANNOTATIONS = {
@@ -130,8 +158,10 @@ const TOOL_DEFINITIONS = [
 
 module.exports = {
   PAYMENT_POLICY,
+  COMMERCE_GUIDANCE,
   TOOL_DEFINITIONS,
   SEARCH_PLAN_OUTPUT_SCHEMA,
   FILTER_OUTPUT_SCHEMA,
   HANDOFF_OUTPUT_SCHEMA,
 };
+

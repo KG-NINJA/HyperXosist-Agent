@@ -443,5 +443,53 @@
     "hyperxosist_list_missions": "dispatchToolCall → listMissions()",
     "hyperxosist_start_session": "dispatchToolCall → startAgentSession(options)"
   },
-  "optionalGrokTools": "Call getToolDefinitions({ includeGrok: true }) or getToolDefinitions({ mode: \"grok\" }) to enable."
+  "optionalGrokTools": "Call getToolDefinitions({ includeGrok: true }) or getToolDefinitions({ mode: \"grok\" }) to enable.",
+  "sourceOfTruth": "openapi",
+  "canonicalOpenApi": "https://api.kgninja.dev/openapi.json",
+  "paymentOptions": "https://api.kgninja.dev/payment-options.json",
+  "lastSynced": "2026-07-19",
+  "paidEndpoint": "https://api.kgninja.dev/hyperxosist-query",
+  "paidOperations": [
+    {
+      "endpoint": "/fix-error",
+      "method": "POST",
+      "price": "$0.01",
+      "network": "eip155:8453",
+      "expectedUnpaidStatus": 402,
+      "expectedPaidStatus": 200
+    },
+    {
+      "endpoint": "/summarize-url",
+      "method": "POST",
+      "price": "$0.01",
+      "network": "eip155:8453",
+      "expectedUnpaidStatus": 402,
+      "expectedPaidStatus": 200
+    },
+    {
+      "endpoint": "/shell-risk-check",
+      "method": "POST",
+      "price": "$0.01",
+      "network": "eip155:8453",
+      "expectedUnpaidStatus": 402,
+      "expectedPaidStatus": 200
+    },
+    {
+      "endpoint": "/agent-visibility-report",
+      "method": "POST",
+      "price": "$0.01",
+      "network": "eip155:8453",
+      "expectedUnpaidStatus": 402,
+      "expectedPaidStatus": 200
+    },
+    {
+      "endpoint": "/hyperxosist-query",
+      "method": "POST",
+      "price": "$0.01",
+      "network": "eip155:8453",
+      "expectedUnpaidStatus": 402,
+      "expectedPaidStatus": 200
+    }
+  ]
 }
+

@@ -3,9 +3,17 @@
   "version": "2.5.0",
   "description": "Universal agent-first X search mission engine for GPT/Claude/Grok/Llama: noise-reduced operators, multi-angle campaigns, score-before-pay, dual JSON+Markdown outputs, x402 execution, Signal-to-Fix handoff, real tool dispatch, Anthropic/OpenAI schema adapters, shell CLI. Optional Grok Build mode (default off).",
   "requiresPaymentForAgentUse": true,
+  "sourceOfTruth": "openapi",
+  "canonicalOpenApi": "https://api.kgninja.dev/openapi.json",
+  "paymentOptions": "https://api.kgninja.dev/payment-options.json",
+  "lastSynced": "2026-07-19",
   "remoteMcp": {
     "endpoint": "https://mcp.kgninja.dev/mcp",
     "healthEndpoint": "https://mcp.kgninja.dev/health",
+    "canonicalOpenApi": "https://api.kgninja.dev/openapi.json",
+    "paymentOptions": "https://api.kgninja.dev/payment-options.json",
+    "sourceOfTruth": "openapi",
+    "lastSynced": "2026-07-19",
     "transport": "Streamable HTTP",
     "authentication": "public-free",
     "deploymentStatus": "deployed; verify healthEndpoint before use",
@@ -25,7 +33,39 @@
       "production search URL usage",
       "automated external collection",
       "paid execution endpoint"
-    ]
+    ],
+    "upgradeRequiredWhen": [
+      "Automated production use of a generated X search URL",
+      "Automated external collection or paid execution"
+    ],
+    "upgradeNotRequiredWhen": [
+      "MCP discovery, planning, filtering, or handoff",
+      "Local preview or dry-run",
+      "A human manually opens the official X search URL"
+    ],
+    "freeToPaidFlow": {
+      "free": [
+        "MCP discovery, planning, filtering, and handoff",
+        "Local preview and dry-run requests",
+        "A human opening an official X search URL in a browser"
+      ],
+      "upgrade_required_when": [
+        "An agent automates production use of a generated search URL",
+        "An agent performs automated external collection or paid execution",
+        "A client requests a paid route result"
+      ],
+      "upgrade_not_required_when": [
+        "The client is only discovering tools or reading schemas",
+        "The client is using planning, filtering, handoff, preview, or dry-run features",
+        "A human manually opens the official X URL"
+      ],
+      "steps": [
+        "Read /openapi.json and /payment-options.json.",
+        "POST the paid operation without proof to receive HTTP 402 and PAYMENT-REQUIRED.",
+        "Obtain x402 payment proof through the client wallet/facilitator.",
+        "Retry the same POST with payment proof and expect HTTP 200."
+      ]
+    }
   },
   "whyAgentsKeepUsingThis": [
     "dispatchToolCall(name, args) — real multi-runtime tool dispatch (OpenAI / Anthropic / Grok call shapes). No hand-written mapping.",
@@ -97,6 +137,8 @@
     "budgetTip": "Run scoreQuery first; skip poor bands; use missions instead of 10 ad-hoc guesses."
   },
   "payment": {
+    "sourceOfTruth": "openapi",
+    "canonicalOpenApi": "https://api.kgninja.dev/openapi.json",
     "scheme": "x402",
     "manifest": "x402-payment.json",
     "endpoint": "https://api.kgninja.dev/hyperxosist-query",
@@ -394,3 +436,4 @@
     "pipelineManifest": "https://kg-ninja.github.io/HyperXosist-Agent/signal-to-fix-pipeline.json"
   }
 }
+

@@ -55,5 +55,10 @@
       ]
     },
     "then": "https://kg-ninja.github.io/Signal-to-Fix/agent-use.json"
-  }
+  },
+  "sourceOfTruth": "openapi",
+  "canonicalOpenApi": "https://api.kgninja.dev/openapi.json",
+  "paymentOptions": "https://api.kgninja.dev/payment-options.json",
+  "lastSynced": "2026-07-19"
 }
+

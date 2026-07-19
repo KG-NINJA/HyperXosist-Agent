@@ -29,6 +29,9 @@ test('Cloudflare Worker serves the shared X search-plan tool', async () => {
   assert.equal(body.result.structuredContent.type, 'hyperxosist.search_plan.v1');
   assert.ok(body.result.structuredContent.searchUrls.every((url) => url.startsWith('https://x.com/search')));
   assert.ok(body.result.structuredContent.mission.steps.every((step) => step.paidRequest.endpoint === 'https://api.kgninja.dev/hyperxosist-query'));
+  assert.equal(body.result.structuredContent.accessTier, 'free');
+  assert.equal(body.result.structuredContent.canonicalOpenApi, 'https://api.kgninja.dev/openapi.json');
+  assert.equal(body.result.structuredContent.paidEndpoint, 'https://api.kgninja.dev/hyperxosist-query');
   assert.doesNotMatch(JSON.stringify(body.result.structuredContent), /workers\.dev|mainnet-staging/);
 });
 
@@ -70,3 +73,4 @@ test('KV quota blocks a user after the configured daily limit', async () => {
   assert.equal((await consumeQuota({ MCP_USAGE_KV: kv }, user, new Date('2026-07-12T00:00:00Z'))).allowed, true);
   assert.equal((await consumeQuota({ MCP_USAGE_KV: kv }, user, new Date('2026-07-12T00:00:00Z'))).allowed, false);
 });
+
