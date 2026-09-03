@@ -38,3 +38,8 @@ This repository is not submitted to the ChatGPT app directory. This checklist pr
 - [ ] Monitoring and incident response are configured.
 - [ ] ChatGPT developer-mode tests pass against the public endpoint.
 - [ ] App submission details are reviewed manually before submission.
+
+
+## Paid execution
+
+Discovery, planning, filtering, and handoff remain free. `hyperxosist_execute` is the only paid production tool. It delegates verification and settlement to the existing x402 v2 endpoint. An unsigned call returns `PAYMENT-REQUIRED`; a confirmed retry supplies `PAYMENT-SIGNATURE`. Clients must never provide private keys or seed phrases.

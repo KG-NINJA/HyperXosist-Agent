@@ -268,10 +268,12 @@
   <h2 id="siteToolsTitle">ChatGPT Site Tools <span class="pill">WebMCP</span></h2>
   <p>
     ChatGPT Desktop の内蔵ブラウザでは、対応環境で HyperXosist の planning / filtering / handoff を
-    Site Tools として直接利用できます。初期3ツールはローカル・read-only・無料です。
+    Site Tools として直接利用できます。planning / filtering / handoff の3ツールはローカル・read-only・無料です。
   </p>
   <p>
-    Site Tools は X をスクレイピングせず、本番検索を自動実行せず、x402 決済も行いません。
+    第4ツール <code>hyperxosist_execute</code> だけが有料のproduction executionです。最初の呼び出しで
+    <code>PAYMENT-REQUIRED</code> を受け取り、対応ウォレットで承認後、<code>PAYMENT-SIGNATURE</code> と
+    <code>confirmPayment=true</code> を渡して再実行します。秘密鍵やシードフレーズは入力しません。
     WebMCP は提案中の Web API のため、<code>document.modelContext</code> 対応環境でのみ有効です。
   </p>
 </section>
@@ -284,11 +286,13 @@
             <dt>MCP endpoint</dt><dd><a href="https://mcp.kgninja.dev/mcp">https://mcp.kgninja.dev/mcp</a></dd>
             <dt>Health endpoint</dt><dd><a href="https://mcp.kgninja.dev/health">https://mcp.kgninja.dev/health</a></dd>
             <dt>Transport</dt><dd>Streamable HTTP</dd>
-            <dt>Authentication</dt><dd>Bearer token</dd>
+            <dt>Free MCP authentication</dt><dd>Public / none</dd>
+            <dt>Private/self-hosted mode</dt><dd>Optional Bearer token</dd>
             <dt>Deployment status</dt><dd id="remoteMcpStatus">Deployed; verify Health before use</dd>
           </dl>
           <p><strong>無料:</strong> <code>hyperxosist_search_plan</code> / <code>hyperxosist_filter_signals</code> / <code>hyperxosist_build_handoff</code>、initialize、tools/list、planning、filtering、handoff。</p>
-          <p><strong>有料:</strong> production search URL usage、automated external collection、<a href="https://api.kgninja.dev/hyperxosist-query">paid execution endpoint</a>。</p>
+          <p><strong>有料:</strong> <code>hyperxosist_execute</code>（x402 v2 / 0.01 USDC / Base）。production search URL usage、automated external collection、<a href="https://api.kgninja.dev/hyperxosist-query">paid execution endpoint</a>。</p>
+          <p>機械可読な境界: <a href="access-policy.json"><code>access-policy.json</code></a></p>
         </section>
         <!-- Signal-to-Fix linked pipeline (human manual + agent auto) -->
         <section class="s2f-pipeline-section" aria-labelledby="s2fPipelineTitle">
@@ -445,7 +449,7 @@
 
     <footer>
       <p>
-        © 2026 HyperXosist Agent v<span id="footerVersion">2.5.0</span> · MIT · Not affiliated with X Corp. ·
+        © 2026 HyperXosist Agent v<span id="footerVersion">2.6.0</span> · MIT · Not affiliated with X Corp. ·
         <a href="https://github.com/KG-NINJA/HyperXosist-Agent">GitHub</a> ·
         <a href="llms.txt">llms.txt</a> ·
         <a href="AGENTS.md">AGENTS.md</a> ·
@@ -458,6 +462,7 @@
 
   <script src="payment-endpoints.js"></script>
   <script src="agent-api.js"></script>
+  <script src="paid-execution.js"></script>
   <script src="webmcp.js"></script>
   <script src="app.js"></script>
 </body>

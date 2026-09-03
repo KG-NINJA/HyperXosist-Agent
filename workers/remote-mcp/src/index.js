@@ -103,6 +103,7 @@ export default {
     const url = new URL(request.url);
     const requestId = createRequestId();
     const startedAt = Date.now();
+    const publicFreeAccess = String(env.HYPERXOSIST_MCP_PUBLIC_FREE_ACCESS || '').toLowerCase() === 'true';
     const observe = (event, status, identity, operation, errorCode) => emitMcpObservation(ctx, env, {
       event,
       requestId,
@@ -119,7 +120,7 @@ export default {
       const response = new Response(JSON.stringify({
         name: 'HyperXosist-Agent Remote MCP',
         description: 'X/Twitter product-feedback discovery, noise-reduced search query planning, customer pain-point detection, signal filtering, and AI-agent handoff generation.',
-        version: '2.5.0',
+        version: '2.6.0',
         endpoint: 'https://mcp.kgninja.dev/mcp',
         healthEndpoint: 'https://mcp.kgninja.dev/health',
         canonicalOpenApi: 'https://api.kgninja.dev/openapi.json',
@@ -127,17 +128,28 @@ export default {
         sourceOfTruth: 'openapi',
         lastSynced: '2026-07-19',
         transport: 'Streamable HTTP',
-        authentication: 'public-free',
+        authentication: publicFreeAccess ? 'none' : 'bearer',
+        accessMode: publicFreeAccess ? 'public-free' : 'private-authenticated',
+        authenticationRequired: !publicFreeAccess,
+        publicFreeAccess,
+        privateOrSelfHostedAuthentication: 'bearer',
         freeTools: [
           'hyperxosist_search_plan',
           'hyperxosist_filter_signals',
           'hyperxosist_build_handoff',
         ],
+        paidTools: ['hyperxosist_execute'],
         paidExecution: {
+          tool: 'hyperxosist_execute',
           protocol: 'x402',
+          x402Version: 2,
           endpoint: 'https://api.kgninja.dev/hyperxosist-query',
           price: '0.01 USDC',
           network: 'eip155:8453',
+          paymentRequiredHeader: 'PAYMENT-REQUIRED',
+          paymentSignatureHeader: 'PAYMENT-SIGNATURE',
+          paymentResponseHeader: 'PAYMENT-RESPONSE',
+          confirmPaymentRequired: true,
         },
         freeToPaidFlow: {
           upgradeRequiredWhen: [
@@ -165,7 +177,9 @@ export default {
         usageTelemetry: true,
         errorMonitoring: true,
         paymentAnalytics: "external-x402-worker",
-        publicFreeAccess: String(env.HYPERXOSIST_MCP_PUBLIC_FREE_ACCESS || "").toLowerCase() === "true",
+        publicFreeAccess,
+        freeToolCount: 3,
+        paidTools: ['hyperxosist_execute'],
       }), {
         headers: { 'Cache-Control': 'no-store', 'Content-Type': 'application/json; charset=utf-8', 'X-Content-Type-Options': 'nosniff' },
       });
@@ -187,7 +201,6 @@ export default {
       headers.set('Allow', 'POST, OPTIONS');
       return withRequestId(jsonError(405, -32000, 'Method not allowed.', null, Object.fromEntries(headers)), requestId);
     }
-    const publicFreeAccess = String(env.HYPERXOSIST_MCP_PUBLIC_FREE_ACCESS || "").toLowerCase() === "true";
     if (!publicFreeAccess && !env.HYPERXOSIST_MCP_TOKEN && !env.HYPERXOSIST_MCP_TOKEN_USERS) {
       observe('mcp_configuration_error', 503, null, 'auth', 'service_not_configured');
       return withRequestId(jsonError(503, -32603, 'Service not configured.'), requestId);

@@ -258,6 +258,18 @@ Do not treat GitHub Pages as the payment verifier.
 
 ---
 
+
+### Free-to-paid Site Tool boundary
+
+The three discovery/analysis tools remain free and read-only:
+
+- `hyperxosist_search_plan`
+- `hyperxosist_filter_signals`
+- `hyperxosist_build_handoff`
+
+`hyperxosist_execute` is the only paid Site Tool. It calls the existing x402 v2 production endpoint. An unsigned call returns `PAYMENT-REQUIRED`; a compatible client authorizes payment and retries with `PAYMENT-SIGNATURE` plus `confirmPayment: true`. The site never requests or stores private keys, seed phrases, or wallet passwords. See [`access-policy.json`](access-policy.json).
+
+
 ## Missions agents re-run
 
 | ID | Purpose |

@@ -15,6 +15,26 @@ test('Cloudflare Worker rejects unauthenticated and disallowed requests', async 
   assert.equal((await worker.fetch(request('/mcp', { method: 'POST', headers: { Authorization: 'Bearer test-token', Origin: 'https://untrusted.example.com' } }), env)).status, 403);
   assert.equal((await worker.fetch(request('/mcp', { method: 'POST', headers: { Authorization: 'Bearer test-token' } }), { ...env, HYPERXOSIST_MCP_TOKEN: '' })).status, 503);
 });
+test('Cloudflare Worker advertises free tools and the x402 paid execution tool', async () => {
+  const response = await worker.fetch(
+    request('/.well-known/mcp.json', { method: 'GET' }),
+    { ...env, HYPERXOSIST_MCP_PUBLIC_FREE_ACCESS: 'true' }
+  );
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.authentication, 'none');
+  assert.equal(body.authenticationRequired, false);
+  assert.equal(body.publicFreeAccess, true);
+  assert.deepEqual(body.freeTools, [
+    'hyperxosist_search_plan',
+    'hyperxosist_filter_signals',
+    'hyperxosist_build_handoff',
+  ]);
+  assert.deepEqual(body.paidTools, ['hyperxosist_execute']);
+  assert.equal(body.paidExecution.tool, 'hyperxosist_execute');
+  assert.equal(body.paidExecution.paymentSignatureHeader, 'PAYMENT-SIGNATURE');
+});
+
 test('Cloudflare Worker handles a stateless MCP initialize request', async () => {
   const response = await worker.fetch(request('/mcp', { method: 'POST', headers: { Authorization: 'Bearer test-token', Accept: 'application/json, text/event-stream', 'Content-Type': 'application/json', Origin: 'https://app.example.com' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'test', version: '1.0.0' } } }) }), env);
   assert.equal(response.status, 200); assert.equal(response.headers.get('access-control-allow-origin'), 'https://app.example.com'); assert.equal(response.headers.get('cache-control'), 'no-store');

@@ -1,0 +1,88 @@
+{
+  "schemaVersion": "1.0",
+  "name": "HyperXosist Access Policy",
+  "version": "2.6.0",
+  "policy": "free-discovery-and-analysis-paid-production-execution",
+  "requiresPaymentForAgentUse": false,
+  "requiresPaymentForProductionExecution": true,
+  "sourceOfTruth": {
+    "payment": "https://api.kgninja.dev/payment-options.json",
+    "openapi": "https://api.kgninja.dev/openapi.json",
+    "repository": "https://github.com/KG-NINJA/HyperXosist-Agent"
+  },
+  "surfaces": {
+    "humanUi": {
+      "authentication": "none",
+      "paymentRequired": false,
+      "capabilities": [
+        "manual X search launch",
+        "local preview",
+        "manual signal collection"
+      ]
+    },
+    "webMcp": {
+      "transport": "document.modelContext",
+      "authentication": "none",
+      "freeTools": [
+        "hyperxosist_search_plan",
+        "hyperxosist_filter_signals",
+        "hyperxosist_build_handoff"
+      ],
+      "paidTools": [
+        "hyperxosist_execute"
+      ],
+      "paidExecution": {
+        "protocol": "x402",
+        "endpoint": "https://api.kgninja.dev/hyperxosist-query",
+        "price": {
+          "amount": "0.01",
+          "asset": "USDC",
+          "network": "eip155:8453"
+        },
+        "firstCall": "Returns HTTP 402 requirements through the Site Tool result.",
+        "retry": "Supply PAYMENT-SIGNATURE and set confirmPayment=true."
+      }
+    },
+    "remoteMcp": {
+      "endpoint": "https://mcp.kgninja.dev/mcp",
+      "authentication": "none for public free mode; bearer only for private/self-hosted mode",
+      "freeTools": [
+        "hyperxosist_search_plan",
+        "hyperxosist_filter_signals",
+        "hyperxosist_build_handoff"
+      ],
+      "paidTools": [
+        "hyperxosist_execute"
+      ],
+      "paymentVerifier": "https://api.kgninja.dev/hyperxosist-query"
+    }
+  },
+  "x402": {
+    "version": 2,
+    "scheme": "exact",
+    "paymentRequiredHeader": "PAYMENT-REQUIRED",
+    "paymentSignatureHeader": "PAYMENT-SIGNATURE",
+    "paymentResponseHeader": "PAYMENT-RESPONSE",
+    "expectedUnpaidStatus": 402,
+    "expectedPaidStatus": 200,
+    "paymentOptions": "https://api.kgninja.dev/payment-options.json"
+  },
+  "safety": {
+    "explicitConfirmationRequired": true,
+    "confirmationField": "confirmPayment",
+    "neverAccepted": [
+      "private keys",
+      "seed phrases",
+      "wallet passwords"
+    ],
+    "endpointAllowlist": [
+      "https://api.kgninja.dev/hyperxosist-query",
+      "https://kg-ninja-x402-revenue-gate-mainnet-staging.fuwafuwow.workers.dev/hyperxosist-query"
+    ],
+    "notes": [
+      "The static site does not verify or settle payments.",
+      "The existing x402 Worker remains the only payment verifier and settlement boundary.",
+      "A PAYMENT-SIGNATURE is opaque authorization data and must not be logged or echoed."
+    ]
+  }
+}

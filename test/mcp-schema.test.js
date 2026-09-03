@@ -5,15 +5,23 @@ const { TOOL_DEFINITIONS } = require('../mcp/tools.js');
 const { createToolDispatcher } = require('../mcp/core.js');
 
 async function main() {
-  assert.strictEqual(TOOL_DEFINITIONS.length, 3);
+  assert.strictEqual(TOOL_DEFINITIONS.length, 4);
   for (const tool of TOOL_DEFINITIONS) {
     assert.strictEqual(tool.inputSchema.type, 'object');
     assert.strictEqual(tool.inputSchema.additionalProperties, false);
     assert.strictEqual(tool.outputSchema.type, 'object');
     assert.ok(Array.isArray(tool.outputSchema.required));
-    assert.strictEqual(tool.annotations.readOnlyHint, true);
-    assert.strictEqual(tool.annotations.destructiveHint, false);
+    assert.strictEqual(typeof tool.annotations.readOnlyHint, 'boolean');
+    assert.strictEqual(typeof tool.annotations.destructiveHint, 'boolean');
   }
+
+  const free = TOOL_DEFINITIONS.filter((tool) => tool.name !== 'hyperxosist_execute');
+  assert.ok(free.every((tool) => tool.annotations.readOnlyHint === true));
+  const paid = TOOL_DEFINITIONS.find((tool) => tool.name === 'hyperxosist_execute');
+  assert.strictEqual(paid.annotations.readOnlyHint, false);
+  assert.strictEqual(paid.annotations.destructiveHint, true);
+  assert.strictEqual(paid.inputSchema.properties.confirmPayment.type, 'boolean');
+  assert.strictEqual(paid.outputSchema.properties.type.const, 'hyperxosist.x402_execution.v1');
 
   const dispatch = createToolDispatcher();
   const cases = [

@@ -1,8 +1,8 @@
 {
   "name": "HyperXosist Agent Use",
-  "version": "2.5.0",
+  "version": "2.6.0",
   "description": "Universal agent-first X search mission engine for GPT/Claude/Grok/Llama: noise-reduced operators, multi-angle campaigns, score-before-pay, dual JSON+Markdown outputs, x402 execution, Signal-to-Fix handoff, real tool dispatch, Anthropic/OpenAI schema adapters, shell CLI. Optional Grok Build mode (default off).",
-  "requiresPaymentForAgentUse": true,
+  "requiresPaymentForAgentUse": false,
   "sourceOfTruth": "openapi",
   "canonicalOpenApi": "https://api.kgninja.dev/openapi.json",
   "paymentOptions": "https://api.kgninja.dev/payment-options.json",
@@ -15,7 +15,7 @@
     "sourceOfTruth": "openapi",
     "lastSynced": "2026-07-19",
     "transport": "Streamable HTTP",
-    "authentication": "public-free",
+    "authentication": "none",
     "deploymentStatus": "deployed; verify healthEndpoint before use",
     "freeTools": [
       "hyperxosist_search_plan",
@@ -65,7 +65,16 @@
         "Obtain x402 payment proof through the client wallet/facilitator.",
         "Retry the same POST with payment proof and expect HTTP 200."
       ]
-    }
+    },
+    "accessMode": "public-free",
+    "authenticationRequired": false,
+    "publicFreeAccess": true,
+    "privateOrSelfHostedAuthentication": "bearer",
+    "paymentRequiredForFreeOperations": false,
+    "paidTools": [
+      "hyperxosist_execute"
+    ],
+    "accessPolicy": "https://kg-ninja.github.io/HyperXosist-Agent/access-policy.json"
   },
   "whyAgentsKeepUsingThis": [
     "dispatchToolCall(name, args) — real multi-runtime tool dispatch (OpenAI / Anthropic / Grok call shapes). No hand-written mapping.",
@@ -126,7 +135,8 @@
     "playbook": "AGENTS.md",
     "llms": "llms.txt",
     "signalToFixPipeline": "HyperXosistAgent.buildSignalToFixPipeline({ productName: 'Acme', feedback: ['...'] })",
-    "pipelineManifest": "signal-to-fix-pipeline.json"
+    "pipelineManifest": "signal-to-fix-pipeline.json",
+    "paidSiteTool": "Call hyperxosist_execute({ input }) to receive PAYMENT-REQUIRED; retry with paymentSignature and confirmPayment=true."
   },
   "costModel": {
     "currency": "USD",
@@ -159,17 +169,24 @@
     "missions": "missions.json",
     "linkedSignalToFix": "https://kg-ninja.github.io/Signal-to-Fix/agent-use.json",
     "testSuite": "test/agent-api.test.js",
-    "signalToFixPipeline": "signal-to-fix-pipeline.json"
+    "signalToFixPipeline": "signal-to-fix-pipeline.json",
+    "paidExecutionScript": "paid-execution.js",
+    "siteToolsAdapter": "webmcp.js",
+    "accessPolicy": "access-policy.json"
   },
   "agentUsePolicy": {
     "humanBrowserUse": "free",
-    "aiAgentUse": "paid-via-existing-x402-worker",
+    "aiAgentUse": "free for discovery, planning, filtering, and handoff; x402 for production execution",
     "mustNotBypassPayment": true,
     "paymentVerifier": "https://api.kgninja.dev/hyperxosist-query",
-    "localPlanningAllowed": true
+    "localPlanningAllowed": true,
+    "mustNotBypassPaymentScope": "automated-production-execution-only",
+    "publicRemoteMcpAuthentication": "none",
+    "requiresPaymentForAgentUse": false,
+    "requiresPaymentForProductionExecution": true
   },
   "apiSurface": {
-    "version": "2.5.0",
+    "version": "2.6.0",
     "methods": [
       "startAgentSession(options?)",
       "dispatchToolCall(nameOrCall, args?)",
@@ -250,7 +267,8 @@
     "validationError": "Read validateInput().errors; fix date order / reply filter conflicts.",
     "needPrSpecs": "buildHandoffPackage then follow Signal-to-Fix agent-use.json; keep-only only.",
     "needGrokBuild": "filterKeepSignals then buildGrokBuildPrompt; paste markdown into Grok Build for one small fix.",
-    "weakGrokSignals": "Lower minTechScore or harvest with grok_code_improvement_radar / higher technical language queries."
+    "weakGrokSignals": "Lower minTechScore or harvest with grok_code_improvement_radar / higher technical language queries.",
+    "paymentSignatureMissing": "Call hyperxosist_execute without a signature, authorize from PAYMENT-REQUIRED, then retry with confirmPayment=true."
   },
   "complementaryPositioning": {
     "hyperxosist": "Universal agent-facing search mission + x402 execution with scoring, dual JSON/Markdown, and self-heal.",
@@ -434,6 +452,28 @@
     "signalToFixAgentUse": "https://kg-ninja.github.io/Signal-to-Fix/agent-use.json",
     "handoff": "Call buildSignalToFixPipeline or buildHandoffPackage after paid search; pass signalToFix.input to Signal-to-Fix. Downstream must use only decision === \"keep\". Humans: free browser steps in humanManual / UI section Signal-to-Fix 連携.",
     "pipelineManifest": "https://kg-ninja.github.io/HyperXosist-Agent/signal-to-fix-pipeline.json"
+  },
+  "requiresPaymentForProductionExecution": true,
+  "requiresAuthenticationForPublicRemoteMcp": false,
+  "accessPolicyManifest": "access-policy.json",
+  "siteTools": {
+    "transport": "WebMCP document.modelContext",
+    "authentication": "none",
+    "freeTools": [
+      "hyperxosist_search_plan",
+      "hyperxosist_filter_signals",
+      "hyperxosist_build_handoff"
+    ],
+    "paidTools": [
+      "hyperxosist_execute"
+    ],
+    "paidExecution": {
+      "protocol": "x402-v2",
+      "paymentRequiredHeader": "PAYMENT-REQUIRED",
+      "paymentSignatureHeader": "PAYMENT-SIGNATURE",
+      "paymentResponseHeader": "PAYMENT-RESPONSE",
+      "confirmPaymentRequired": true,
+      "privateKeysAccepted": false
+    }
   }
 }
-

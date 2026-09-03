@@ -32,6 +32,7 @@ async function main() {
       listed.tools.map((tool) => tool.name).sort(),
       [
         'hyperxosist_build_handoff',
+        'hyperxosist_execute',
         'hyperxosist_filter_signals',
         'hyperxosist_search_plan',
       ]

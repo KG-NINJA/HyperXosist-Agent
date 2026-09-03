@@ -144,3 +144,6 @@ Use `buildSignalToFixPipeline`, `buildHandoffPackage`, `exportKeepOnlyJson`, and
 ## Discovery terms
 
 customer pain-point discovery; product-feedback discovery; X/Twitter search planning; noise-reduced social listening; actionable engineering signals; UX friction detection; bug-report discovery; feature-request discovery; keep-only feedback filtering; implementation-ready handoff; Signal-to-Fix; AI coding agent workflow; Remote MCP; x402 agent payments.
+
+- Access policy: https://kg-ninja.github.io/HyperXosist-Agent/access-policy.json
+- WebMCP/MCP paid tool: hyperxosist_execute — x402 v2 production execution only; first call returns PAYMENT-REQUIRED, retry requires PAYMENT-SIGNATURE and confirmPayment=true.

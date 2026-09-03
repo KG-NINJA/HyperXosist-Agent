@@ -5,10 +5,10 @@
   "service": "HyperXosist",
   "sourceOfTruth": "openapi",
   "canonicalOpenApi": "https://api.kgninja.dev/openapi.json",
-  "lastSynced": "2026-07-19",
+  "lastSynced": "2026-09-03",
   "apiVersion": "2.1.0",
   "usageType": "ai-agent-search-query-generation",
-  "status": "payment-required-for-agent-use",
+  "status": "payment-required-for-production-execution",
   "enforcement": "external-x402-endpoint",
   "baseUrl": "https://api.kgninja.dev",
   "price": {
@@ -62,22 +62,28 @@
   "expectedPaidStatus": 200,
   "agentAutopayAvailable": true,
   "instructionsForAgents": [
-    "Read agent-use.json first.",
-    "Read this x402-payment.json before automated use.",
-    "Fetch paymentOptionsEndpoint for the current x402 requirements, including payTo, asset, network, and accepted payment headers.",
-    "POST the same input to paymentEndpoint. The existing x402 Worker returns 402 until payment is supplied.",
-    "After x402 payment, retry paymentEndpoint to receive the paid query and X search URL.",
-    "For PR-spec generation, hand candidate feedback to Signal-to-Fix at https://kg-ninja.github.io/Signal-to-Fix/.",
-    "For local browser-only preview, use HyperXosistAgent.buildQuery(input) or HyperXosistAgent.buildSearchUrl(input).",
-    "Prefer applyTemplate('signal_to_fix'|'product_feedback') before POST when gathering implementation feedback.",
-    "Use validateInput(input) and explainQuery(input) for local inspection; paid results still require x402 settlement.",
-    "Do not treat this static GitHub Pages site as the payment verifier; verification and settlement remain on the existing x402 Worker."
+    "Use free planning, filtering, and handoff tools without payment.",
+    "Call hyperxosist_execute without paymentSignature to receive PAYMENT-REQUIRED.",
+    "Authorize payment with a compatible x402 wallet or facilitator.",
+    "Retry hyperxosist_execute with the Base64 PAYMENT-SIGNATURE and confirmPayment=true.",
+    "Never provide private keys, seed phrases, wallet passwords, or arbitrary Authorization headers.",
+    "The existing x402 Worker remains the payment verifier and settlement boundary."
   ],
   "limits": {
     "staticSiteCannotVerifyPayment": true,
     "dedicatedHyperXosistPaidRoute": true,
     "note": "GitHub Pages is static, but AI agents can discover and pay the existing x402 Worker directly through paymentEndpoint."
   },
-  "paymentOptions": "https://api.kgninja.dev/payment-options.json"
+  "paymentOptions": "https://api.kgninja.dev/payment-options.json",
+  "requiresPaymentForAgentUse": false,
+  "requiresPaymentForProductionExecution": true,
+  "paidTools": [
+    "hyperxosist_execute"
+  ],
+  "headers": {
+    "paymentRequired": "PAYMENT-REQUIRED",
+    "paymentSignature": "PAYMENT-SIGNATURE",
+    "paymentResponse": "PAYMENT-RESPONSE"
+  },
+  "explicitConfirmationField": "confirmPayment"
 }
-

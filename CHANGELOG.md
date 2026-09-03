@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.6.0] - 2026-09-03
+
+### Added
+- `hyperxosist_execute` as the single x402-paid production tool for WebMCP and Remote MCP.
+- `paid-execution.js`, a shared 402 → PAYMENT-SIGNATURE → 200 bridge with explicit payment confirmation.
+- `access-policy.json` and machine-readable free/paid tool metadata.
+- Paid execution and WebMCP boundary tests.
+
+### Changed
+- Public Remote MCP authentication metadata now reports `none`; Bearer remains optional for private/self-hosted mode.
+- Agent use is free for discovery, planning, filtering, and handoff. Payment is required only for production execution.
+- Version bumped to 2.6.0.
+
+
 All notable changes to this project are documented in this file.
 
 ## [Unreleased]

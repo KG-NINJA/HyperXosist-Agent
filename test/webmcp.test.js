@@ -1,7 +1,4 @@
-/**
- * Zero-dependency tests for the browser-only WebMCP adapter.
- * Run: node test/webmcp.test.js
- */
+/** Zero-dependency tests for the browser-only WebMCP adapter. */
 'use strict';
 
 const assert = require('assert');
@@ -28,6 +25,7 @@ async function test(name, fn) {
 function makeHarness(options = {}) {
   const registered = [];
   const calls = [];
+  const paidCalls = [];
   const warnings = [];
   const errors = [];
   const dispatch =
@@ -35,6 +33,12 @@ function makeHarness(options = {}) {
     ((name, args) => {
       calls.push({ name, args });
       return { ok: true, result: { name, args, helper: () => 'not serializable output' } };
+    });
+  const paidExecute =
+    options.paidExecute ||
+    (async (input, executionOptions) => {
+      paidCalls.push({ input, options: executionOptions });
+      return { type: 'hyperxosist.x402_execution.v1', stage: 'payment_required', status: 402 };
     });
 
   const sandbox = {
@@ -58,6 +62,9 @@ function makeHarness(options = {}) {
           }
         },
     HyperXosistAgent: options.missingAgent ? undefined : { dispatchToolCall: dispatch },
+    HyperXosistPaidExecution: options.missingPaid
+      ? undefined
+      : { execute: paidExecute },
     AbortController,
     setTimeout,
     clearTimeout
@@ -66,7 +73,7 @@ function makeHarness(options = {}) {
   sandbox.globalThis = sandbox;
   vm.createContext(sandbox);
 
-  return { sandbox, registered, calls, warnings, errors };
+  return { sandbox, registered, calls, paidCalls, warnings, errors };
 }
 
 function load(harness) {
@@ -84,19 +91,32 @@ function byName(harness, name) {
     assert.strictEqual(h.registered.length, 0);
   });
 
-  await test('registers exactly three tools', async () => {
+  await test('registers three free tools and one paid execution tool', async () => {
     const h = makeHarness();
     load(h);
     assert.deepStrictEqual(
       h.registered.map((tool) => tool.name),
-      ['hyperxosist_search_plan', 'hyperxosist_filter_signals', 'hyperxosist_build_handoff']
+      [
+        'hyperxosist_search_plan',
+        'hyperxosist_filter_signals',
+        'hyperxosist_build_handoff',
+        'hyperxosist_execute'
+      ]
     );
   });
 
-  await test('all initial tools are read only', async () => {
+  await test('free tools are read-only and paid execution is consequential', async () => {
     const h = makeHarness();
     load(h);
-    h.registered.forEach((tool) => assert.strictEqual(tool.annotations.readOnlyHint, true));
+    h.registered.slice(0, 3).forEach((tool) => {
+      assert.strictEqual(tool.annotations.readOnlyHint, true);
+      assert.strictEqual(tool.annotations.destructiveHint, false);
+    });
+    const paid = byName(h, 'hyperxosist_execute');
+    assert.strictEqual(paid.annotations.readOnlyHint, false);
+    assert.strictEqual(paid.annotations.destructiveHint, true);
+    assert.strictEqual(paid.annotations.idempotentHint, false);
+    assert.strictEqual(paid.annotations.openWorldHint, true);
   });
 
   await test('search plan mapping', async () => {
@@ -126,13 +146,37 @@ function byName(harness, name) {
     assert.strictEqual(h.calls[0].name, 'hyperxosist_build_handoff');
   });
 
-  await test('does not expose paid execution', async () => {
+  await test('paid execution maps input, proof, confirmation, environment and AbortSignal', async () => {
+    const h = makeHarness();
+    load(h);
+    const controller = new AbortController();
+    await byName(h, 'hyperxosist_execute').execute(
+      {
+        input: { keywords: 'Acme' },
+        paymentSignature: 'c2lnbmVk',
+        confirmPayment: true,
+        paymentEnvironment: 'staging'
+      },
+      { signal: controller.signal }
+    );
+    assert.deepStrictEqual(h.paidCalls[0].input, { keywords: 'Acme' });
+    assert.strictEqual(h.paidCalls[0].options.paymentSignature, 'c2lnbmVk');
+    assert.strictEqual(h.paidCalls[0].options.confirmPayment, true);
+    assert.strictEqual(h.paidCalls[0].options.paymentEnvironment, 'staging');
+    assert.strictEqual(h.paidCalls[0].options.signal, controller.signal);
+  });
+
+  await test('does not expose internal payment construction or wallet-secret tools', async () => {
     const h = makeHarness();
     load(h);
     const names = h.registered.map((tool) => tool.name);
-    ['hyperxosist_build_paid_request', 'hyperxosist_paid_search', 'hyperxosist_execute_payment'].forEach(
-      (forbidden) => assert.ok(!names.includes(forbidden), forbidden)
-    );
+    [
+      'hyperxosist_build_paid_request',
+      'hyperxosist_paid_search',
+      'hyperxosist_execute_payment',
+      'hyperxosist_sign_payment',
+      'hyperxosist_import_private_key'
+    ].forEach((forbidden) => assert.ok(!names.includes(forbidden), forbidden));
   });
 
   await test('dispatcher failure', async () => {
@@ -148,7 +192,7 @@ function byName(harness, name) {
     );
   });
 
-  await test('serializable result', async () => {
+  await test('serializable free result', async () => {
     const h = makeHarness();
     load(h);
     const result = await byName(h, 'hyperxosist_search_plan').execute({ intent: 'test' });
@@ -160,10 +204,10 @@ function byName(harness, name) {
     const h = makeHarness();
     load(h);
     load(h);
-    assert.strictEqual(h.registered.length, 3);
+    assert.strictEqual(h.registered.length, 4);
   });
 
-  await test('pre-aborted execution is rejected cleanly', async () => {
+  await test('pre-aborted free execution is rejected cleanly', async () => {
     const h = makeHarness();
     load(h);
     const controller = new AbortController();
@@ -175,10 +219,20 @@ function byName(harness, name) {
     assert.strictEqual(h.calls.length, 0);
   });
 
-  await test('missing agent skips registration without throwing', async () => {
+  await test('missing agent skips all registration without throwing', async () => {
     const h = makeHarness({ missingAgent: true });
     assert.doesNotThrow(() => load(h));
     assert.strictEqual(h.registered.length, 0);
+    assert.strictEqual(h.warnings.length, 1);
+  });
+
+  await test('missing paid executor keeps the three free tools active', async () => {
+    const h = makeHarness({ missingPaid: true });
+    assert.doesNotThrow(() => load(h));
+    assert.deepStrictEqual(
+      h.registered.map((tool) => tool.name),
+      ['hyperxosist_search_plan', 'hyperxosist_filter_signals', 'hyperxosist_build_handoff']
+    );
     assert.strictEqual(h.warnings.length, 1);
   });
 
@@ -187,7 +241,7 @@ function byName(harness, name) {
     assert.doesNotThrow(() => load(h));
     assert.deepStrictEqual(
       h.registered.map((tool) => tool.name),
-      ['hyperxosist_search_plan', 'hyperxosist_build_handoff']
+      ['hyperxosist_search_plan', 'hyperxosist_build_handoff', 'hyperxosist_execute']
     );
     assert.strictEqual(h.errors.length, 1);
   });

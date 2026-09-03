@@ -190,3 +190,8 @@ See [CHATGPT_APP.md](CHATGPT_APP.md). A directory submission is intentionally no
 - Bearer token registry management is suitable for controlled deployments; a broad public multi-user app may still require OAuth/account linking.
 - Daily quotas require the optional `MCP_USAGE_KV` binding; Cloudflare WAF remains the distributed edge rate limiter.
 - No X scraping or X API integration is included.
+
+
+## Paid execution
+
+Discovery, planning, filtering, and handoff remain free. `hyperxosist_execute` is the only paid production tool. It delegates verification and settlement to the existing x402 v2 endpoint. An unsigned call returns `PAYMENT-REQUIRED`; a confirmed retry supplies `PAYMENT-SIGNATURE`. Clients must never provide private keys or seed phrases.

@@ -230,3 +230,14 @@ This script:
 **Guarantees for the dry-run:** no X scraping, no posting, no payment, no HTTP calls.  
 Real production search URL use still requires x402; real feedback must be collected outside this static toolkit.
 
+
+
+## WebMCP paid execution boundary
+
+- Free/read-only: `hyperxosist_search_plan`, `hyperxosist_filter_signals`, `hyperxosist_build_handoff`.
+- Paid/open-world: `hyperxosist_execute`.
+- First call without `paymentSignature` must return the x402 v2 `PAYMENT-REQUIRED` requirements.
+- Retry only after authorization, with `paymentSignature` and `confirmPayment: true`.
+- Never request, accept, log, or store private keys, seed phrases, or wallet passwords.
+- Payment verification and settlement stay at `https://api.kgninja.dev/hyperxosist-query`.
+- Canonical access boundary: `access-policy.json`.
