@@ -5,7 +5,7 @@
 [![Version](https://img.shields.io/badge/version-2.5.0-brightgreen.svg)](CHANGELOG.md)
 [![Live](https://img.shields.io/badge/demo-GitHub%20Pages-black.svg)](https://kg-ninja.github.io/HyperXosist-Agent/)
 
-**Agent-first toolkit and Remote MCP server for noise-reduced X (Twitter) search planning and Feedback-to-Fix engineering handoffs.** It generates structured search plans and official X search URLs for humans and AI agents. The planning and synthetic demonstration workflow does **not** directly scrape X. Optional **Grok Build** mode is default off.
+**Agent-native research infrastructure that turns noisy public X/Twitter signals into implementation-ready engineering handoffs.** It connects human search, local WebMCP Site Tools, public Remote MCP planning/filtering/handoff, x402-gated production execution, Signal-to-Fix, and downstream coding agents. It does **not** directly scrape X. Optional **Grok Build** mode is default off.
 
 | | |
 |---|---|
@@ -15,13 +15,13 @@
 | **CLI** | `npx hyperxosist plan "…" --json` |
 | **Version** | 2.5.0 |
 
-> 日本語の要点: X 公式検索用クエリを組み立てる静的ツールです。人間の UI は無料。AI エージェントの本番利用は x402 支払い前提。検索結果の埋め込みや自動投稿はしません。
+> 日本語の要点: 公開SNS上のノイズから実装可能なSignalを抽出し、AI coding agentへ渡すためのAgent-native research infrastructureです。人間UI、Site Tools、Remote MCPの計画・filtering・handoffは無料。本番の自動検索・外部収集だけがx402対象です。
 
 ## Agent-readable summary
 
 HyperXosist-Agent helps an AI agent turn a research intent into a structured search plan, an official X search URL, supplied-feedback filtering results, and a Signal-to-Fix engineering handoff. It is a planning and handoff layer: it does not claim to scrape X directly, publish posts, or deploy code automatically.
 
-Free capabilities include MCP discovery, planning, filtering, structured handoff, and local dry-run workflows. Automated production use of generated search URLs and external collection use the existing x402 endpoint and return HTTP 402 until valid payment proof is supplied. Payment requirements are published at [`payment-options.json`](https://api.kgninja.dev/HyperXosist-Agent/payment-options.json).
+Free capabilities include MCP discovery, planning, filtering, structured handoff, and local dry-run workflows. Automated production use of generated search URLs and external collection use the existing x402 endpoint and return HTTP 402 until valid payment proof is supplied. Payment requirements are published at [`payment-options.json`](https://api.kgninja.dev/payment-options.json).
 
 Agents must follow the applicable user or operator payment policy. They must not request private keys, seed phrases, wallet secrets, or sensitive user data. If a wallet requires human approval, the agent should ask the operator to review and approve the transaction, then retry the same request with valid x402 payment proof.
 
@@ -198,13 +198,13 @@ npm run mcp
 HYPERXOSIST_MCP_TOKEN="replace-me" npm run mcp:remote
 ```
 
-Remote endpoints are `POST /mcp` and `GET /health`. Public deployment requires HTTPS, Bearer authentication, allowed-host configuration, rate limiting, and monitoring.
+Remote endpoints are `POST /mcp` and `GET /health`. The current production endpoint is public-free for the three read-only MCP tools and requires no Bearer token. Private/self-hosted deployments may require Bearer authentication. All public deployments still require HTTPS, allowed-host configuration, rate limiting, and monitoring.
 Public production Remote MCP:
 
 - Endpoint: `https://mcp.kgninja.dev/mcp`
 - Health: `https://mcp.kgninja.dev/health`
 - Transport: Streamable HTTP
-- Authentication: Bearer token
+- Authentication: none for public free operations; optional Bearer token for private/self-hosted mode
 - Status: deployed; verify `/health` before use
 - Free tools: `hyperxosist_search_plan`, `hyperxosist_filter_signals`, `hyperxosist_build_handoff`
 
@@ -218,7 +218,7 @@ npm run openai:remote-check
 npm run test:tool-selection
 ```
 
-GitHub Pages remains the static human UI and cannot host MCP. The repository includes a separate [Cloudflare Worker Remote MCP adapter](workers/remote-mcp/README.md) using Web Standard Streamable HTTP. It is intended for a custom-domain deployment with a required Bearer secret, closed-by-default origin/host allowlists, a 1 MiB request limit, and a zone-level WAF rate-limit rule. The Node stdio and `node:http` adapters do not run in Workers unchanged.
+GitHub Pages remains the static human UI and cannot host MCP. The repository includes a separate [Cloudflare Worker Remote MCP adapter](workers/remote-mcp/README.md) using Web Standard Streamable HTTP. It supports public-free production access or a private Bearer-authenticated mode, with closed-by-default browser origins, a Host allowlist, a 1 MiB request limit, and a zone-level WAF rate-limit rule. The Node stdio and `node:http` adapters do not run in Workers unchanged.
 
 Planning, collected-post filtering, and handoff are free. Human manual use of generated X URLs is free. Automated production execution uses `https://api.kgninja.dev/hyperxosist-query`; staging MCP deployments preserve the existing staging payment Worker through `HYPERXOSIST_PAYMENT_ENVIRONMENT=staging`. This change does not modify x402 payment behavior.
 Remote MCP operations use optional SHA-256 token registry identities, structured Worker usage/error logs, request IDs, and optional KV daily limits. Raw tokens and request content are not logged. Payment analytics remain authoritative in the existing x402 Worker D1/Telegram pipeline; MCP requests are free and never treated as paid settlement events.

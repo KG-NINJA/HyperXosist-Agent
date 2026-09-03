@@ -76,7 +76,8 @@ npm run test:mcp:security
 |---|---:|---|
 | `HOST` | `127.0.0.1` | Bind address |
 | `PORT` | `8787` | HTTP port |
-| `HYPERXOSIST_MCP_TOKEN` | unset | Bearer token; mandatory for public deployment |
+| `HYPERXOSIST_MCP_TOKEN` | unset | Bearer token for private/self-hosted mode; not required when public-free access is enabled |
+| `HYPERXOSIST_MCP_PUBLIC_FREE_ACCESS` | `false` | Set `true` only for the public read-only production MCP tools |
 | `HYPERXOSIST_MCP_MAX_BODY_BYTES` | `1048576` | Request body limit |
 | `HYPERXOSIST_MCP_TIMEOUT_MS` | `15000` | Request timeout |
 | `HYPERXOSIST_MCP_ALLOWED_ORIGINS` | empty | Comma-separated browser origins; requests with Origin are rejected unless listed |
@@ -89,7 +90,7 @@ The server also accepts an injected `rateLimit` callback through `createRemoteSe
 
 ## Security policy
 
-- Require HTTPS and Bearer authentication for public endpoints.
+- Require HTTPS for every public endpoint. The current production MCP is public-free for three read-only tools; private/self-hosted deployments require Bearer authentication.
 - Keep secrets in environment or platform secret storage.
 - Do not put tokens in URLs, images, Docker layers, logs, or Git.
 - Origin checks default closed when an Origin header is present.
@@ -153,14 +154,14 @@ The image uses Node 20 slim, production dependencies, a non-root user, port 8787
 
 Use a Cloudflare custom domain for production, not a `workers.dev` hostname. Before a public deployment:
 
-1. Set `HYPERXOSIST_MCP_TOKEN` with `wrangler secret put`; it is mandatory for `POST /mcp`.
+1. Choose one explicit access mode: set `HYPERXOSIST_MCP_PUBLIC_FREE_ACCESS=true` for the three public read-only tools, or keep it false and configure `HYPERXOSIST_MCP_TOKEN` / token registry for private access.
 2. Set `HYPERXOSIST_MCP_ALLOWED_HOSTS` to the exact custom hostname and only add `HYPERXOSIST_MCP_ALLOWED_ORIGINS` for browser clients that require it.
 3. Create a zone-level Cloudflare WAF rate-limiting rule that matches `POST /mcp`, groups by source IP, and returns JSON `429`. Keep it at the Cloudflare edge; Workers module memory is not a distributed rate limiter.
 4. Deploy staging first, test authenticated `initialize` and tool calls, then deploy production with the custom domain.
 
 The checked-in production configuration binds the Worker to `mcp.kgninja.dev`, disables `workers.dev` and version preview URLs, and restricts the Host allowlist to that hostname. It deliberately leaves browser origins empty because Remote MCP clients are server-to-server by default.
 
-The Worker exposes only `POST /mcp`, CORS preflight for an allowlisted browser origin, and `GET /health`. It enforces Bearer authentication, closed-by-default Origin and Host validation, a 1 MiB body limit, JSON-only requests, generic errors, and `no-store` responses. Production returns x402 execution URLs under `https://api.kgninja.dev`; staging preserves the existing `workers.dev` payment origin. Run `npm run test:mcp:cloudflare` and `npm run cloudflare:mcp:check` before deployment. See [Worker deployment details](../workers/remote-mcp/README.md).
+The Worker exposes only `POST /mcp`, CORS preflight for an allowlisted browser origin, and `GET /health`. In public-free mode it accepts the three read-only MCP tools without client authentication; in private mode it enforces Bearer authentication. Both modes keep closed-by-default browser Origin handling, Host validation, a 1 MiB body limit, JSON-only requests, generic errors, and `no-store` responses. Production returns x402 execution URLs under `https://api.kgninja.dev`; staging preserves the existing `workers.dev` payment origin. Run `npm run test:mcp:cloudflare` and `npm run cloudflare:mcp:check` before deployment. See [Worker deployment details](../workers/remote-mcp/README.md).
 The production endpoint is `https://mcp.kgninja.dev/mcp` and health is `https://mcp.kgninja.dev/health`. The deployed Worker now supports optional per-user token registry management through `HYPERXOSIST_MCP_TOKEN_USERS` (SHA-256 token hash keys, user ID, plan, status, and daily limit), while keeping the legacy `HYPERXOSIST_MCP_TOKEN` compatible. Authenticated requests emit sanitized request, latency, status, quota, and error events with request IDs to Worker Logs. Optional `MCP_USAGE_KV` enforces daily limits and optional `MCP_ANALYTICS` writes aggregate data points. Raw tokens, prompts, payment headers, and wallet data are never logged.
 
 Payment analysis remains separate: the existing x402 Worker is authoritative for paid API access, D1 revenue/access/funnel summaries, settlement evidence, and Telegram notifications. Remote MCP planning/filtering/handoff requests are free and are recorded with `paid: false`; the MCP Worker does not verify or settle x402 payments.
@@ -187,6 +188,6 @@ See [CHATGPT_APP.md](CHATGPT_APP.md). A directory submission is intentionally no
 ## Limitations
 
 - Production Remote MCP is deployed at `https://mcp.kgninja.dev/mcp`; verify `/health` before use.
-- Bearer token registry management is suitable for controlled deployments; a broad public multi-user app may still require OAuth/account linking.
+- Public-free mode is suitable only for the bounded read-only tool set. Private or account-specific deployments may use Bearer token registry management or OAuth/account linking.
 - Daily quotas require the optional `MCP_USAGE_KV` binding; Cloudflare WAF remains the distributed edge rate limiter.
 - No X scraping or X API integration is included.

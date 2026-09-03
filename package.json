@@ -36,6 +36,7 @@
     "webmcp.js",
     "payment-endpoints.js",
     "agent-use.json",
+    "access-policy.json",
     "agent-tools.json",
     "missions.json",
     "signal-to-fix-pipeline.json",
@@ -55,8 +56,8 @@
     "test/tool-selection-cases.json"
   ],
   "scripts": {
-    "test": "node test/agent-api.test.js && node test/mcp.test.js && node test/mcp-core.test.js && node test/mcp-remote.test.js && node test/mcp-security.test.js && node test/mcp-schema.test.js && node test/mcp-consistency.test.js && node --test test/mcp-cloudflare-worker.test.mjs && node test/payment-endpoints.test.js && node test/webmcp.test.js",
-    "test:agent": "node test/agent-api.test.js",
+    "test": "node test/agent-api.test.js && node test/mcp.test.js && node test/mcp-core.test.js && node test/mcp-remote.test.js && node test/mcp-security.test.js && node test/mcp-schema.test.js && node test/mcp-consistency.test.js && node --test test/mcp-cloudflare-worker.test.mjs && node test/payment-endpoints.test.js && node test/webmcp.test.js && node test/access-policy-consistency.test.js",
+    "test:agent": "node test/agent-api.test.js && node test/access-policy-consistency.test.js",
     "test:mcp": "node test/mcp.test.js",
     "quickstart": "node examples/quickstart.mjs",
     "serve": "npx --yes serve -l 5173 .",
@@ -78,7 +79,8 @@
     "cloudflare:mcp:check": "npm --prefix workers/remote-mcp run check",
     "sync:payment-metadata": "node scripts/sync-payment-metadata.mjs",
     "test:payment-endpoints": "node test/payment-endpoints.test.js",
-    "test:webmcp": "node test/webmcp.test.js"
+    "test:webmcp": "node test/webmcp.test.js",
+    "test:access-policy": "node test/access-policy-consistency.test.js"
   },
   "engines": {
     "node": ">=18"

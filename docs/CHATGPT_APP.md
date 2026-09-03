@@ -29,7 +29,7 @@ This repository is not submitted to the ChatGPT app directory. This checklist pr
 ## Submission checklist
 
 - [ ] Remote MCP is deployed behind HTTPS.
-- [ ] Bearer/OAuth authentication is production-ready.
+- [ ] The declared access mode is accurate: public-free for the bounded read-only tools, or Bearer/OAuth for private/account-specific access.
 - [ ] Origin, host, payload, timeout, and rate limits are enforced.
 - [ ] Privacy policy, terms, and support URLs are public.
 - [ ] The 20-case tool-selection evaluation passes.

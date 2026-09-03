@@ -103,6 +103,7 @@ export default {
     const url = new URL(request.url);
     const requestId = createRequestId();
     const startedAt = Date.now();
+    const publicFreeAccess = String(env.HYPERXOSIST_MCP_PUBLIC_FREE_ACCESS || '').toLowerCase() === 'true';
     const observe = (event, status, identity, operation, errorCode) => emitMcpObservation(ctx, env, {
       event,
       requestId,
@@ -127,7 +128,12 @@ export default {
         sourceOfTruth: 'openapi',
         lastSynced: '2026-07-19',
         transport: 'Streamable HTTP',
-        authentication: 'public-free',
+        authentication: publicFreeAccess ? 'none' : 'bearer',
+        accessMode: publicFreeAccess ? 'public-free' : 'private-authenticated',
+        authenticationRequired: !publicFreeAccess,
+        publicFreeAccess,
+        privateOrSelfHostedAuthentication: 'bearer',
+        accessPolicy: 'https://kg-ninja.github.io/HyperXosist-Agent/access-policy.json',
         freeTools: [
           'hyperxosist_search_plan',
           'hyperxosist_filter_signals',
@@ -138,6 +144,8 @@ export default {
           endpoint: 'https://api.kgninja.dev/hyperxosist-query',
           price: '0.01 USDC',
           network: 'eip155:8453',
+          authentication: 'x402-payment-proof',
+          paymentRequired: true,
         },
         freeToPaidFlow: {
           upgradeRequiredWhen: [
@@ -165,7 +173,10 @@ export default {
         usageTelemetry: true,
         errorMonitoring: true,
         paymentAnalytics: "external-x402-worker",
-        publicFreeAccess: String(env.HYPERXOSIST_MCP_PUBLIC_FREE_ACCESS || "").toLowerCase() === "true",
+        publicFreeAccess,
+        accessMode: publicFreeAccess ? 'public-free' : 'private-authenticated',
+        authentication: publicFreeAccess ? 'none' : 'bearer',
+        authenticationRequired: !publicFreeAccess,
       }), {
         headers: { 'Cache-Control': 'no-store', 'Content-Type': 'application/json; charset=utf-8', 'X-Content-Type-Options': 'nosniff' },
       });
@@ -187,7 +198,6 @@ export default {
       headers.set('Allow', 'POST, OPTIONS');
       return withRequestId(jsonError(405, -32000, 'Method not allowed.', null, Object.fromEntries(headers)), requestId);
     }
-    const publicFreeAccess = String(env.HYPERXOSIST_MCP_PUBLIC_FREE_ACCESS || "").toLowerCase() === "true";
     if (!publicFreeAccess && !env.HYPERXOSIST_MCP_TOKEN && !env.HYPERXOSIST_MCP_TOKEN_USERS) {
       observe('mcp_configuration_error', 503, null, 'auth', 'service_not_configured');
       return withRequestId(jsonError(503, -32603, 'Service not configured.'), requestId);

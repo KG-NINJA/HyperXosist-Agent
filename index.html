@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HyperXosist Agent — Advanced X Search Launcher</title>
+  <title>HyperXosist Agent — Agent-native Research Infrastructure</title>
   <meta name="description" content="API-free advanced X/Twitter search query builder with noise reduction, research templates, AI agent missions, and x402 payment path. 高度なX検索ランチャー。">
   <meta name="theme-color" content="#0a0e17">
   <meta name="author" content="KG-NINJA">
@@ -11,7 +11,7 @@
   <link rel="canonical" href="https://kg-ninja.github.io/HyperXosist-Agent/">
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="HyperXosist Agent — Advanced X Search Launcher">
+  <meta property="og:title" content="HyperXosist Agent — Agent-native Research Infrastructure">
   <meta property="og:description" content="API-free X search builder for humans and AI agents. Missions, noise reduction, x402, Signal-to-Fix handoff.">
   <meta property="og:url" content="https://kg-ninja.github.io/HyperXosist-Agent/">
   <meta property="og:image" content="https://kg-ninja.github.io/HyperXosist-Agent/favicon.svg">
@@ -32,7 +32,7 @@
         <h1>HyperXosist</h1>
         <span class="version-badge" id="versionBadge">v2.5.0</span>
       </div>
-      <p class="subtitle">Advanced X search launcher — API-free query builder with noise reduction &amp; agent path</p>
+      <p class="subtitle">Agent-native X research infrastructure — noise → signal → engineering handoff</p>
     </header>
 
     <main>
@@ -279,12 +279,14 @@
         <!-- Remote MCP production -->
         <section class="agent-section remote-mcp-section" aria-labelledby="remoteMcpTitle">
           <h2 id="remoteMcpTitle">Remote MCP <span class="pill">production</span></h2>
-          <p>AIエージェント向けに、initialize、tools/list、planning、filtering、handoffを無料で提供しています。これらは本番検索結果の自動取得を含みません。本番の検索URL自動利用・外部収集・有料query実行にはx402決済が必要です。利用前にHealth endpointがHTTP 200であることを確認してください。</p>
+          <p>公開Remote MCPでは、initialize、tools/list、planning、filtering、handoffを認証なし・無料で提供しています。Bearer tokenはprivate/self-hosted構成でのみ任意です。本番の検索URL自動利用・外部収集・有料query実行にはx402 payment proofが必要です。利用前にHealth endpointがHTTP 200であることを確認してください。</p>
           <dl class="remote-mcp-details">
             <dt>MCP endpoint</dt><dd><a href="https://mcp.kgninja.dev/mcp">https://mcp.kgninja.dev/mcp</a></dd>
             <dt>Health endpoint</dt><dd><a href="https://mcp.kgninja.dev/health">https://mcp.kgninja.dev/health</a></dd>
             <dt>Transport</dt><dd>Streamable HTTP</dd>
-            <dt>Authentication</dt><dd>Bearer token</dd>
+            <dt>Free MCP authentication</dt><dd>Public / none</dd>
+            <dt>Private/self-hosted mode</dt><dd>Optional Bearer token</dd>
+            <dt>Paid execution authentication</dt><dd>x402 payment proof</dd>
             <dt>Deployment status</dt><dd id="remoteMcpStatus">Deployed; verify Health before use</dd>
           </dl>
           <p><strong>無料:</strong> <code>hyperxosist_search_plan</code> / <code>hyperxosist_filter_signals</code> / <code>hyperxosist_build_handoff</code>、initialize、tools/list、planning、filtering、handoff。</p>
@@ -449,7 +451,8 @@
         <a href="https://github.com/KG-NINJA/HyperXosist-Agent">GitHub</a> ·
         <a href="llms.txt">llms.txt</a> ·
         <a href="AGENTS.md">AGENTS.md</a> ·
-        <a href="signal-to-fix-pipeline.json">Signal-to-Fix pipeline</a>
+        <a href="signal-to-fix-pipeline.json">Signal-to-Fix pipeline</a> ·
+        <a href="access-policy.json">Access policy</a>
       </p>
     </footer>
   </div>

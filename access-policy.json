@@ -1,0 +1,74 @@
+{
+  "schemaVersion": "1.0",
+  "name": "HyperXosist Access Policy",
+  "version": "2.5.0",
+  "lastUpdated": "2026-09-03",
+  "summary": "Discovery, planning, filtering, and handoff are free. Only automated production execution uses x402.",
+  "humanUi": {
+    "accessMode": "public-free",
+    "authenticationRequired": false,
+    "paymentRequired": false,
+    "scope": [
+      "query building",
+      "manual opening of official X search URLs",
+      "manual Signal-to-Fix handoff"
+    ]
+  },
+  "siteTools": {
+    "transport": "WebMCP document.modelContext",
+    "accessMode": "local-free",
+    "authenticationRequired": false,
+    "paymentRequired": false,
+    "readOnly": true,
+    "tools": [
+      "hyperxosist_search_plan",
+      "hyperxosist_filter_signals",
+      "hyperxosist_build_handoff"
+    ],
+    "excludes": [
+      "X scraping",
+      "automatic external navigation",
+      "Remote MCP forwarding",
+      "wallet actions",
+      "x402 payment"
+    ]
+  },
+  "remoteMcp": {
+    "endpoint": "https://mcp.kgninja.dev/mcp",
+    "healthEndpoint": "https://mcp.kgninja.dev/health",
+    "accessMode": "public-free",
+    "authentication": "none",
+    "authenticationRequired": false,
+    "paymentRequired": false,
+    "privateOrSelfHostedAuthentication": "bearer",
+    "tools": [
+      "hyperxosist_search_plan",
+      "hyperxosist_filter_signals",
+      "hyperxosist_build_handoff"
+    ]
+  },
+  "productionExecution": {
+    "endpoint": "https://api.kgninja.dev/hyperxosist-query",
+    "accessMode": "paid-x402",
+    "authentication": "x402-payment-proof",
+    "authenticationRequired": true,
+    "paymentRequired": true,
+    "protocol": "x402-v2",
+    "network": "eip155:8453",
+    "asset": "USDC",
+    "price": "0.01",
+    "expectedUnpaidStatus": 402,
+    "expectedPaidStatus": 200,
+    "scope": [
+      "automated production use of generated X search URLs",
+      "automated external collection",
+      "paid execution"
+    ]
+  },
+  "invariants": [
+    "Free MCP and Site Tool calls must never return HTTP 402.",
+    "Planning output must not be treated as authorization to spend.",
+    "No private key, seed phrase, bearer token, cookie, or wallet secret may be exposed.",
+    "Current payment details are authoritative only when confirmed by the live payment metadata."
+  ]
+}

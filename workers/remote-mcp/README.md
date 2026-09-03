@@ -4,7 +4,7 @@ This Worker is the public Streamable HTTP adapter. It is separate from GitHub Pa
 
 ## Security model
 
-- `HYPERXOSIST_MCP_TOKEN` is the backwards-compatible default Cloudflare secret. Requests to `POST /mcp` without a matching `Authorization: Bearer` header are rejected.
+- Access mode is explicit. With `HYPERXOSIST_MCP_PUBLIC_FREE_ACCESS=true`, the three read-only production tools accept requests without client authentication. Otherwise `POST /mcp` requires `HYPERXOSIST_MCP_TOKEN` or a token-registry Bearer credential.
 - `HYPERXOSIST_MCP_TOKEN_USERS` is an optional secret JSON registry keyed by SHA-256 token hash. Each value may set `userId`, `plan`, `status` (`active` or disabled), and `dailyLimit` (0 means unlimited). Raw tokens are never logged or stored.
 - `HYPERXOSIST_MCP_DEFAULT_USER_ID`, `HYPERXOSIST_MCP_DEFAULT_PLAN`, and `HYPERXOSIST_MCP_DEFAULT_DAILY_LIMIT` identify and limit the legacy default token.
 - `HYPERXOSIST_MCP_ALLOWED_ORIGINS` is a comma-separated allowlist. Browser-originated requests default closed.
@@ -35,7 +35,7 @@ npx wrangler secret put HYPERXOSIST_MCP_TOKEN --env staging
 npx wrangler deploy --env staging
 ```
 
-Production is configured for `mcp.kgninja.dev`. It disables `workers.dev` and preview URLs, sets the Host allowlist to that hostname, leaves browser origins empty, and requires a separate production `HYPERXOSIST_MCP_TOKEN` secret. Add the zone-level WAF/rate-limiting rule before deploying with `--env production` after a staged smoke test.
+Production is configured for `mcp.kgninja.dev`. It disables `workers.dev` and preview URLs, sets the Host allowlist to that hostname, leaves browser origins empty, and currently enables public-free access for the three bounded read-only tools. Private deployments should disable public-free access and configure a production Bearer secret or token registry. Add the zone-level WAF/rate-limiting rule before deploying with `--env production` after a staged smoke test.
 
 The Worker keeps planning, filtering, and handoff free. It does not call, replace, or alter the existing x402 payment endpoint.
 ## Operations and analytics

@@ -39,11 +39,16 @@ Output is structured JSON and, where supported, Markdown containing search plans
 - Model-agnostic implementation prompts and optional Grok Build prompts
 - JSON and Markdown representations for tool-calling and human review
 
+## ChatGPT Site Tools / WebMCP
+
+In compatible ChatGPT Desktop built-in browser environments, the GitHub Pages site exposes `hyperxosist_search_plan`, `hyperxosist_filter_signals`, and `hyperxosist_build_handoff` through `document.modelContext`. These Site Tools are local, read-only, free, and require no authentication. They do not scrape X, open external URLs automatically, call Remote MCP, or perform x402 payment.
+
 ## Remote MCP
 
 - Endpoint: `https://mcp.kgninja.dev/mcp`
 - Health: `https://mcp.kgninja.dev/health`
 - Transport: Streamable HTTP
+- Authentication: none for public free operations; optional Bearer token for private/self-hosted mode
 - Free tools: `hyperxosist_search_plan`, `hyperxosist_filter_signals`, `hyperxosist_build_handoff`
 - Free MCP operations: `initialize`, `tools/list`, planning, filtering, and handoff
 
@@ -130,6 +135,7 @@ Use `buildSignalToFixPipeline`, `buildHandoffPackage`, `exportKeepOnlyJson`, and
 - API library: `https://kg-ninja.github.io/HyperXosist-Agent/agent-api.js`
 - Payment metadata: `https://kg-ninja.github.io/HyperXosist-Agent/x402-payment.json`
 - Pipeline manifest: `https://kg-ninja.github.io/HyperXosist-Agent/signal-to-fix-pipeline.json`
+- Access policy: `https://kg-ninja.github.io/HyperXosist-Agent/access-policy.json`
 - Linked Signal-to-Fix metadata: `https://kg-ninja.github.io/Signal-to-Fix/agent-use.json`
 
 ## Safety and payment rules

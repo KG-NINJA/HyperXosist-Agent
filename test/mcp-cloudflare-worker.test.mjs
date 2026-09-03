@@ -52,6 +52,29 @@ test('Remote MCP exposes request IDs and operational health capabilities', async
   assert.equal(body.paymentAnalytics, 'external-x402-worker');
 });
 
+test('public-free production mode requires no Bearer token and advertises the same policy', async () => {
+  const publicEnv = { ...env, HYPERXOSIST_MCP_PUBLIC_FREE_ACCESS: 'true' };
+  const discovery = await worker.fetch(request('/.well-known/mcp.json', { method: 'GET' }), publicEnv);
+  assert.equal(discovery.status, 200);
+  const metadata = await discovery.json();
+  assert.equal(metadata.authentication, 'none');
+  assert.equal(metadata.authenticationRequired, false);
+  assert.equal(metadata.publicFreeAccess, true);
+  assert.equal(metadata.paidExecution.authentication, 'x402-payment-proof');
+
+  const response = await worker.fetch(request('/mcp', {
+    method: 'POST',
+    headers: { Accept: 'application/json, text/event-stream', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jsonrpc: '2.0', id: 4, method: 'initialize', params: { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'public-test', version: '1.0.0' } } })
+  }), publicEnv);
+  assert.equal(response.status, 200);
+
+  const health = await worker.fetch(request('/health', { method: 'GET' }), publicEnv);
+  const healthBody = await health.json();
+  assert.equal(healthBody.authentication, 'none');
+  assert.equal(healthBody.authenticationRequired, false);
+});
+
 test('token registry identifies users without exposing raw tokens', async () => {
   const hash = await sha256Hex('mapped-token');
   const identity = await identifyUser(

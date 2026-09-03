@@ -8,7 +8,7 @@
   "sourceOfTruth": "openapi",
   "lastSynced": "2026-07-19",
   "transport": "Streamable HTTP",
-  "authentication": "public-free",
+  "authentication": "none",
   "freeTools": [
     "hyperxosist_search_plan",
     "hyperxosist_filter_signals",
@@ -18,7 +18,9 @@
     "protocol": "x402",
     "endpoint": "https://api.kgninja.dev/hyperxosist-query",
     "price": "0.01 USDC",
-    "network": "eip155:8453"
+    "network": "eip155:8453",
+    "authentication": "x402-payment-proof",
+    "paymentRequired": true
   },
   "freeToPaidFlow": {
     "free": [
@@ -42,6 +44,10 @@
       "Obtain x402 payment proof through the client wallet/facilitator.",
       "Retry the same POST with payment proof and expect HTTP 200."
     ]
-  }
+  },
+  "accessMode": "public-free",
+  "authenticationRequired": false,
+  "publicFreeAccess": true,
+  "privateOrSelfHostedAuthentication": "bearer",
+  "accessPolicy": "https://kg-ninja.github.io/HyperXosist-Agent/access-policy.json"
 }
-

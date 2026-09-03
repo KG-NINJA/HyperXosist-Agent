@@ -3442,7 +3442,16 @@
   const api = {
     version: VERSION,
     paymentRequired: true,
-    agentUseRequiresPayment: true,
+    paymentRequiredScope: 'automated-production-execution-only',
+    agentUseRequiresPayment: false,
+    productionExecutionRequiresPayment: true,
+    accessPolicyManifest: 'access-policy.json',
+    accessPolicy: {
+      humanUi: { authenticationRequired: false, paymentRequired: false },
+      siteTools: { authenticationRequired: false, paymentRequired: false, readOnly: true },
+      remoteMcp: { authentication: 'none', authenticationRequired: false, paymentRequired: false },
+      productionExecution: { authentication: 'x402-payment-proof', paymentRequired: true }
+    },
     paymentManifest: 'x402-payment.json',
     paymentEndpoint: PAYMENT_ENDPOINT,
     paymentOptionsEndpoint: PAYMENT_OPTIONS_ENDPOINT,

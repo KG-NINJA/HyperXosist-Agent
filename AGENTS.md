@@ -6,7 +6,7 @@ Instructions for **any** AI coding / research agent (GPT, Claude, Grok, Llama, l
 
 HyperXosist builds **high-signal X (Twitter) advanced search queries** with noise reduction.  
 It does **not** scrape X. It produces queries + official search URLs.  
-Agents pay via **x402** for automated production use.
+Discovery, planning, filtering, and handoff are free. Agents pay via **x402** only for automated production execution.
 
 **Default mode: universal.** Grok Build is an optional powerful mode (`mode: "grok"`).
 
@@ -162,12 +162,16 @@ HyperXosistAgent.resetNoiseRules()
 - `competitive_intel` / `weekly_monitor` / `launch_pulse` / `osint_entity`  
 - Optional Grok-oriented: `grok_code_improvement_radar`, `ui_ux_feedback_harvest`, `performance_complaint_detector`
 
+## ChatGPT Site Tools / WebMCP
+
+When `document.modelContext` is available, the GitHub Pages site registers the same three planning/filtering/handoff capabilities locally as read-only Site Tools. No MCP connection, authentication, network forwarding, X scraping, or x402 payment is used by these Site Tools.
+
 ## Remote MCP (production)
 
 - Endpoint: `https://mcp.kgninja.dev/mcp`
 - Health: `https://mcp.kgninja.dev/health`
 - Transport: Streamable HTTP
-- Authentication: Bearer token
+- Authentication: none for public free operations; optional Bearer token for private/self-hosted mode
 - Deployment status: deployed; verify `/health` before use
 - Free tools: `hyperxosist_search_plan`, `hyperxosist_filter_signals`, `hyperxosist_build_handoff`
 - Free: MCP initialize, `tools/list`, planning, filtering, and handoff
@@ -198,6 +202,7 @@ Human UI remains free.
 - https://kg-ninja.github.io/HyperXosist-Agent/agent-tools.json  
 - https://kg-ninja.github.io/HyperXosist-Agent/missions.json  
 - https://kg-ninja.github.io/HyperXosist-Agent/signal-to-fix-pipeline.json  
+- https://kg-ninja.github.io/HyperXosist-Agent/access-policy.json
 - https://kg-ninja.github.io/Signal-to-Fix/agent-use.json  
 
 ## Humans vs agents (Signal-to-Fix)
