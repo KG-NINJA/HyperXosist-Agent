@@ -1,0 +1,229 @@
+name: Minimize access policy JSON diffs
+
+on:
+  push:
+    branches:
+      - codex/align-agent-access-policy
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: codex/align-agent-access-policy
+          fetch-depth: 0
+
+      - name: Restore canonical JSON formatting and apply only semantic edits
+        shell: bash
+        run: |
+          git checkout origin/main -- agent-use.json agent-tools.json .well-known/mcp.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          def replace_once(text, old, new, label):
+              if text.count(old) != 1:
+                  raise SystemExit(f'{label}: expected one match, found {text.count(old)}')
+              return text.replace(old, new, 1)
+
+          path = Path('agent-use.json')
+          text = path.read_text(encoding='utf-8')
+          text = replace_once(
+              text,
+              '  "requiresPaymentForAgentUse": true,\n',
+              '  "requiresPaymentForAgentUse": false,\n'
+              '  "requiresPaymentForProductionExecution": true,\n'
+              '  "requiresAuthenticationForPublicRemoteMcp": false,\n'
+              '  "accessPolicyManifest": "access-policy.json",\n',
+              'agent-use top-level payment boundary'
+          )
+          text = replace_once(
+              text,
+              '    "authentication": "public-free",\n',
+              '    "authentication": "none",\n',
+              'agent-use public MCP authentication'
+          )
+          text = replace_once(
+              text,
+              '      ]\n    }\n  },\n  "whyAgentsKeepUsingThis":',
+              '      ]\n    },\n'
+              '    "accessMode": "public-free",\n'
+              '    "authenticationRequired": false,\n'
+              '    "publicFreeAccess": true,\n'
+              '    "privateOrSelfHostedAuthentication": "bearer",\n'
+              '    "paymentRequiredForFreeOperations": false,\n'
+              '    "accessPolicy": "https://kg-ninja.github.io/HyperXosist-Agent/access-policy.json"\n'
+              '  },\n  "whyAgentsKeepUsingThis":',
+              'agent-use remote MCP boundary'
+          )
+          text = replace_once(
+              text,
+              '    "testSuite": "test/agent-api.test.js",\n'
+              '    "signalToFixPipeline": "signal-to-fix-pipeline.json"\n'
+              '  },',
+              '    "testSuite": "test/agent-api.test.js",\n'
+              '    "signalToFixPipeline": "signal-to-fix-pipeline.json",\n'
+              '    "accessPolicy": "access-policy.json",\n'
+              '    "siteToolsAdapter": "webmcp.js"\n'
+              '  },',
+              'agent-use entrypoints'
+          )
+          text = replace_once(
+              text,
+              '  "agentUsePolicy": {\n'
+              '    "humanBrowserUse": "free",\n'
+              '    "aiAgentUse": "paid-via-existing-x402-worker",\n'
+              '    "mustNotBypassPayment": true,\n'
+              '    "paymentVerifier": "https://api.kgninja.dev/hyperxosist-query",\n'
+              '    "localPlanningAllowed": true\n'
+              '  },',
+              '  "agentUsePolicy": {\n'
+              '    "humanBrowserUse": "free",\n'
+              '    "aiAgentUse": "free for discovery, planning, filtering, and handoff; x402 required only for automated production execution",\n'
+              '    "mustNotBypassPayment": true,\n'
+              '    "paymentVerifier": "https://api.kgninja.dev/hyperxosist-query",\n'
+              '    "localPlanningAllowed": true,\n'
+              '    "publicRemoteMcpAuthentication": "none",\n'
+              '    "requiresPaymentForAgentUse": false,\n'
+              '    "requiresPaymentForProductionExecution": true,\n'
+              '    "mustNotBypassPaymentScope": "automated-production-execution-only"\n'
+              '  },',
+              'agent-use policy object'
+          )
+          suffix = '''  "accessBoundary": {
+            "free": [
+              "human UI",
+              "WebMCP Site Tools",
+              "Remote MCP discovery/planning/filtering/handoff",
+              "local preview and dry-run"
+            ],
+            "paid": [
+              "automated production search URL use",
+              "automated external collection",
+              "POST /hyperxosist-query"
+            ],
+            "paidAuthentication": "x402-payment-proof"
+          },
+          "siteTools": {
+            "transport": "WebMCP document.modelContext",
+            "authentication": "none",
+            "authenticationRequired": false,
+            "paymentRequired": false,
+            "readOnly": true,
+            "tools": [
+              "hyperxosist_search_plan",
+              "hyperxosist_filter_signals",
+              "hyperxosist_build_handoff"
+            ]
+          }'''
+          suffix = '\n'.join(line[2:] if line.startswith('  ') else line for line in suffix.splitlines())
+          if not text.endswith('\n}\n'):
+              raise SystemExit('agent-use unexpected final newline')
+          text = text[:-3] + ',\n' + suffix + '\n}\n'
+          json.loads(text)
+          path.write_text(text, encoding='utf-8', newline='')
+
+          path = Path('agent-tools.json')
+          text = path.read_text(encoding='utf-8')
+          text = replace_once(
+              text,
+              '  "paymentRequiredForAutomatedSearchUse": true,\n',
+              '  "paymentRequiredForAutomatedSearchUse": true,\n'
+              '  "requiresPaymentForAgentUse": false,\n'
+              '  "requiresPaymentForProductionExecution": true,\n'
+              '  "accessPolicyManifest": "access-policy.json",\n',
+              'agent-tools top-level boundary'
+          )
+          text = replace_once(
+              text,
+              '    "authentication": "public-free",\n',
+              '    "authentication": "none",\n',
+              'agent-tools public MCP authentication'
+          )
+          text = replace_once(
+              text,
+              '      "paid execution endpoint"\n'
+              '    ]\n'
+              '  },\n'
+              '  "paymentEndpoint":',
+              '      "paid execution endpoint"\n'
+              '    ],\n'
+              '    "accessMode": "public-free",\n'
+              '    "authenticationRequired": false,\n'
+              '    "publicFreeAccess": true,\n'
+              '    "privateOrSelfHostedAuthentication": "bearer",\n'
+              '    "paymentRequiredForFreeOperations": false\n'
+              '  },\n'
+              '  "paymentEndpoint":',
+              'agent-tools remote MCP boundary'
+          )
+          site_tools = '''  "siteTools": {
+            "transport": "WebMCP document.modelContext",
+            "authentication": "none",
+            "paymentRequired": false,
+            "readOnly": true,
+            "tools": [
+              "hyperxosist_search_plan",
+              "hyperxosist_filter_signals",
+              "hyperxosist_build_handoff"
+            ]
+          }'''
+          site_tools = '\n'.join(line[2:] if line.startswith('  ') else line for line in site_tools.splitlines())
+          if not text.endswith('\n}\n'):
+              raise SystemExit('agent-tools unexpected final newline')
+          text = text[:-3] + ',\n' + site_tools + '\n}\n'
+          json.loads(text)
+          path.write_text(text, encoding='utf-8', newline='')
+
+          path = Path('.well-known/mcp.json')
+          text = path.read_text(encoding='utf-8')
+          text = replace_once(
+              text,
+              '  "authentication": "public-free",\n',
+              '  "authentication": "none",\n',
+              'well-known public MCP authentication'
+          )
+          text = replace_once(
+              text,
+              '    "network": "eip155:8453"\n',
+              '    "network": "eip155:8453",\n'
+              '    "authentication": "x402-payment-proof",\n'
+              '    "paymentRequired": true\n',
+              'well-known paid execution authentication'
+          )
+          access = '''  "accessMode": "public-free",
+          "authenticationRequired": false,
+          "publicFreeAccess": true,
+          "privateOrSelfHostedAuthentication": "bearer",
+          "accessPolicy": "https://kg-ninja.github.io/HyperXosist-Agent/access-policy.json"'''
+          access = '\n'.join(line[2:] if line.startswith('  ') else line for line in access.splitlines())
+          if not text.endswith('\n}\n'):
+              raise SystemExit('well-known unexpected final newline')
+          text = text[:-3] + ',\n' + access + '\n}\n'
+          json.loads(text)
+          path.write_text(text, encoding='utf-8', newline='')
+          PY
+
+      - name: Validate semantic policy and compact diff
+        run: |
+          npm run test:agent
+          npm run test:mcp:cloudflare
+          npm run test:webmcp
+          node -e "for (const f of ['agent-use.json','agent-tools.json','.well-known/mcp.json']) JSON.parse(require('fs').readFileSync(f,'utf8'))"
+          git diff --check
+          git diff --stat
+
+      - name: Commit compact JSON diff
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add agent-use.json agent-tools.json .well-known/mcp.json
+          git commit -m "Minimize access policy metadata diff"
+          git push origin HEAD:codex/align-agent-access-policy
