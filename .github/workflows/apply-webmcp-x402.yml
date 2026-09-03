@@ -1,0 +1,97 @@
+name: Apply WebMCP x402 paid execution
+
+on:
+  push:
+    branches:
+      - codex/webmcp-x402-paid-execution
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout implementation branch
+        uses: actions/checkout@v4
+        with:
+          ref: codex/webmcp-x402-paid-execution
+          fetch-depth: 0
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Apply paid execution boundary
+        run: python3 scripts/apply-webmcp-x402.py
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm --prefix workers/remote-mcp ci
+
+      - name: Validate paid execution and WebMCP
+        run: |
+          npm run test:paid-execution
+          npm run test:webmcp
+
+      - name: Validate Agent API and MCP adapters
+        run: |
+          npm run test:agent
+          npm run test:mcp
+          npm run test:mcp:core
+          npm run test:mcp:remote
+          npm run test:mcp:security
+          npm run test:mcp:schema
+          npm run test:mcp:consistency
+          npm run test:mcp:cloudflare
+
+      - name: Validate selection, examples and Worker bundles
+        run: |
+          npm run test:tool-selection
+          npm run openai:remote-check
+          npm run quickstart
+          npm run agent-handoff-dryrun -- HyperXosist-Agent
+          npm --prefix workers/remote-mcp run check -- --env staging
+          npm --prefix workers/remote-mcp run check -- --env production
+
+      - name: Validate manifests and package contents
+        shell: bash
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const files = [
+            'package.json',
+            'package-lock.json',
+            'agent-use.json',
+            'agent-tools.json',
+            'x402-payment.json',
+            '.well-known/mcp.json',
+            'mcp-catalog.json',
+            'access-policy.json'
+          ];
+          for (const file of files) {
+            JSON.parse(fs.readFileSync(file, 'utf8'));
+            console.log('OK', file);
+          }
+          NODE
+          npm pack --dry-run --json > /tmp/npm-pack.json
+          node - <<'NODE'
+          const result = JSON.parse(require('fs').readFileSync('/tmp/npm-pack.json', 'utf8'))[0];
+          const files = new Set(result.files.map((entry) => entry.path));
+          for (const required of ['paid-execution.js', 'webmcp.js', 'access-policy.json', 'mcp/core.js', 'mcp/tools.js']) {
+            if (!files.has(required)) throw new Error(`Missing from npm package: ${required}`);
+          }
+          NODE
+          git diff --check
+
+      - name: Commit validated implementation
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Add x402 paid execution tool for WebMCP and MCP"
+          git push origin HEAD:codex/webmcp-x402-paid-execution
