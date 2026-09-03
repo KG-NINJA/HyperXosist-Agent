@@ -1,14 +1,14 @@
 {
   "name": "HyperXosist Agent Tools",
-  "version": "2.5.0",
+  "version": "2.6.0",
   "description": "OpenAI-compatible tools for any AI agent (GPT/Claude/Grok/Llama). Default universal mode. Pass includeGrok/mode=grok for optional Grok Build tools. Automated search URL use requires x402. Prefer dispatchToolCall(name, args) — no hand-written mapping.",
   "paymentRequiredForAutomatedSearchUse": true,
   "remoteMcp": {
     "endpoint": "https://mcp.kgninja.dev/mcp",
     "healthEndpoint": "https://mcp.kgninja.dev/health",
     "transport": "Streamable HTTP",
-    "authentication": "public-free",
-    "deploymentStatus": "deployed; verify healthEndpoint before use",
+    "authentication": "none",
+    "deploymentStatus": "three free tools deployed; paid tool code ready; production Worker deploy pending",
     "freeTools": [
       "hyperxosist_search_plan",
       "hyperxosist_filter_signals",
@@ -25,7 +25,22 @@
       "production search URL usage",
       "automated external collection",
       "paid execution endpoint"
-    ]
+    ],
+    "accessMode": "public-free",
+    "authenticationRequired": false,
+    "publicFreeAccess": true,
+    "privateOrSelfHostedAuthentication": "bearer",
+    "paymentRequiredForFreeOperations": false,
+    "paidTools": [],
+    "deployedTools": [
+      "hyperxosist_search_plan",
+      "hyperxosist_filter_signals",
+      "hyperxosist_build_handoff"
+    ],
+    "codeReadyPaidTools": [
+      "hyperxosist_execute"
+    ],
+    "paidToolDeploymentStatus": "pending-production-worker-deploy"
   },
   "paymentEndpoint": "https://api.kgninja.dev/hyperxosist-query",
   "stickyTip": "plan → score → pay → collect → refine → keep/exportKeepOnly → handoff/agent prompt → receipt (optional: grok mode)",
@@ -447,7 +462,7 @@
   "sourceOfTruth": "openapi",
   "canonicalOpenApi": "https://api.kgninja.dev/openapi.json",
   "paymentOptions": "https://api.kgninja.dev/payment-options.json",
-  "lastSynced": "2026-07-19",
+  "lastSynced": "2026-09-03",
   "paidEndpoint": "https://api.kgninja.dev/hyperxosist-query",
   "paidOperations": [
     {
@@ -490,6 +505,76 @@
       "expectedUnpaidStatus": 402,
       "expectedPaidStatus": 200
     }
+  ],
+  "requiresPaymentForAgentUse": false,
+  "requiresPaymentForProductionExecution": true,
+  "accessPolicyManifest": "access-policy.json",
+  "siteTools": {
+    "transport": "WebMCP document.modelContext",
+    "authentication": "none",
+    "freeTools": [
+      "hyperxosist_search_plan",
+      "hyperxosist_filter_signals",
+      "hyperxosist_build_handoff"
+    ],
+    "paidTools": [
+      "hyperxosist_execute"
+    ],
+    "handler": "HyperXosistPaidExecution.execute",
+    "paymentProtocol": "x402-v2",
+    "confirmPaymentRequired": true
+  },
+  "paidToolDefinitions": [
+    {
+      "name": "hyperxosist_execute",
+      "handler": "HyperXosistPaidExecution.execute(input, options)",
+      "availableVia": [
+        "WebMCP Site Tools",
+        "Remote MCP"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "input": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "paymentSignature": {
+            "type": "string",
+            "description": "Opaque Base64 x402 v2 PAYMENT-SIGNATURE; never a private key."
+          },
+          "confirmPayment": {
+            "type": "boolean"
+          },
+          "paymentEnvironment": {
+            "type": "string",
+            "enum": [
+              "production",
+              "staging"
+            ]
+          }
+        },
+        "required": [
+          "input"
+        ],
+        "additionalProperties": false
+      },
+      "payment": {
+        "required": true,
+        "protocol": "x402",
+        "x402Version": 2,
+        "endpoint": "https://api.kgninja.dev/hyperxosist-query",
+        "paymentOptions": "https://api.kgninja.dev/payment-options.json",
+        "paymentRequiredHeader": "PAYMENT-REQUIRED",
+        "paymentSignatureHeader": "PAYMENT-SIGNATURE",
+        "paymentResponseHeader": "PAYMENT-RESPONSE",
+        "confirmPaymentRequired": true
+      },
+      "availability": {
+        "webMcp": "available after GitHub Pages deploy",
+        "localMcp": "available in package 2.6.0",
+        "remoteMcpProduction": "pending explicit production Worker deployment"
+      }
+    }
   ]
 }
-

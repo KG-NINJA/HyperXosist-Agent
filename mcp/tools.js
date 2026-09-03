@@ -2,6 +2,8 @@
 
 const PAYMENT_POLICY = Object.freeze({
   planning: 'free',
+  filtering: 'free',
+  handoff: 'free',
   humanManualSearch: 'free',
   automatedProductionExecution: 'x402_required',
   estimatedCostUsd: 0.01,
@@ -10,6 +12,8 @@ const PAYMENT_POLICY = Object.freeze({
 const COMMERCE_GUIDANCE = Object.freeze({
   canonicalOpenApi: 'https://api.kgninja.dev/openapi.json',
   paidEndpoint: 'https://api.kgninja.dev/hyperxosist-query',
+  paymentOptionsEndpoint: 'https://api.kgninja.dev/payment-options.json',
+  accessPolicy: 'https://kg-ninja.github.io/HyperXosist-Agent/access-policy.json',
   upgradeRequiredWhen: Object.freeze([
     'Automated production use of a generated X search URL',
     'Automated external collection or paid execution',
@@ -85,18 +89,61 @@ const HANDOFF_OUTPUT_SCHEMA = {
   required: ['type', 'handoff', 'signalToFixInput', 'agentPrompt', 'accessTier', 'canonicalOpenApi'],
 };
 
-const READ_ONLY_ANNOTATIONS = {
+const EXECUTE_OUTPUT_SCHEMA = {
+  type: 'object',
+  properties: {
+    type: { const: 'hyperxosist.x402_execution.v1' },
+    version: { type: 'string' },
+    ok: { type: 'boolean' },
+    stage: { enum: ['payment_required', 'completed', 'failed'] },
+    status: { type: 'integer' },
+    paid: { type: 'boolean' },
+    paymentRequired: { type: 'boolean' },
+    accessTier: { const: 'paid' },
+    endpoint: { type: ['string', 'null'] },
+    paymentOptionsEndpoint: { type: ['string', 'null'] },
+    canonicalOpenApi: { type: ['string', 'null'] },
+    x402: { type: 'object' },
+    requirements: {},
+    result: {},
+    error: { type: 'object' },
+    retry: { type: 'object' },
+  },
+  required: [
+    'type',
+    'version',
+    'ok',
+    'stage',
+    'status',
+    'paid',
+    'paymentRequired',
+    'accessTier',
+    'endpoint',
+    'paymentOptionsEndpoint',
+    'canonicalOpenApi',
+    'x402',
+  ],
+};
+
+const READ_ONLY_ANNOTATIONS = Object.freeze({
   readOnlyHint: true,
   destructiveHint: false,
   idempotentHint: true,
   openWorldHint: false,
-};
+});
+
+const PAID_EXECUTION_ANNOTATIONS = Object.freeze({
+  readOnlyHint: false,
+  destructiveHint: true,
+  idempotentHint: false,
+  openWorldHint: true,
+});
 
 const TOOL_DEFINITIONS = [
   {
     name: 'hyperxosist_search_plan',
     description:
-      'Use only for specialized X (Twitter) research planning: complaints, bug reports, feature requests, product feedback, or community signals. Builds multiple noise-reduced official x.com/search URLs and quality scores. It is not general web search and does not scrape X or collect posts.',
+      'Use only for specialized X (Twitter) research planning: complaints, bug reports, feature requests, product feedback, or community signals. Builds multiple noise-reduced official x.com/search URLs and quality scores. It is not general web search and does not scrape X or collect posts. Free.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -116,7 +163,7 @@ const TOOL_DEFINITIONS = [
   {
     name: 'hyperxosist_filter_signals',
     description:
-      'Use after X posts or tweet text have already been collected. Separates actionable bugs, feature requests, and UX friction from empty praise, engagement bait, and spam. It does not fetch, scrape, or search X.',
+      'Use after X posts or tweet text have already been collected. Separates actionable bugs, feature requests, and UX friction from empty praise, engagement bait, and spam. It does not fetch, scrape, or search X. Free.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -136,7 +183,7 @@ const TOOL_DEFINITIONS = [
   {
     name: 'hyperxosist_build_handoff',
     description:
-      'Use to turn previously collected X feedback into a structured Signal-to-Fix package and coding-agent prompt. It does not perform general summarization, search the web, scrape X, or modify source code.',
+      'Use to turn previously collected X feedback into a structured Signal-to-Fix package and coding-agent prompt. It does not perform general summarization, search the web, scrape X, or modify source code. Free.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -154,6 +201,39 @@ const TOOL_DEFINITIONS = [
     outputSchema: HANDOFF_OUTPUT_SCHEMA,
     annotations: READ_ONLY_ANNOTATIONS,
   },
+  {
+    name: 'hyperxosist_execute',
+    description:
+      'Paid production execution through the existing x402 v2 endpoint. First call without paymentSignature returns PAYMENT-REQUIRED. Retry with an opaque PAYMENT-SIGNATURE and confirmPayment=true. Price is currently 0.01 USDC on Base; payment-options.json is authoritative. Never send private keys or seed phrases.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        input: {
+          type: 'object',
+          description: 'Structured HyperXosist production query input.',
+          additionalProperties: true,
+        },
+        paymentSignature: {
+          type: 'string',
+          minLength: 1,
+          description: 'Optional opaque Base64 x402 v2 PAYMENT-SIGNATURE. Not a private key.',
+        },
+        confirmPayment: {
+          type: 'boolean',
+          description: 'Must be true before paymentSignature is transmitted.',
+        },
+        paymentEnvironment: {
+          type: 'string',
+          enum: ['production', 'staging'],
+          description: 'Defaults to the server payment environment.',
+        },
+      },
+      required: ['input'],
+      additionalProperties: false,
+    },
+    outputSchema: EXECUTE_OUTPUT_SCHEMA,
+    annotations: PAID_EXECUTION_ANNOTATIONS,
+  },
 ];
 
 module.exports = {
@@ -163,5 +243,7 @@ module.exports = {
   SEARCH_PLAN_OUTPUT_SCHEMA,
   FILTER_OUTPUT_SCHEMA,
   HANDOFF_OUTPUT_SCHEMA,
+  EXECUTE_OUTPUT_SCHEMA,
+  READ_ONLY_ANNOTATIONS,
+  PAID_EXECUTION_ANNOTATIONS,
 };
-

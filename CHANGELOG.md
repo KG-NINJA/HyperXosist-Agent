@@ -1,15 +1,26 @@
 # Changelog
 
+## [2.6.0] - 2026-09-03
+
+### Added
+- `hyperxosist_execute` as the single x402-paid production tool for WebMCP, local MCP, and the Remote MCP Worker code path.
+- `paid-execution.js`, a shared 402 → PAYMENT-SIGNATURE → 200 bridge with explicit payment confirmation.
+- `access-policy.json` and machine-readable free/paid tool metadata.
+- Paid execution, WebMCP boundary, and cross-manifest consistency tests.
+- Live unsigned endpoint probe confirming CORS preflight, 402, and standard x402 header exposure without making a payment.
+
+### Changed
+- Public Remote MCP authentication metadata now reports `none`; Bearer remains optional for private/self-hosted mode.
+- Agent use is free for discovery, planning, filtering, and handoff. Payment is required only for production execution.
+- Version bumped to 2.6.0.
+- Production Remote MCP deployment remains an explicit manual operation; static metadata marks the paid tool as pending until deployed.
+
+
 All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
-### ChatGPT Site Tools / WebMCP
-- Added `webmcp.js`, a dependency-free browser adapter using the current `document.modelContext.registerTool(...)` API when available.
-- Exposed exactly three local/read-only/free Site Tools for planning, supplied-signal filtering, and engineering handoff by dispatching into the existing `HyperXosistAgent` API.
-- Kept X scraping, external navigation, Remote MCP calls, production automated search, wallet actions, and x402 payment outside the WebMCP Site Tools boundary.
-- Added zero-dependency WebMCP tests for feature detection, mappings, duplicate initialization, controlled dispatch errors, serialization, abort handling, and paid-tool exclusion.
-- Documented the separation between Human UI, Site Tools/WebMCP, Remote MCP, and x402 execution.
+- No unreleased changes.
 
 ## [2.5.0] - 2026-07-10
 

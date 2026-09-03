@@ -1,6 +1,7 @@
 'use strict';
 
 const HyperXosistAgent = require('../agent-api.js');
+const HyperXosistPaidExecution = require('../paid-execution.js');
 const { COMMERCE_GUIDANCE, PAYMENT_POLICY, TOOL_DEFINITIONS } = require('./tools.js');
 
 function errorResult(message) {
@@ -27,6 +28,10 @@ function validStringArray(value) {
     value.length > 0 &&
     value.every((item) => typeof item === 'string' && item.trim().length > 0)
   );
+}
+
+function validObject(value) {
+  return value && typeof value === 'object' && !Array.isArray(value);
 }
 
 function createToolDispatcher(agent = HyperXosistAgent, options = {}) {
@@ -73,13 +78,13 @@ function createToolDispatcher(agent = HyperXosistAgent, options = {}) {
           queries,
           searchUrls,
           qualityScores,
-           estimatedCostUsd,
+          estimatedCostUsd,
           accessTier: 'free',
           canonicalOpenApi: COMMERCE_GUIDANCE.canonicalOpenApi,
           paidEndpoint: String(steps[0]?.paidRequest?.endpoint || COMMERCE_GUIDANCE.paidEndpoint),
           upgradeRequiredWhen: COMMERCE_GUIDANCE.upgradeRequiredWhen,
           upgradeNotRequiredWhen: COMMERCE_GUIDANCE.upgradeNotRequiredWhen,
-           requiresPaymentForAutomatedProductionUse: true,
+          requiresPaymentForAutomatedProductionUse: true,
           paymentPolicy: PAYMENT_POLICY,
         });
       }
@@ -97,11 +102,11 @@ function createToolDispatcher(agent = HyperXosistAgent, options = {}) {
           keep,
           discard,
           summary: filtered.focusSummary || {},
-           keepCount: keep.length,
-           discardCount: discard.length,
+          keepCount: keep.length,
+          discardCount: discard.length,
           accessTier: 'free',
           canonicalOpenApi: COMMERCE_GUIDANCE.canonicalOpenApi,
-         });
+        });
       }
 
       if (name === 'hyperxosist_build_handoff') {
@@ -118,11 +123,27 @@ function createToolDispatcher(agent = HyperXosistAgent, options = {}) {
         return successResult({
           type: 'hyperxosist.handoff.v1',
           handoff,
-           signalToFixInput: (handoff.signalToFix && handoff.signalToFix.input) || {},
-           agentPrompt: handoff.agentPrompt || {},
+          signalToFixInput: (handoff.signalToFix && handoff.signalToFix.input) || {},
+          agentPrompt: handoff.agentPrompt || {},
           accessTier: 'free',
           canonicalOpenApi: COMMERCE_GUIDANCE.canonicalOpenApi,
-         });
+        });
+      }
+
+      if (name === 'hyperxosist_execute') {
+        if (!args || !validObject(args.input)) {
+          return errorResult("'input' must be a JSON object.");
+        }
+        const execution = await HyperXosistPaidExecution.execute(args.input, {
+          paymentEnvironment:
+            args.paymentEnvironment || options.paymentEnvironment || 'production',
+          paymentSignature: args.paymentSignature,
+          confirmPayment: args.confirmPayment,
+          fetch: options.fetch,
+          signal: options.signal,
+          timeoutMs: options.timeoutMs,
+        });
+        return successResult(execution);
       }
 
       return errorResult(`Unknown tool '${String(name)}'.`);
@@ -162,4 +183,3 @@ module.exports = {
   errorResult,
   successResult,
 };
-

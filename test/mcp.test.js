@@ -47,10 +47,11 @@ function runTest() {
         assert.strictEqual(response.id, 1);
         const tools = response.result.tools;
         assert.ok(Array.isArray(tools));
-        assert.strictEqual(tools.length, 3);
+        assert.strictEqual(tools.length, 4);
         const toolNames = tools.map(t => t.name).sort();
         assert.deepStrictEqual(toolNames, [
           'hyperxosist_build_handoff',
+          'hyperxosist_execute',
           'hyperxosist_filter_signals',
           'hyperxosist_search_plan'
         ]);

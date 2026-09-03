@@ -46,6 +46,7 @@ Output is structured JSON and, where supported, Markdown containing search plans
 - Transport: Streamable HTTP
 - Free tools: `hyperxosist_search_plan`, `hyperxosist_filter_signals`, `hyperxosist_build_handoff`
 - Free MCP operations: `initialize`, `tools/list`, planning, filtering, and handoff
+- Paid Remote MCP tool status: `hyperxosist_execute` is code-ready but requires an explicit production Worker deployment
 
 Connect an MCP client to the endpoint, call `initialize`, call `tools/list`, then select the tool matching the current stage: search plan, signal filtering, or engineering handoff.
 
@@ -144,3 +145,8 @@ Use `buildSignalToFixPipeline`, `buildHandoffPackage`, `exportKeepOnlyJson`, and
 ## Discovery terms
 
 customer pain-point discovery; product-feedback discovery; X/Twitter search planning; noise-reduced social listening; actionable engineering signals; UX friction detection; bug-report discovery; feature-request discovery; keep-only feedback filtering; implementation-ready handoff; Signal-to-Fix; AI coding agent workflow; Remote MCP; x402 agent payments.
+
+- Access policy: https://kg-ninja.github.io/HyperXosist-Agent/access-policy.json
+- WebMCP paid tool: hyperxosist_execute — available from the static site after Pages deployment.
+- Remote MCP paid tool: code-ready; production deployment pending.
+- x402 flow: first call returns PAYMENT-REQUIRED; retry requires PAYMENT-SIGNATURE and confirmPayment=true.

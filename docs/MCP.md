@@ -1,25 +1,20 @@
 # HyperXosist Model Context Protocol (MCP)
 
-HyperXosist-Agent provides two adapters over one shared tool core:
+HyperXosist-Agent uses one shared MCP core across local stdio, the Node Streamable HTTP adapter, and the Cloudflare Worker adapter. GitHub Pages remains a static site; its WebMCP adapter is a separate browser integration.
 
-- Local stdio: `mcp/server.js`
-- Remote Streamable HTTP: `mcp/remote-server.js`, endpoint `POST /mcp`
+## Tool and payment boundary
 
-Both adapters expose the same three read-only tools and use `agent-api.js` as the business-logic source of truth. GitHub Pages remains a static human UI and is not an MCP server.
-
-## Tool scope
+Free and read-only:
 
 - `hyperxosist_search_plan`: specialized X research planning and official `x.com/search` URLs.
-- `hyperxosist_filter_signals`: filtering of X post text that the caller already collected.
-- `hyperxosist_build_handoff`: Signal-to-Fix input and a coding-agent prompt from collected feedback.
+- `hyperxosist_filter_signals`: filtering of X post text already supplied by the caller.
+- `hyperxosist_build_handoff`: Signal-to-Fix input and coding-agent handoff from supplied feedback.
 
-These tools are not general web search. They do not scrape X, call the X API, collect posts, post content, or persist input.
+Paid and consequential:
 
-Each successful call returns text content plus `structuredContent`:
+- `hyperxosist_execute`: production execution through the existing x402 v2 endpoint.
 
-- `hyperxosist.search_plan.v1`
-- `hyperxosist.signal_filter.v1`
-- `hyperxosist.handoff.v1`
+The paid tool does not receive wallet private material. An unsigned call returns `PAYMENT-REQUIRED`; a compatible client authorizes payment and retries with an opaque `PAYMENT-SIGNATURE` plus `confirmPayment: true`. Do not automatically retry confirmed payment calls.
 
 ## Local stdio
 
@@ -30,7 +25,7 @@ npm install
 npm run mcp
 ```
 
-Example local client configuration:
+Example:
 
 ```json
 {
@@ -43,11 +38,9 @@ Example local client configuration:
 }
 ```
 
-This works with Cursor, Claude Code, and VS Code-compatible clients that can launch a local stdio process. Logs go to stderr; stdout is reserved for MCP JSON-RPC.
+All four code-defined tools are available locally. Paid execution still settles only through `https://api.kgninja.dev/hyperxosist-query`.
 
-## Remote Streamable HTTP
-
-The implementation uses the official `@modelcontextprotocol/sdk` Streamable HTTP transport in stateless JSON-response mode. SSE is not required for these request-response tools.
+## Node Streamable HTTP adapter
 
 ```bash
 export HYPERXOSIST_MCP_TOKEN="replace-with-a-long-random-secret"
@@ -58,135 +51,77 @@ npm run mcp:remote
 
 Endpoints:
 
-- `POST /mcp`: Streamable HTTP MCP
-- `GET /health`: health and auth-configuration status
+- `POST /mcp`
+- `GET /health`
 - `GET /mcp`: 405 in stateless mode
 
-Test locally:
+The Node server may be run locally without a token. Public private-mode deployments should use HTTPS, Bearer authentication, host/origin controls, body limits, timeouts, monitoring, and a shared rate limiter.
 
-```bash
-curl http://127.0.0.1:8787/health
-npm run test:mcp:remote
-npm run test:mcp:security
-```
+## Public Cloudflare Remote MCP
 
-### Environment variables
+Production endpoint: `https://mcp.kgninja.dev/mcp`
+Health endpoint: `https://mcp.kgninja.dev/health`
 
-| Variable | Default | Purpose |
-|---|---:|---|
-| `HOST` | `127.0.0.1` | Bind address |
-| `PORT` | `8787` | HTTP port |
-| `HYPERXOSIST_MCP_TOKEN` | unset | Bearer token; mandatory for public deployment |
-| `HYPERXOSIST_MCP_MAX_BODY_BYTES` | `1048576` | Request body limit |
-| `HYPERXOSIST_MCP_TIMEOUT_MS` | `15000` | Request timeout |
-| `HYPERXOSIST_MCP_ALLOWED_ORIGINS` | empty | Comma-separated browser origins; requests with Origin are rejected unless listed |
-| `HYPERXOSIST_MCP_ALLOWED_HOSTS` | empty | Comma-separated public hostnames for deployment validation |
-| `HYPERXOSIST_PAYMENT_ENVIRONMENT` | `production` | Payment URL profile: `production` returns `https://api.kgninja.dev`; `staging` preserves the existing Worker URL |
+The current production configuration uses public free mode for the three read-only tools. Bearer authentication remains available for private/self-hosted mode. The repository now includes `hyperxosist_execute` in the Worker source, but the public endpoint will not expose it until an explicit production Worker deployment is performed.
 
-If the token is unset, the server starts for local development and prints a warning without printing any secret. Never expose that unauthenticated configuration publicly.
+Merging `main` does not deploy the Worker. Follow the staged deployment procedure in [`workers/remote-mcp/README.md`](../workers/remote-mcp/README.md). Do not claim the paid Remote MCP tool is live before `tools/list` and `/.well-known/mcp.json` on the deployed Worker confirm it.
 
-The server also accepts an injected `rateLimit` callback through `createRemoteServer()`. Production hosting must connect this extension point to a shared limiter or gateway. The built-in process does not claim distributed rate limiting.
+## x402 execution protocol
+
+Authoritative payment metadata:
+
+- OpenAPI: `https://api.kgninja.dev/openapi.json`
+- Payment options: `https://api.kgninja.dev/payment-options.json`
+- Paid endpoint: `https://api.kgninja.dev/hyperxosist-query`
+- Access policy: `https://kg-ninja.github.io/HyperXosist-Agent/access-policy.json`
+
+Current published metadata states x402 v2, exact scheme, 0.01 USDC, Base (`eip155:8453`). The payment endpoint's live response remains authoritative.
+
+Standard headers:
+
+- Response on 402: `PAYMENT-REQUIRED`
+- Confirmed retry request: `PAYMENT-SIGNATURE`
+- Successful settlement response: `PAYMENT-RESPONSE`
+
+The browser route has been checked for a 204 CORS preflight, allowance of `PAYMENT-SIGNATURE`, exposure of `PAYMENT-REQUIRED` and `PAYMENT-RESPONSE`, and an unsigned 402 JSON response. No payment was performed by that check.
 
 ## Security policy
 
-- Require HTTPS and Bearer authentication for public endpoints.
-- Keep secrets in environment or platform secret storage.
-- Do not put tokens in URLs, images, Docker layers, logs, or Git.
-- Origin checks default closed when an Origin header is present.
-- Configure allowed hostnames behind a public reverse proxy.
-- Requests require `application/json`.
-- Oversized and malformed bodies receive bounded JSON-RPC errors.
-- Internal exceptions never expose stack traces.
-- Inputs are processed in memory and are not persisted.
-- No unconditional wildcard CORS is enabled.
-- Put production rate limiting, TLS, monitoring, and abuse controls at the gateway.
+- Never request or accept private keys, seed phrases, wallet passwords, or arbitrary authorization headers as payment material.
+- Treat `PAYMENT-SIGNATURE` as opaque authorization data; do not log or echo it.
+- Require `confirmPayment: true` before transmitting a supplied signature.
+- Do not auto-retry confirmed payment calls.
+- Keep payment endpoint selection on the checked-in allowlist.
+- Keep planning, filtering, and handoff free; do not use them as a payment bypass for production execution.
+- The x402 Worker remains the only payment verifier and settlement system.
+- Keep request bodies, prompts, tokens, payment headers, and wallet data out of MCP telemetry.
 
-## OpenAI Responses API and GPT-5.x
-
-A public HTTPS Remote MCP URL is required. GitHub Pages and local stdio paths cannot be supplied as `server_url`.
+## Validation
 
 ```bash
-export OPENAI_API_KEY="..."
-export HYPERXOSIST_MCP_URL="https://mcp.example.com/mcp"
-export HYPERXOSIST_MCP_TOKEN="..."
-export OPENAI_MODEL="gpt-5.5"
-node examples/openai-remote-mcp.mjs
-```
-
-The example sends a Responses API MCP tool with `server_url`, allowed tool names, and an optional Authorization header. Run configuration validation without an API call:
-
-```bash
+npm run test:agent
+npm run test:mcp
+npm run test:mcp:core
+npm run test:mcp:remote
+npm run test:mcp:security
+npm run test:mcp:schema
+npm run test:mcp:consistency
+npm run test:mcp:cloudflare
+npm run test:paid-execution
+npm run test:webmcp
+npm run test:access-policy
 npm run openai:remote-check
 ```
 
-OpenAI currently documents GPT-5.5 as the generally available recommended model. GPT-5.6 is limited preview; accounts with an enabled GPT-5.6 model ID can set it through `OPENAI_MODEL` without code changes.
-
-Official references:
-
-- [OpenAI Responses API MCP tool fields](https://platform.openai.com/docs/api-reference/responses/create)
-- [OpenAI models](https://developers.openai.com/api/docs/models)
-- [MCP Streamable HTTP transport](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports)
-- [MCP TypeScript SDK server guide](https://github.com/modelcontextprotocol/typescript-sdk/blob/main/docs/server.md)
-
-## Tool-selection evaluation
+Cloudflare dry run, without deployment:
 
 ```bash
-npm run test:tool-selection
+npm --prefix workers/remote-mcp run check -- --env staging
+npm --prefix workers/remote-mcp run check -- --env production
 ```
 
-The default run statically checks 20 positive and negative prompts. Optional live evaluation requires `EVALUATE_WITH_OPENAI=1`, `OPENAI_API_KEY`, and a reachable `HYPERXOSIST_MCP_URL`.
+## OpenAI and other MCP clients
 
-## Docker and hosting
+A public HTTPS Remote MCP URL can be supplied to compatible MCP clients. The paid tool additionally requires an x402-capable wallet or facilitator flow. Do not assume a client can automatically produce `PAYMENT-SIGNATURE`; feature-detect or obtain explicit operator authorization.
 
-```bash
-docker build -t hyperxosist-remote-mcp .
-docker run --rm -p 8787:8787 \
-  -e HYPERXOSIST_MCP_TOKEN="replace-with-a-long-random-secret" \
-  hyperxosist-remote-mcp
-```
-
-The image uses Node 20 slim, production dependencies, a non-root user, port 8787, and a health check. The same container can be placed behind HTTPS on a VPS, Render, Fly.io, or Railway. Configure the public hostname, token, rate limiting, and platform health checks.
-
-### Cloudflare Worker public endpoint
-
-`workers/remote-mcp/` is a separate Worker adapter that reuses `mcp/core.js` with the SDK's Web Standard Streamable HTTP transport. It does not run the Node `http` or stdio adapter in Workers, and it does not alter GitHub Pages or the existing x402 endpoint.
-
-Use a Cloudflare custom domain for production, not a `workers.dev` hostname. Before a public deployment:
-
-1. Set `HYPERXOSIST_MCP_TOKEN` with `wrangler secret put`; it is mandatory for `POST /mcp`.
-2. Set `HYPERXOSIST_MCP_ALLOWED_HOSTS` to the exact custom hostname and only add `HYPERXOSIST_MCP_ALLOWED_ORIGINS` for browser clients that require it.
-3. Create a zone-level Cloudflare WAF rate-limiting rule that matches `POST /mcp`, groups by source IP, and returns JSON `429`. Keep it at the Cloudflare edge; Workers module memory is not a distributed rate limiter.
-4. Deploy staging first, test authenticated `initialize` and tool calls, then deploy production with the custom domain.
-
-The checked-in production configuration binds the Worker to `mcp.kgninja.dev`, disables `workers.dev` and version preview URLs, and restricts the Host allowlist to that hostname. It deliberately leaves browser origins empty because Remote MCP clients are server-to-server by default.
-
-The Worker exposes only `POST /mcp`, CORS preflight for an allowlisted browser origin, and `GET /health`. It enforces Bearer authentication, closed-by-default Origin and Host validation, a 1 MiB body limit, JSON-only requests, generic errors, and `no-store` responses. Production returns x402 execution URLs under `https://api.kgninja.dev`; staging preserves the existing `workers.dev` payment origin. Run `npm run test:mcp:cloudflare` and `npm run cloudflare:mcp:check` before deployment. See [Worker deployment details](../workers/remote-mcp/README.md).
-The production endpoint is `https://mcp.kgninja.dev/mcp` and health is `https://mcp.kgninja.dev/health`. The deployed Worker now supports optional per-user token registry management through `HYPERXOSIST_MCP_TOKEN_USERS` (SHA-256 token hash keys, user ID, plan, status, and daily limit), while keeping the legacy `HYPERXOSIST_MCP_TOKEN` compatible. Authenticated requests emit sanitized request, latency, status, quota, and error events with request IDs to Worker Logs. Optional `MCP_USAGE_KV` enforces daily limits and optional `MCP_ANALYTICS` writes aggregate data points. Raw tokens, prompts, payment headers, and wallet data are never logged.
-
-Payment analysis remains separate: the existing x402 Worker is authoritative for paid API access, D1 revenue/access/funnel summaries, settlement evidence, and Telegram notifications. Remote MCP planning/filtering/handoff requests are free and are recorded with `paid: false`; the MCP Worker does not verify or settle x402 payments.
-
-## Free planning and x402 boundary
-
-Remote MCP tool discovery and all three MCP calls are free. The Remote MCP endpoint must not return HTTP 402 for planning, filtering, or handoff.
-
-```json
-{
-  "planning": "free",
-  "humanManualSearch": "free",
-  "automatedProductionExecution": "x402_required",
-  "estimatedCostUsd": 0.01
-}
-```
-
-A human may manually open a generated official X search URL for free. Automated production execution of generated search URLs uses the existing x402 endpoint documented in `x402-payment.json`. This change does not modify that endpoint, wallet, price, facilitator, verification, or settlement behavior.
-
-## ChatGPT App preparation
-
-See [CHATGPT_APP.md](CHATGPT_APP.md). A directory submission is intentionally not performed. A stable public HTTPS Remote MCP endpoint, production auth, policies, support contact, monitoring, and manual review are required first.
-
-## Limitations
-
-- Production Remote MCP is deployed at `https://mcp.kgninja.dev/mcp`; verify `/health` before use.
-- Bearer token registry management is suitable for controlled deployments; a broad public multi-user app may still require OAuth/account linking.
-- Daily quotas require the optional `MCP_USAGE_KV` binding; Cloudflare WAF remains the distributed edge rate limiter.
-- No X scraping or X API integration is included.
+See [`CHATGPT_APP.md`](CHATGPT_APP.md). Directory submission and production Worker deployment remain manual operations.
