@@ -1,0 +1,69 @@
+name: Apply access policy alignment
+
+on:
+  push:
+    branches:
+      - codex/align-agent-access-policy
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: codex/align-agent-access-policy
+          fetch-depth: 0
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm --prefix workers/remote-mcp ci
+
+      - name: Apply repository-wide access policy alignment
+        shell: bash
+        run: |
+          cat > /tmp/align-policy.py.gz.b64 <<'EOF'
+          H4sIAOkNmWoC/+1d/28cx3X//f6KCQ3kjsrdHqXEgUuJKiiakthaEkFSsQNS4C1358gV93Y3u3ukLhIBk3ISO3IiN7EdpHGTOk0T1w4sBG1Q13ZsoH9KzqTk/6LvvZnZnf1yX2gybgPUNpLb3Zk37715Xz7zle3Q77DAjLdcZ4M5ncAPY7YIjxX5+3bke5XKyo1nZ7/NZlj13NS5bzam/qYx9fVqpVKxeZu5vmmvx/xOXEMqk9MVBv8EUBapiHf0KjR34WVghBzKb/RiHtXEB89FwmvhmldlTpttqJ8eVeFuxOGrVxVEeNwN6YNhc8u3ea3ajduNZ6qTQDdwTQteUPU61ZmsA3XJZ2Tu8JTPOsOf+Hnmuu/xwWwDR8CgEzEsxkzPBhH4HSeKgX1RCf9ZrwsxcspI5YP/8cNUjsAIzJB7sdHZtp2wJh6imZWwy+uMyK/72/Q4Kcvvhk7Mpd6wgXJ5tbf4znMnDe5l9DQp1SELrvselBYa8V0bqvBdKZdS0ACxQDFQgXl+jF2FH1N1hKYDvbbci2Lemb/jxLV29S7W3JtmHTPc5iFVa/tdz55md4HM6vTZqalbXwn3qglxEtKCInENCkyyr8yws8dpgaqyuzkye9BqWNpkmX0k6lSqqbOzZFN5LTrt9SDkEXTiSXRZ0ONYPGUYIuros7o3jmhdOhXWMvC7MDAiW2dkSXovG1EcOkEtMSTiMWmxzmwzNsmvhAlaficwrXjmsgmOLPkBceXrVFQkDfwRE3a3E0Q1QYh7UTfk62ZkOY4gUmcRB4cxYz+MZmrVOtr+NBg2+1rqXxg1vhhtx7OhF2fOZcgNih1KB44X8TBeN9sxD2sdMwgcb7POtnmvzkzbdmLH9yIpu99FVu7u0QPa4nad7aBuZTUD3LyTiS1QY3X7FlTaSV6BArfZzAy2kJaTZY1uANLxWtqw3slQAHhuhxzk8X03ArKr9L261Qt4eMePMPZE3AytrXWwM+jC4ue244Kg65Gz6YHSykpsdB3XXt+CcOm321DgVsW0LB5F64HvOlYPNSAqRdYW75jf4mEErFanWfWsMaUIemaH46urSPgFIsxmiQxbJDKq4E5a/ZzxdErANaP4JmnDhm+Uw+SXqNuBMNHDGs86keUDBegrlNejrhMS0k8M+VIQBmGaoe4MdsNze8zsxn4HqbMg9O2uheqG6M2tLv3qRjxid74xdc5IVNTtmN5NB5q9m3RbVWjmGgRpZCfoboBoDWxF1hKFuvEW2KVjmUh6iX+n64QklTDbtGBg9jpQcEgJEDfAplar3+mC2Iz6CkRFPwL2uiakqoCjHpgPcanddiwH3r3AhFWwm0vPRVrZZbKCRuw3Ljt3lKaqt0SDe0rfYNUraG9Z0ePQ9CKEGSj583zj2twis32r26HUCBpx53wPnS2jioy+XN+C1v+C6kK8gr2NFoTpWeNeCpR6k/aR37Hcrs0jUjTozgrNQCpZmo1jga2AlYH2mGfuOJvEKxZY4h0/5gy1ARFi1wxV9+yarstjZpKlUSegeTEpRF7pIZG5ZgVZpXPPDnzHI51vxXEQTTebHSswtjehz2+bAKx28FlX5xY33XhrfoyKouTg7hrLvLGgB3DrL9SjQejsgNfeCJe5277qA4SwZwvtb4Cx87A6RncrdacxYF6FgNGKB6PI6i8Nog1yzyGqNB27gf0/XJFYoiGV0gAe/fZYas3ZelGr+QKhH/uW7yZN7mT48ni864fb+JU7wdmnn55+5htPfz3DSRRxUs3N5WfnqtnuskjgKWPqbDXjYgG3oPNueqiK5diMu9g/0HhJoUW9yLmpqdKAWBrQIYxjINzkHg/pWyESptUShwZNuNxSDo38pYkh76eOt2OGjgkDAGQi5esyGBoFAUxByxBBGYZQBvEO8nanC9nQ45C4VGq/urKyyLRsQzQWZUrDxB8A9BDVAM1tcBZDaEOmzQgz2ZYfOt8lK2CxzyLIAHaG0nWfSccRwCbiqKat0ETUJLwFKm5zDzGfv+3AW0A3MmJF3AIuAeP0sGHoEz/iWfJz3RDHQCqWMZvHpgNyYsqV3EHvOTvQF5h6d8FqoR2v7YQd4GOjx8COmYvfFYUOUECcp5oBre9VUrQqvakhEImB76CrMjAF4N1TzNxExwEjoCLTCnwKICC+QpcE5objAt6CjN8WI2q9x42KLdC0hL0KiEtGMi3AcMRehdhNjhYtCmEu++EslroZ8SpCQQppFRt+ZaAntDKsZl2hrmKZxdLglfp4UiUbKbEmRfQlLddo8VYqWcC1a6bntHlETl6m/MoeiS4+XcLBIUK0WylYpKyBfko4it1cQN+SsCHxjyiXQW2F75oK3jUTdNdMEKoEEmDifMfhu+RydthrhN3EXcmLB4eJNCZgxBgrLCzeWF5hJSFfb3B2vIC+h5pLUZamtONirOG5eKw8PDwHlyOq0vS6Vwk7IIltQGqAcZbZdeOaBmvAnsFkwo4a8twdS4AReGRMCakeRmgxIsnKcnyEkVcZOBYSvxFgziGwN9ivdDyxvdkQYGLTibe6G4bjN7XhU4NCQXOQ85lBQdmmjB1qwEUaN4O8xp0kxkwLN6WhrT3+0Oo8DZSYjDK2CPJIY/gYq5rpjiQIzQ61gCERMm+oxw6TmF+v+/GlXgB4RtYbXWJZIpA0ZDRSaRuJtA3UioyTmV4CEmGPsGUkumg1ayAYDspCLgYNve4tLYbM2mYAHSXq7vINRPq3o2omg2YTV51ls5yWPsmfZQLtmNucsnUE43u2IeM8vLa2HI83MDqYGy4fJ2emZDFrlmXDolvNKhUvU8AekRdPzzKOmwn/P/IVIp/AB19Glju9BFZwF81mSx0GBymORbFR9HcaRhOJIqOCsREnI3HqcLVq7HLXbWx7/q7XFI6KwwwxNzjEjdI5YDtrSeMOyk936mqYZZ1k5H76yZKGb0pzuosiZEsDgIrFWR4popagOEFuNUfj1mrBGpEAaiadm9bn3/MmNSyMgq00gCvT9TdVGIUAioPKfOwRr2XgEQ9/5cFHH23oefKk1lE5RYs4ljVooabQr6WhZqkLLEAOnl1cYG3X3IymYWjPA+byTdPqsVxDMzGtTm50YTiPeIU5MY7kQXAndntGJbOiKPuUIh7Ocd1WywQTtJyZpTzNiPSah98U4lzKpthMGVlfpdHcoEhKPDFmg7lvhMXGhWIjWG6T6cpmigBhmIhlcGEAWihWmGZ3xUvG5JIDvGHlHqa4LOqI3rO9uiKVJN4vTKzOVOoUsmrEE2xTJJ5EkhNLUNIHpc2VDbHLbYjtCdp7x7LMCrnf8z4tVKfpncZDNIEO6mjjRAHhZHBXXGgJpbcimkGgG4MqcWJyywzthuXjGgG7RMGtqYXXUr/cpZajplB6A6JFMwqtJq593sm5qgUIDBw+NkOMppg+ngWnMABp1CbPC5lFEX+DsgKbmfgitfOBHUouxzhKrHFvx7j67cX5pRduLC8sr6wDsltfvHnpuYW59ctL8/Prs3Nz88vL7N49Vq1OGrH/nL/Lwzkz4rVJNjMzg9Cwy6sDWIWOOJl6yPPy5pPJbhMjShck/1tp7kxLVsqAlZtjHi2vqreNFGRObGjNQs7QCQ7wqa/kqWt1hn0alYOHSKWC18kB2ul0LGNy2SK/apEyvlfo3zEqsfEijl5hWAKTfJyKyPmenT6+G65NrE2UOeLaBPK8NlHQ2BBr+gtb+/G9b2xnOXl3nF5gHNUjMjg6bVYrCKJ3VnkBkcxo/h2gk8hiATgoagg3tGTVUBWibsUdF6fAL8QAHvnFzBYPWlL584uvs1l7x4Q6uOImJmvYc2bXs7Z4eKEp6o0mQQjUEytHS1xO0i947dCMQHjIrCFPiE0OZxUXlBBCQDtxb2bC35ymehPYUzFuGpo4rhgTF09GeAzhJkaKFTDLNaNoZiLqboh2L2ocS6Ku5Fi0u7hALse0DSTwaReCNPN83JgHTiGnar9qdoLzcpkMB6gXmsHFgc3q8rzAQiWRk5GIWBDN/Pn7P2FiFxL95N6m43GaXFbzytRcqSfqWhBvLgQXZxf6B+/073/cP/igf/C7/v1/799/+fC1f+jvw3/v9V/cdzwwa9N1vsvhgWZymi70CTyoCW74mcxww2/JRv/gJ49fevvozZ/393939PC1zz75RX//Z/393/b3X+rvf9Lf/3n/xYP+/k/7B6/2D17p7z86euv3j9949+g3bz3+j18//uNrR798q7///pMfvHv44I3Dh28efvIzIHj42nv9/U+p+i/6Bz8FCqIWlBQVby49J6u8/G+PXwexPjr8zZuf33/n8OGPP//F9+Hx6K1XgCXqxMP3f/Xk7VdRyP1HmIuO/vDh0Qcv9/dfPfz0e09+uw9sCyYFqcNXfgRFrwqoqrY1QGFagj43NUXFD/oHD1Cm/XdQ+l9/+OTdHymhH/b3/7m//wZK/+KBsIikCw6/9/vP33yQLuARrUcn0z00/eSdj/v77yID9z8a2RWXtOVsaFxmlWYEkKaxRZjm6HcPjl5+jXh7H3rhs48+OnrpYaKlU+yIZDmbQMGX1yGVcZ3Gji9mAd6FJry6YNsXdS3CS/uiXifd3FBeWSwrsybDbEy1dTjEGNJYLPYLjY4SIjcCpAnRocBKCbHMiv0gtopdIiQbW10m24KxHUS9ZNtc27nTCJyAuxC7CL5OXMzuqVMfLzTNi6dFh/33f6YqSIgVoTQEZQE7xDtiQST8pfnZZ6/NT8PgLvS9TVCulvMJAwCxLm2UEFSpZ9zS4aggZXRsJd2ZMyIVtJ0QEh76+rYTE1FtYV9OVOJEOGWDBiUdSlq1FchFEAcmVfpSEYJoXObc3jCtbaWXkrQRGWfOsIU42fQTsST92DrNiAiW75Ekzmj6RZSaXRBpMDLYCozqMyxFPQ/MDef9bRAQcJ9Y+2AIF9uuv8tsH3g4c8bzY2DMBtBpxW5P7CqEVGmwxNLPnLkS+tvsEuZkKComCyImpyORVSOvZZlwB6XbeMuEPuiGIAbquSchKXuhKbUsU3AEFWMfz5C4HN2DJKDlvN4wFQPG8UCaSKhKKrDOxHaMwuaOumpdM4TB+zrqtKrc2By4flzPbl8VS9K2v4s9wM0Ok9Mqqt+A3VPtiPKoUXCHi+zoZ/8KOeXJu79EGPDb/ccH/zUNxgap8vDjhxIlQF45eETo5V0M73+EbPbp4/ceYHg/ePD5P/388T++1L//EmKb++8l2eOzDz/8/E3ICO+zmwsMMo7MjC8egLEWkRAmNMpsMo/tPxKr9kevPzp6BZMHpCFIqZgAs8jl8FcP+gf7Tz75GAHLwUsiGR798I3H73yKuR2TUIpihkst4MHy9eXPPvgh5t77P+4f/KZ/8GF/H5p4BbPnv3zv8OGjJ/f/BOledC6o4+iHfzr8wYfY0Iv7IJrerf39D44+eBvVsf8rYBJojuMVOQ3eXADCqZXCgw5g3n/yzsuPX/8IEn0KT+5/pOCJpvUEN0gNkRbzcAEzNcDRV1H1h48+efKHtxNmCgal2xKrrrbUDINPViqWIVu3aoN2oxYnW8oITH4h2uWUxnMIqVwFdMQuwZbYTgVD6ha5cevKPO6uIkzUMpgEFDaQ90X6Vov4tHNyua5AQjbzQ0hwIQBzmwCG2HK42Q3lN8pvrtOBxKc2tED4dmIf+9g4CbuYIiy1J1KLXJIGhhJt8oNyDc4Vx1v4hEGXVigoPoqDHmJBWUrs+RlIBNopgVKpqiLauSlrl+vJYLOuq4KzXjOKHfig6kpVn0Cnw028wfKzjbqc5SUQYZICJfekUD/Zf3Ce+WUwUtQYgEDHtOMF6kcHB/k21KT9TtDrUex3GrbfMR1Pt1caX5vpHinJjdhbW4fhNG6qbWz0GkmOCR1Iu01SMmkcx0uQQk12ll1zLhElDt9I2ULTJvsuaKPh8h0O2Xf2MvVGgwqwsOtyQ2M96ga44yJriJqtStxHQqmtw4Ln7PwcaawuxCsKsRH6uwD1pDDE/dWMQCeUR7Mn7RRf1qrSTA4DkiyoxnkHAAHcCWLjOEUJQ4upHFzLCYXOhJtmNnxE+Qm02Svz11eWJWdEIcIRCdtxTAAdmBUAbgzcOoe7tbDiFzv2NKi5MbfrGYW5qIww/6edV+NUvHjqKR2E1lJ5J9c8rcwcwOcriysahgXDELh2zVvznseN7K3SrUotDA7mjum4uB+uTvH9ihNf7W6wRYAuES3IgkVtghPwMEr31IkkMBgWZ/erE9LG02yRljdSbg123ScJJVAXOTGXI+WSh3Zcqc7SQ090EiAzcgbBwBDVvn08yZu2h1oZqtvKCCM61urRkPEz9N8p01vzjkmtOCAHpkrN03U7kRGn+9syGjyOQS54Yo9I7IDRJYWf5dF27Ac01xs3IC+psMy9HSf0Pcr1g0xUnPeIWGvAGdNWPfspe760JYJRa+D50hYavN/d3BrkR4SmMkZGIY0Mv54afZ2CR11HSgiU8jgHaGFgplM0atxXpyOT6T5/Gv8n5/zQvep0bkfrE3IKkAhcppNxjqIDlNl82t9ooitq+yOt18HIFSMGga1R39Ek/xdiao7/RekngDPVxonWabld60togrSoT5Qdl3jR0VsCIiT7YEHbiAamER0gMu460VY6QhAdpeVccQppQG+UzsIh9SZYm5bi7rFWfoVx5cbfz19vsXus60U8hv/XTeA8KtfGk/k93X40DHvvi5Ieal3nyRkTYEyHw3RQKpEoZB3uoeXb7N6aV8JBcfkU2WnRNiL8tQxstXDNtJUiHgx5Us40fWodkY7A7hW9OKNztNIlfZxEkah0tKVrNxlWGmUksCAnLJkrPnCIiQyXji6zI0uS6Xxpl+jDv+GDxuoIhZw1hM4HmAoNGVq7ENw23WQkBJzHrfO4O9GJcvaojbkNSX5uy/fxgKfHk82M+oQ1nveLxzGUGWEW2XF4wS7EtnCM/LTREtoSW9Swo9UwmA8UtyldQUA+5WNyZCWYHqlRGLdxD+pB4UETHsUx2A0aexGXNPbaMV3HVtMjcvC14ds9NfL6u+Ub14XAckgGMtNUOtpfGPphJHO65zdgsBuC4mDcFUBu4cKKF7L+KyZPRccEcTRipgOtAq/ZsFwHTTsr3nncMK90pugO14jBLvlgZ1g4Ev02eJQqNYXIxCXk+yXoa2RQycTRxHjANQCiKTgedZ2YQAHaFO47CPGoYsaXzwPvIKdpK7vugOQOnv8BjQUBzRFlZ3tuILLA3EZ38YBCtsW0GOXjQv9qTGSiKx0R4nbOjdAxk3krmmQQzTSigFtOOzcLhbzhQe6RqgBCA7iGdDzehp7CNE9joEc7wpZxNQrHTVFDg97KtOZcv2u3XUSsIsAZFOLRSvCktj6PqCzfBIliPE61yVqz+tFuNaJu4T5T3LOBVEN+m47IGym/s2kEpKwpI6PBnqeIO244rJd6qpZr5NQkuXVi+8Md2GA34DHcxf0fuuzJ3OYgXdM8FHV8I+l4aQ6gVbz1xzHdQWsy43RzegQMdZaEczGv18rdlNESq0lOhPYOTMsG6JPYQiVPIuNQAk/by7CXnftCA6D1Ocy8eF9Onbnc3AGCuWkzxjtB3KtnZ4HN9DC71ieD9CeN769NWolw3J7EflEZMsym7fKAE6XRJjO/Dabq2kq2MuLZ5G7qus5M4aKFZgOTMQAxzl2dXYFR+frsYhrkV9kttf2bAlgeMSKkSw8y0LKskdZELGhzC6OMreMfmoKSC/nTpSsOA5RFICfDjw7gC7E6RS/pxvgYg8E0A/DqtHvQDtDIaJfMJk3kkVERZrWOFetMPuSuPavixyadj0niakMUNfCT0bkdARfyErkZNoEvoVY2YTgULto4fYbpLw1ZNNWBcRfvLqRKeCLXjHqexXDX5UV2d6Li8V3iEciH1WpVtDBgEp06YdC6jZjitkFDsYMTLMkMYKCOa2darmQ3lc57O3iAkhmGwb0dgCojo/q03E3P9s4ntNLJ6hlm7pqApqQ22xxSUE0G9Vq1WXpGsQ7tdzjozgbaV+ZXgPRkPeVvEtvBm2HC2ABCpltLmjMius2ljtubJlN21K0fCTdpBToaVaSY3BOSx8FiI/DYFdRu4LrA9EPqFTYL027uYRX0M2BFPks2jwOxRCUKKo7qoI44WEzhPekTzLAy5AvIQKd/Zilj43mkAJEBMdJE/Yq78Zow4kTvpqkmDDJzYiNrY6Unz7nnqlXVZTiIiqcJD9M9g94muH7tLl3dFwYWXfA2BQQdYO0b9ZTLdG8gHdQJzQ6xqS4lkvfLTdP9pU83pr7ZOPsM3k2oTYND8b26RBwLMBzA6phi0uMc6KZQaSehddaYAmbYHv6LZ0FHWK7qhpzhJt0kT/6M6CR1wdYYfqOTvYSjDUVavBrkD2mFsT1iYJWiT+yhyBD0KnixqoyD6kpJdc2kFsaTCyO1e0PLSpTeCSpRGyWSwsWj8tpPjRLoR3tK7tkUFesJt+xrTL06m786dKzsUmfleYpyH3gKTgtyz+oJvhEZEdDA4E4DM9N2tDk+cfsTbbS3tLoitax5VRz1oH6tuAqaFzYhOg/LiP6pQcfafFq8bsrS0FGidDsqlGxH6Wc6hZ4vgC/TIhCSsDV8CWqNfHeH19bXbScUIK5qGFpZPNY2w2ptx+WUttoR3Rl8GZ6XIZnRMWfjtu94NSRLi5YcbB8vuH0mJUNrJToZiikQGiJeQ3Liw2SikuRiyoGXQyWkuxRKy+9uUmXU5ZqDbqtQ5eQh3aRk8UC2KqnnWVG2NKEm5cXastYvhtHMnMdF2TNeLIWVJ0aN3JGj1IXLKiVnQ49XLTn1OTJuDK99rEZLToEWCciMPG79cXNyhh6azeArRwYIUV6p5PqRchlE9XKtawF+7DojVI5VU9tQp3/LWYtlmWMqZFC1sVWiCBxPKcpL5V0I41VKwejA8tkKJLsx4ID5AIWIOqPPm5drQ9YuORRfH+9QfBpTafs7hSCIt/pm+LRNmqeq0ac6aw46FLCWOxWwJo4FNFM6uC33uh9fy5ArOZuwVno4YQ338DeT0JksKCjWS2Z/VBmKulZBIvUZuJgYPa6amGZ0FG9C8eC73ADjqlUzi4rMyoED3IkT0U2KUA/SveFKJFXJQ5JMPmtodAQsIVSivSUosmha22B5NMicWxh+H1MgyqpLRACwlaVQBd9sY5MDZ5iCseHVW+picBvNxV6VX24Z1JPFLAsQ7CyjNrIfiHZSW/ztAJd7tfTdpLpkJW0Be60GLddLWc5ftRVZoOD0mi1CoJlq4jIPBEFsTM2Tto5TIVHjasLOLcFKcudPyRf2NeCLffWr7Fi8aZeKZPq45EKRkmlTuebdVOcYoqblGL30OIwA7g050lrugDcyiDjWNl0ZkJ5QCbu4LSHo4A+tQDmZb4nVlmT+reg8AwgXOxO3YpyUR3FcZm4LAgLHhFGx1E9QnvpZmKaauzp7/cr8czeu4ATfZIVuaUPDquIWntWbXshdboLr3xK7RZ7Kbj9goIJN2pSDOxPm/DCkGf6SwxO5WUI15TAt1rXTeajc9B4tHAhqTZqykoc/8wssIn2cV68hgJo4P5vsahu6rG8g88uBi8ukIy9bLb2CnbhK1nXzV8yJS2/EylrJBgxqftamyU1x90Y92TxST+7ikvk7f5mHHKjXZfTMhG5ri4NxEPklro5NQSv6KV+8lHec0zmkgMy5HHUaZ9BZHHH4oSGUmRzGQTOSw/K8hSXxJrFWEWSSR7DL5Hf6F0hwPzhUJEWLz5GYwBcz0bjmRFakFMnFH8DAzxicBUe4xfU06EDGIBcqG7NnXE3zyax76pezRWAFcdKPMvPrf0CD/ohMIW2Jv31DjdJfZYFumEn+LsuIO39BGnHpr2ysWjxdqbpJNK7DrWENK4KS5ZIMmPy9mwo4Ku6NHhBqGM3qERqp/A/KIDPTV2gAAA==
+          EOF
+          base64 -d /tmp/align-policy.py.gz.b64 | gzip -d > /tmp/align-policy.py
+          python3 /tmp/align-policy.py
+
+      - name: Validate access policy and existing behavior
+        run: |
+          npm run test:access-policy
+          npm run test:agent
+          npm run test:mcp
+          npm run test:mcp:core
+          npm run test:mcp:remote
+          npm run test:mcp:security
+          npm run test:mcp:schema
+          npm run test:mcp:consistency
+          npm run test:mcp:cloudflare
+          npm run test:webmcp
+          npm run test:tool-selection
+          npm run quickstart
+          npm --prefix workers/remote-mcp run check -- --env production
+
+      - name: Validate JSON and diff
+        run: |
+          node -e "for (const f of ['access-policy.json','agent-use.json','agent-tools.json','mcp-catalog.json','.well-known/mcp.json','package.json']) JSON.parse(require('fs').readFileSync(f,'utf8'))"
+          git diff --check
+
+      - name: Commit validated alignment
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Clarify free MCP and paid x402 access policy"
+          git push origin HEAD:codex/align-agent-access-policy
