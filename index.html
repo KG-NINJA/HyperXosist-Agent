@@ -263,6 +263,19 @@
           </p>
         </section>
 
+        <!-- ChatGPT Site Tools / WebMCP -->
+<section class="agent-section" aria-labelledby="siteToolsTitle">
+  <h2 id="siteToolsTitle">ChatGPT Site Tools <span class="pill">WebMCP</span></h2>
+  <p>
+    ChatGPT Desktop の内蔵ブラウザでは、対応環境で HyperXosist の planning / filtering / handoff を
+    Site Tools として直接利用できます。初期3ツールはローカル・read-only・無料です。
+  </p>
+  <p>
+    Site Tools は X をスクレイピングせず、本番検索を自動実行せず、x402 決済も行いません。
+    WebMCP は提案中の Web API のため、<code>document.modelContext</code> 対応環境でのみ有効です。
+  </p>
+</section>
+
         <!-- Remote MCP production -->
         <section class="agent-section remote-mcp-section" aria-labelledby="remoteMcpTitle">
           <h2 id="remoteMcpTitle">Remote MCP <span class="pill">production</span></h2>
@@ -445,6 +458,7 @@
 
   <script src="payment-endpoints.js"></script>
   <script src="agent-api.js"></script>
+  <script src="webmcp.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

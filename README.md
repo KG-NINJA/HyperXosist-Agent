@@ -174,6 +174,18 @@ npm run quickstart
 # or: node examples/quickstart.mjs "Weekly monitor about MyProduct"
 ```
 
+### ChatGPT Site Tools / WebMCP
+
+The GitHub Pages site includes a thin, dependency-free WebMCP adapter for compatible environments that expose `document.modelContext.registerTool(...)`. In supported ChatGPT Desktop built-in browser environments, ChatGPT can discover three Site Tools directly from the page without a separate MCP connection:
+
+- `hyperxosist_search_plan` — local search-plan generation via `hyperxosist_plan_from_intent`
+- `hyperxosist_filter_signals` — local keep-only filtering via `hyperxosist_filter_keep_signals`
+- `hyperxosist_build_handoff` — local Signal-to-Fix/coding-agent handoff via `hyperxosist_build_handoff`
+
+All initial Site Tools are **local, read-only, and free**. They do not scrape X, automatically open X search URLs, call the Remote MCP when equivalent local logic exists, perform x402 payment, or expose production automated search. Automated production use of generated search URLs continues to follow the existing x402 policy.
+
+WebMCP is a proposed web API and is feature-detected. Browsers without `document.modelContext.registerTool` continue to use the normal human UI unchanged. Remote MCP remains a separate integration path for clients that connect to `https://mcp.kgninja.dev/mcp`.
+
 ### MCP: Local and Remote
 
 The same three read-only tools are available over two adapters:
