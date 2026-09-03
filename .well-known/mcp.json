@@ -24,7 +24,8 @@
     "paymentRequiredHeader": "PAYMENT-REQUIRED",
     "paymentSignatureHeader": "PAYMENT-SIGNATURE",
     "paymentResponseHeader": "PAYMENT-RESPONSE",
-    "confirmPaymentRequired": true
+    "confirmPaymentRequired": true,
+    "availability": "direct x402 endpoint live; Remote MCP tool deploy pending"
   },
   "freeToPaidFlow": {
     "free": [
@@ -53,8 +54,14 @@
   "authenticationRequired": false,
   "publicFreeAccess": true,
   "privateOrSelfHostedAuthentication": "bearer",
-  "paidTools": [
+  "paidTools": [],
+  "accessPolicy": "https://kg-ninja.github.io/HyperXosist-Agent/access-policy.json",
+  "codeReadyPaidTools": [
     "hyperxosist_execute"
   ],
-  "accessPolicy": "https://kg-ninja.github.io/HyperXosist-Agent/access-policy.json"
+  "paidToolDeploymentStatus": "pending-production-worker-deploy",
+  "deploymentStatus": {
+    "freeTools": "deployed",
+    "paidTool": "code-ready; production Worker deployment required"
+  }
 }

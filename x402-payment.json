@@ -85,5 +85,9 @@
     "paymentSignature": "PAYMENT-SIGNATURE",
     "paymentResponse": "PAYMENT-RESPONSE"
   },
-  "explicitConfirmationField": "confirmPayment"
+  "explicitConfirmationField": "confirmPayment",
+  "agentAutopayRequiresCompatibleWalletOrFacilitator": true,
+  "webMcpGeneratesPaymentSignature": false,
+  "confirmedPaymentAutoRetryAllowed": false,
+  "remoteMcpPaidToolDeploymentStatus": "pending-production-worker-deploy"
 }

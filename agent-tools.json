@@ -8,7 +8,7 @@
     "healthEndpoint": "https://mcp.kgninja.dev/health",
     "transport": "Streamable HTTP",
     "authentication": "none",
-    "deploymentStatus": "deployed; verify healthEndpoint before use",
+    "deploymentStatus": "three free tools deployed; paid tool code ready; production Worker deploy pending",
     "freeTools": [
       "hyperxosist_search_plan",
       "hyperxosist_filter_signals",
@@ -31,9 +31,16 @@
     "publicFreeAccess": true,
     "privateOrSelfHostedAuthentication": "bearer",
     "paymentRequiredForFreeOperations": false,
-    "paidTools": [
+    "paidTools": [],
+    "deployedTools": [
+      "hyperxosist_search_plan",
+      "hyperxosist_filter_signals",
+      "hyperxosist_build_handoff"
+    ],
+    "codeReadyPaidTools": [
       "hyperxosist_execute"
-    ]
+    ],
+    "paidToolDeploymentStatus": "pending-production-worker-deploy"
   },
   "paymentEndpoint": "https://api.kgninja.dev/hyperxosist-query",
   "stickyTip": "plan → score → pay → collect → refine → keep/exportKeepOnly → handoff/agent prompt → receipt (optional: grok mode)",
@@ -455,7 +462,7 @@
   "sourceOfTruth": "openapi",
   "canonicalOpenApi": "https://api.kgninja.dev/openapi.json",
   "paymentOptions": "https://api.kgninja.dev/payment-options.json",
-  "lastSynced": "2026-07-19",
+  "lastSynced": "2026-09-03",
   "paidEndpoint": "https://api.kgninja.dev/hyperxosist-query",
   "paidOperations": [
     {
@@ -562,6 +569,11 @@
         "paymentSignatureHeader": "PAYMENT-SIGNATURE",
         "paymentResponseHeader": "PAYMENT-RESPONSE",
         "confirmPaymentRequired": true
+      },
+      "availability": {
+        "webMcp": "available after GitHub Pages deploy",
+        "localMcp": "available in package 2.6.0",
+        "remoteMcpProduction": "pending explicit production Worker deployment"
       }
     }
   ]

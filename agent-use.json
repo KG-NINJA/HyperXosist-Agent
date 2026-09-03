@@ -6,17 +6,17 @@
   "sourceOfTruth": "openapi",
   "canonicalOpenApi": "https://api.kgninja.dev/openapi.json",
   "paymentOptions": "https://api.kgninja.dev/payment-options.json",
-  "lastSynced": "2026-07-19",
+  "lastSynced": "2026-09-03",
   "remoteMcp": {
     "endpoint": "https://mcp.kgninja.dev/mcp",
     "healthEndpoint": "https://mcp.kgninja.dev/health",
     "canonicalOpenApi": "https://api.kgninja.dev/openapi.json",
     "paymentOptions": "https://api.kgninja.dev/payment-options.json",
     "sourceOfTruth": "openapi",
-    "lastSynced": "2026-07-19",
+    "lastSynced": "2026-09-03",
     "transport": "Streamable HTTP",
     "authentication": "none",
-    "deploymentStatus": "deployed; verify healthEndpoint before use",
+    "deploymentStatus": "three free tools deployed; paid tool code ready; production Worker deploy pending",
     "freeTools": [
       "hyperxosist_search_plan",
       "hyperxosist_filter_signals",
@@ -71,10 +71,17 @@
     "publicFreeAccess": true,
     "privateOrSelfHostedAuthentication": "bearer",
     "paymentRequiredForFreeOperations": false,
-    "paidTools": [
+    "paidTools": [],
+    "accessPolicy": "https://kg-ninja.github.io/HyperXosist-Agent/access-policy.json",
+    "deployedTools": [
+      "hyperxosist_search_plan",
+      "hyperxosist_filter_signals",
+      "hyperxosist_build_handoff"
+    ],
+    "codeReadyPaidTools": [
       "hyperxosist_execute"
     ],
-    "accessPolicy": "https://kg-ninja.github.io/HyperXosist-Agent/access-policy.json"
+    "paidToolDeploymentStatus": "pending-production-worker-deploy"
   },
   "whyAgentsKeepUsingThis": [
     "dispatchToolCall(name, args) — real multi-runtime tool dispatch (OpenAI / Anthropic / Grok call shapes). No hand-written mapping.",
@@ -474,6 +481,8 @@
       "paymentResponseHeader": "PAYMENT-RESPONSE",
       "confirmPaymentRequired": true,
       "privateKeysAccepted": false
-    }
+    },
+    "deploymentStatus": "available after GitHub Pages deploy",
+    "remoteMcpDependency": false
   }
 }

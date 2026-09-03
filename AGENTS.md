@@ -6,7 +6,7 @@ Instructions for **any** AI coding / research agent (GPT, Claude, Grok, Llama, l
 
 HyperXosist builds **high-signal X (Twitter) advanced search queries** with noise reduction.  
 It does **not** scrape X. It produces queries + official search URLs.  
-Agents pay via **x402** for automated production use.
+Planning, filtering, and handoff are free. Automated production execution uses **x402**.
 
 **Default mode: universal.** Grok Build is an optional powerful mode (`mode: "grok"`).
 
@@ -241,3 +241,11 @@ Real production search URL use still requires x402; real feedback must be collec
 - Never request, accept, log, or store private keys, seed phrases, or wallet passwords.
 - Payment verification and settlement stay at `https://api.kgninja.dev/hyperxosist-query`.
 - Canonical access boundary: `access-policy.json`.
+
+
+## Production Remote MCP deployment status
+
+- The public production Remote MCP currently exposes the three free tools.
+- `hyperxosist_execute` is implemented and tested in the Worker source but requires an explicit production Worker deployment.
+- Do not advertise the paid Remote MCP tool as deployed until live `tools/list` and `/.well-known/mcp.json` confirm it.
+- GitHub Pages WebMCP calls the existing x402 endpoint directly and does not depend on that Worker deployment.
