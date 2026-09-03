@@ -29,6 +29,11 @@ jobs:
       - name: Run Agent API tests
         run: npm run test:agent
 
+      - name: Run WebMCP and x402 paid execution tests
+        run: |
+          npm run test:paid-execution
+          npm run test:webmcp
+
       - name: Run local stdio MCP integration tests
         run: npm run test:mcp
 
@@ -59,6 +64,9 @@ jobs:
             'agent-tools.json',
             'missions.json',
             'x402-payment.json',
+            'access-policy.json',
+            '.well-known/mcp.json',
+            'mcp-catalog.json',
             'top30_repost_blacklist.json',
             'package.json',
             'examples/agent-session.example.json',
@@ -86,7 +94,7 @@ jobs:
       - name: Verify npm package contents
         run: |
           npm pack --dry-run --json > npm-pack.json
-          node -e "const p=require('./npm-pack.json')[0]; const files=new Set(p.files.map(x=>x.path)); for (const f of ['agent-api.js','mcp/server.js','mcp/remote-server.js','mcp/core.js','mcp/tools.js','docs/MCP.md','docs/CHATGPT_APP.md','agent-use.json','agent-tools.json','missions.json','x402-payment.json','README.md']) { if (!files.has(f)) throw new Error('Missing from npm package: '+f); }"
+          node -e "const p=require('./npm-pack.json')[0]; const files=new Set(p.files.map(x=>x.path)); for (const f of ['agent-api.js','paid-execution.js','webmcp.js','access-policy.json','mcp/server.js','mcp/remote-server.js','mcp/core.js','mcp/tools.js','docs/MCP.md','docs/CHATGPT_APP.md','agent-use.json','agent-tools.json','missions.json','x402-payment.json','README.md']) { if (!files.has(f)) throw new Error('Missing from npm package: '+f); }"
 
       - name: Build Remote MCP Docker image
         if: matrix.node-version == '20'
@@ -109,6 +117,11 @@ jobs:
 
       - name: Install Cloudflare Worker build dependencies
         run: npm --prefix workers/remote-mcp ci
+
+      - name: Run WebMCP and x402 paid execution tests
+        run: |
+          npm run test:paid-execution
+          npm run test:webmcp
 
       - name: Run Cloudflare Worker MCP adapter tests
         run: npm run test:mcp:cloudflare
