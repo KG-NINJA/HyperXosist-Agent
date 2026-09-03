@@ -27,19 +27,37 @@ jobs:
       - name: Refine metadata and documentation
         run: python3 scripts/refine-webmcp-x402.py
 
-      - name: Align remaining static version badge
+      - name: Align remaining static text
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          target = Path('index.html')
-          data = target.read_bytes()
-          old = b'id="versionBadge">v2.5.0'
-          new = b'id="versionBadge">v2.6.0'
-          count = data.count(old)
-          if count != 1:
-              raise SystemExit(f'expected one legacy version badge, found {count}')
-          target.write_bytes(data.replace(old, new, 1))
+
+          replacements = {
+              'index.html': [
+                  ('id="versionBadge">v2.5.0', 'id="versionBadge">v2.6.0'),
+              ],
+              'README.md': [
+                  ('`agent-use.json` / `x402-payment.json` / `access-policy.json` / `llms.txt` fetchable  ',
+                   '`agent-use.json` / `x402-payment.json` / `access-policy.json` / `llms.txt` fetchable'),
+              ],
+              'docs/MCP.md': [
+                  ('Production endpoint: `https://mcp.kgninja.dev/mcp`  ',
+                   'Production endpoint: `https://mcp.kgninja.dev/mcp`'),
+              ],
+          }
+
+          for filename, pairs in replacements.items():
+              target = Path(filename)
+              data = target.read_bytes()
+              for old_text, new_text in pairs:
+                  old = old_text.encode('utf-8')
+                  new = new_text.encode('utf-8')
+                  count = data.count(old)
+                  if count != 1:
+                      raise SystemExit(f'{filename}: expected one match for {old_text!r}, found {count}')
+                  data = data.replace(old, new, 1)
+              target.write_bytes(data)
           PY
 
       - name: Install dependencies
