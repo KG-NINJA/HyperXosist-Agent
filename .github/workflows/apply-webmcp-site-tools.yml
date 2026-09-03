@@ -30,6 +30,84 @@ jobs:
       - name: Apply WebMCP patch
         run: python3 scripts/apply-webmcp-site-tools.py
 
+      - name: Preserve existing line endings for HTML and README
+        run: |
+          python3 - <<'PY'
+          import subprocess
+          from pathlib import Path
+
+          site_tools = '''        <!-- ChatGPT Site Tools / WebMCP -->
+          <section class="agent-section" aria-labelledby="siteToolsTitle">
+            <h2 id="siteToolsTitle">ChatGPT Site Tools <span class="pill">WebMCP</span></h2>
+            <p>
+              ChatGPT Desktop の内蔵ブラウザでは、対応環境で HyperXosist の planning / filtering / handoff を
+              Site Tools として直接利用できます。初期3ツールはローカル・read-only・無料です。
+            </p>
+            <p>
+              Site Tools は X をスクレイピングせず、本番検索を自動実行せず、x402 決済も行いません。
+              WebMCP は提案中の Web API のため、<code>document.modelContext</code> 対応環境でのみ有効です。
+            </p>
+          </section>
+
+          '''
+
+          readme_section = '''### ChatGPT Site Tools / WebMCP
+
+          The GitHub Pages site includes a thin, dependency-free WebMCP adapter for compatible environments that expose `document.modelContext.registerTool(...)`. In supported ChatGPT Desktop built-in browser environments, ChatGPT can discover three Site Tools directly from the page without a separate MCP connection:
+
+          - `hyperxosist_search_plan` — local search-plan generation via `hyperxosist_plan_from_intent`
+          - `hyperxosist_filter_signals` — local keep-only filtering via `hyperxosist_filter_keep_signals`
+          - `hyperxosist_build_handoff` — local Signal-to-Fix/coding-agent handoff via `hyperxosist_build_handoff`
+
+          All initial Site Tools are **local, read-only, and free**. They do not scrape X, automatically open X search URLs, call the Remote MCP when equivalent local logic exists, perform x402 payment, or expose production automated search. Automated production use of generated search URLs continues to follow the existing x402 policy.
+
+          WebMCP is a proposed web API and is feature-detected. Browsers without `document.modelContext.registerTool` continue to use the normal human UI unchanged. Remote MCP remains a separate integration path for clients that connect to `https://mcp.kgninja.dev/mcp`.
+
+          '''
+
+          # Strip indentation introduced by the YAML heredoc while keeping Markdown/HTML content exact.
+          import textwrap
+          site_tools = textwrap.dedent(site_tools)
+          readme_section = textwrap.dedent(readme_section)
+
+          def original(path):
+              return subprocess.check_output(['git', 'show', f'HEAD:{path}']).decode('utf-8')
+
+          def newline_for(text):
+              return '\r\n' if '\r\n' in text else '\n'
+
+          index = original('index.html')
+          nl = newline_for(index)
+          section = site_tools.replace('\n', nl)
+          marker = '        <!-- Remote MCP production -->' + nl
+          if marker not in index:
+              raise SystemExit('index.html Remote MCP marker not found')
+          index = index.replace(marker, section + marker, 1)
+          old_scripts = nl.join([
+              '  <script src="payment-endpoints.js"></script>',
+              '  <script src="agent-api.js"></script>',
+              '  <script src="app.js"></script>'
+          ])
+          new_scripts = nl.join([
+              '  <script src="payment-endpoints.js"></script>',
+              '  <script src="agent-api.js"></script>',
+              '  <script src="webmcp.js"></script>',
+              '  <script src="app.js"></script>'
+          ])
+          if old_scripts not in index:
+              raise SystemExit('index.html script-order marker not found')
+          Path('index.html').write_bytes(index.replace(old_scripts, new_scripts, 1).encode('utf-8'))
+
+          readme = original('README.md')
+          nl = newline_for(readme)
+          marker = '### MCP: Local and Remote' + nl
+          if marker not in readme:
+              raise SystemExit('README MCP marker not found')
+          Path('README.md').write_bytes(
+              readme.replace(marker, readme_section.replace('\n', nl) + marker, 1).encode('utf-8')
+          )
+          PY
+
       - name: Run WebMCP adapter tests
         run: node test/webmcp.test.js
 
