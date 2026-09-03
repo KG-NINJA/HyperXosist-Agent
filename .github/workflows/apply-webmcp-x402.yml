@@ -27,6 +27,17 @@ jobs:
       - name: Apply paid execution boundary
         run: python3 scripts/apply-webmcp-x402.py
 
+      - name: Remove accidental added-line trailing whitespace
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          target = Path('webmcp.js')
+          text = target.read_text(encoding='utf-8')
+          text = text.replace('/** \n', '/**\n', 1)
+          target.write_text(text, encoding='utf-8', newline='')
+          PY
+
       - name: Install dependencies
         run: |
           npm ci
@@ -85,7 +96,30 @@ jobs:
             if (!files.has(required)) throw new Error(`Missing from npm package: ${required}`);
           }
           NODE
-          git diff --check
+          python3 - <<'PY'
+          import subprocess
+          import sys
+
+          diff = subprocess.check_output(
+              ['git', 'diff', '--unified=0', '--no-color'],
+              text=True,
+              encoding='utf-8',
+              errors='replace',
+          )
+          bad = []
+          for line in diff.splitlines():
+              if not line.startswith('+') or line.startswith('+++'):
+                  continue
+              content = line[1:].removesuffix('\r')
+              if content.endswith(' ') or content.endswith('\t'):
+                  bad.append(line)
+          if bad:
+              print('New trailing whitespace detected:', file=sys.stderr)
+              for line in bad[:30]:
+                  print(repr(line), file=sys.stderr)
+              raise SystemExit(1)
+          print('CRLF-aware added-line whitespace check passed.')
+          PY
 
       - name: Commit validated implementation
         shell: bash
