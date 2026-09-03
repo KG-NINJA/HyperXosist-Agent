@@ -29,8 +29,9 @@ jobs:
       - name: Run Agent API tests
         run: npm run test:agent
 
-      - name: Run WebMCP and x402 paid execution tests
+      - name: Run access policy, WebMCP and x402 paid execution tests
         run: |
+          npm run test:access-policy
           npm run test:paid-execution
           npm run test:webmcp
 
@@ -118,8 +119,9 @@ jobs:
       - name: Install Cloudflare Worker build dependencies
         run: npm --prefix workers/remote-mcp ci
 
-      - name: Run WebMCP and x402 paid execution tests
+      - name: Run access policy, WebMCP and x402 paid execution tests
         run: |
+          npm run test:access-policy
           npm run test:paid-execution
           npm run test:webmcp
 
