@@ -1,0 +1,79 @@
+name: Minimize access policy JSON diffs v2
+
+on:
+  push:
+    branches:
+      - codex/align-agent-access-policy
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: codex/align-agent-access-policy
+          fetch-depth: 0
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Apply compact semantic JSON edits
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import re
+          import textwrap
+          from pathlib import Path
+
+          workflow = Path('.github/workflows/cleanup-json-formatting.yml').read_text(encoding='utf-8')
+          match = re.search(
+              r"Restore canonical JSON formatting and apply only semantic edits.*?python3 - <<'PY'\n(.*?)\n\s+PY",
+              workflow,
+              re.S,
+          )
+          if not match:
+              raise SystemExit('cleanup Python block not found')
+          source = textwrap.dedent(match.group(1))
+          replacements = {
+              "if not text.endswith('\\n}\\n'):\n    raise SystemExit('agent-use unexpected final newline')\ntext = text[:-3] + ',\\n' + suffix + '\\n}\\n'":
+              "text = text.rstrip()\nif not text.endswith('}'):\n    raise SystemExit('agent-use missing final object brace')\ntext = text[:-1] + ',\\n' + suffix + '\\n}\\n'",
+              "if not text.endswith('\\n}\\n'):\n    raise SystemExit('agent-tools unexpected final newline')\ntext = text[:-3] + ',\\n' + site_tools + '\\n}\\n'":
+              "text = text.rstrip()\nif not text.endswith('}'):\n    raise SystemExit('agent-tools missing final object brace')\ntext = text[:-1] + ',\\n' + site_tools + '\\n}\\n'",
+              "if not text.endswith('\\n}\\n'):\n    raise SystemExit('well-known unexpected final newline')\ntext = text[:-3] + ',\\n' + access + '\\n}\\n'":
+              "text = text.rstrip()\nif not text.endswith('}'):\n    raise SystemExit('well-known missing final object brace')\ntext = text[:-1] + ',\\n' + access + '\\n}\\n'",
+          }
+          for old, new in replacements.items():
+              if old not in source:
+                  raise SystemExit('expected cleanup source block not found')
+              source = source.replace(old, new, 1)
+          Path('/tmp/compact-access-json.py').write_text(source, encoding='utf-8')
+          PY
+          python3 /tmp/compact-access-json.py
+
+      - name: Validate compact metadata
+        run: |
+          npm run test:agent
+          npm run test:mcp:cloudflare
+          npm run test:webmcp
+          node -e "for (const f of ['agent-use.json','agent-tools.json','.well-known/mcp.json']) JSON.parse(require('fs').readFileSync(f,'utf8'))"
+          git diff --check
+          git diff --stat
+
+      - name: Commit compact metadata diff
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add agent-use.json agent-tools.json .well-known/mcp.json
+          git commit -m "Minimize access policy metadata diff"
+          git push origin HEAD:codex/align-agent-access-policy
