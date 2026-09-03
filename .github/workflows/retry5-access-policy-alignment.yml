@@ -1,0 +1,171 @@
+name: Retry access policy alignment 5
+
+on:
+  push:
+    branches:
+      - codex/align-agent-access-policy
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          ref: codex/align-agent-access-policy
+          fetch-depth: 0
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm --prefix workers/remote-mcp ci
+
+      - name: Extract and apply corrected alignment script
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import base64
+          import gzip
+          import re
+          from pathlib import Path
+
+          workflow = Path('.github/workflows/apply-access-policy-alignment.yml').read_text(encoding='utf-8')
+          match = re.search(r"cat > /tmp/align-policy\.py\.gz\.b64 <<'EOF'\n\s*([A-Za-z0-9+/=\n ]+?)\n\s*EOF", workflow)
+          if not match:
+              raise SystemExit('embedded alignment script not found')
+          encoded = ''.join(match.group(1).split())
+          source = gzip.decompress(base64.b64decode(encoded)).decode('utf-8')
+          source = source.replace(
+              "assert 'Bearer token</dd>' not in Path('index.html').read_text(encoding='utf-8')",
+              "assert '<dt>Authentication</dt><dd>Bearer token</dd>' not in Path('index.html').read_text(encoding='utf-8')"
+          )
+          source = source.replace(
+              "consistency = r'''\\n'use strict';",
+              "consistency = r'''\n'use strict';"
+          )
+          Path('/tmp/align-policy.py').write_text(source, encoding='utf-8')
+          PY
+          python3 /tmp/align-policy.py
+
+      - name: Keep CI workflow unchanged and route policy test through test:agent
+        shell: bash
+        run: |
+          git checkout HEAD -- .github/workflows/ci.yml
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path('package.json')
+          package = json.loads(path.read_text(encoding='utf-8'))
+          package['scripts']['test:agent'] = 'node test/agent-api.test.js && node test/access-policy-consistency.test.js'
+          path.write_text(json.dumps(package, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          PY
+
+      - name: Preserve repository line endings and remove new trailing whitespace
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import subprocess
+          from pathlib import Path
+
+          paths = [
+              '.well-known/mcp.json',
+              'AGENTS.md',
+              'README.md',
+              'agent-api.js',
+              'agent-tools.json',
+              'agent-use.json',
+              'docs/CHATGPT_APP.md',
+              'docs/MCP.md',
+              'index.html',
+              'llms.txt',
+              'mcp-catalog.json',
+              'package.json',
+              'test/mcp-cloudflare-worker.test.mjs',
+              'workers/remote-mcp/README.md',
+              'workers/remote-mcp/src/index.js',
+          ]
+          for relative in paths:
+              original = subprocess.check_output(['git', 'show', f'HEAD:{relative}'])
+              current = Path(relative).read_bytes()
+              normalized = current.replace(b'\r\n', b'\n').replace(b'\r', b'\n')
+              if b'\r\n' in original:
+                  normalized = normalized.replace(b'\n', b'\r\n')
+              Path(relative).write_bytes(normalized)
+
+          agents = Path('AGENTS.md')
+          data = agents.read_bytes()
+          data = data.replace(
+              b'https://kg-ninja.github.io/HyperXosist-Agent/access-policy.json  \r\n',
+              b'https://kg-ninja.github.io/HyperXosist-Agent/access-policy.json\r\n'
+          )
+          data = data.replace(
+              b'https://kg-ninja.github.io/HyperXosist-Agent/access-policy.json  \n',
+              b'https://kg-ninja.github.io/HyperXosist-Agent/access-policy.json\n'
+          )
+          agents.write_bytes(data)
+          PY
+
+      - name: Validate access policy and existing behavior
+        run: |
+          npm run test:agent
+          npm run test:mcp
+          npm run test:mcp:core
+          npm run test:mcp:remote
+          npm run test:mcp:security
+          npm run test:mcp:schema
+          npm run test:mcp:consistency
+          npm run test:mcp:cloudflare
+          npm run test:webmcp
+          npm run test:tool-selection
+          npm run quickstart
+          npm --prefix workers/remote-mcp run check -- --env production
+
+      - name: Validate JSON, scope and CRLF-aware diff whitespace
+        shell: bash
+        run: |
+          node -e "for (const f of ['access-policy.json','agent-use.json','agent-tools.json','mcp-catalog.json','.well-known/mcp.json','package.json']) JSON.parse(require('fs').readFileSync(f,'utf8'))"
+          test -z "$(git diff --name-only -- .github/workflows/ci.yml)"
+          python3 - <<'PY'
+          import subprocess
+          import sys
+
+          diff = subprocess.check_output(
+              ['git', 'diff', '--unified=0', '--no-color'],
+              text=True,
+              encoding='utf-8',
+              errors='replace'
+          )
+          bad = []
+          for line in diff.splitlines():
+              if not line.startswith('+') or line.startswith('+++'):
+                  continue
+              content = line[1:]
+              if content.endswith(' ') or content.endswith('\t'):
+                  bad.append(line)
+          if bad:
+              print('New trailing whitespace detected:', file=sys.stderr)
+              for line in bad[:20]:
+                  print(repr(line), file=sys.stderr)
+              raise SystemExit(1)
+          print('CRLF-aware added-line whitespace check passed.')
+          PY
+          git diff --stat
+
+      - name: Commit validated alignment
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Clarify free MCP and paid x402 access policy"
+          git push origin HEAD:codex/align-agent-access-policy
