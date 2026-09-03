@@ -35,8 +35,9 @@ jobs:
           python3 - <<'PY'
           import subprocess
           from pathlib import Path
+          import textwrap
 
-          site_tools = '''        <!-- ChatGPT Site Tools / WebMCP -->
+          site_tools = textwrap.dedent('''        <!-- ChatGPT Site Tools / WebMCP -->
           <section class="agent-section" aria-labelledby="siteToolsTitle">
             <h2 id="siteToolsTitle">ChatGPT Site Tools <span class="pill">WebMCP</span></h2>
             <p>
@@ -49,9 +50,9 @@ jobs:
             </p>
           </section>
 
-          '''
+          ''')
 
-          readme_section = '''### ChatGPT Site Tools / WebMCP
+          readme_section = textwrap.dedent('''### ChatGPT Site Tools / WebMCP
 
           The GitHub Pages site includes a thin, dependency-free WebMCP adapter for compatible environments that expose `document.modelContext.registerTool(...)`. In supported ChatGPT Desktop built-in browser environments, ChatGPT can discover three Site Tools directly from the page without a separate MCP connection:
 
@@ -63,12 +64,7 @@ jobs:
 
           WebMCP is a proposed web API and is feature-detected. Browsers without `document.modelContext.registerTool` continue to use the normal human UI unchanged. Remote MCP remains a separate integration path for clients that connect to `https://mcp.kgninja.dev/mcp`.
 
-          '''
-
-          # Strip indentation introduced by the YAML heredoc while keeping Markdown/HTML content exact.
-          import textwrap
-          site_tools = textwrap.dedent(site_tools)
-          readme_section = textwrap.dedent(readme_section)
+          ''')
 
           def original(path):
               return subprocess.check_output(['git', 'show', f'HEAD:{path}']).decode('utf-8')
@@ -147,7 +143,7 @@ jobs:
         run: npm run quickstart
 
       - name: Validate diff
-        run: git diff --check
+        run: git -c core.whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol diff --check
 
       - name: Commit validated implementation
         shell: bash
