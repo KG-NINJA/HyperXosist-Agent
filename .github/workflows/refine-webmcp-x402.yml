@@ -27,6 +27,21 @@ jobs:
       - name: Refine metadata and documentation
         run: python3 scripts/refine-webmcp-x402.py
 
+      - name: Align remaining static version badge
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          target = Path('index.html')
+          data = target.read_bytes()
+          old = b'id="versionBadge">v2.5.0'
+          new = b'id="versionBadge">v2.6.0'
+          count = data.count(old)
+          if count != 1:
+              raise SystemExit(f'expected one legacy version badge, found {count}')
+          target.write_bytes(data.replace(old, new, 1))
+          PY
+
       - name: Install dependencies
         run: |
           npm ci
