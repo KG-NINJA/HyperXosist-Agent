@@ -2,6 +2,15 @@
 
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+
+### ChatGPT Site Tools / WebMCP
+- Added `webmcp.js`, a dependency-free browser adapter using the current `document.modelContext.registerTool(...)` API when available.
+- Exposed exactly three local/read-only/free Site Tools for planning, supplied-signal filtering, and engineering handoff by dispatching into the existing `HyperXosistAgent` API.
+- Kept X scraping, external navigation, Remote MCP calls, production automated search, wallet actions, and x402 payment outside the WebMCP Site Tools boundary.
+- Added zero-dependency WebMCP tests for feature detection, mappings, duplicate initialization, controlled dispatch errors, serialization, abort handling, and paid-tool exclusion.
+- Documented the separation between Human UI, Site Tools/WebMCP, Remote MCP, and x402 execution.
+
 ## [2.5.0] - 2026-07-10
 
 ### Remote MCP and OpenAI integration
