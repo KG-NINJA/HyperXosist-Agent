@@ -29,6 +29,10 @@ jobs:
       - name: Run Agent API tests
         run: npm run test:agent
 
+      - name: Check payment metadata against production OpenAPI (read-only)
+        timeout-minutes: 2
+        run: npm run test:payment-endpoints
+
       - name: Run access policy, WebMCP and x402 paid execution tests
         run: |
           npm run test:access-policy
