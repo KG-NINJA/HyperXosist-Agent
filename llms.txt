@@ -150,3 +150,12 @@ customer pain-point discovery; product-feedback discovery; X/Twitter search plan
 - WebMCP paid tool: hyperxosist_execute — available from the static site after Pages deployment.
 - Remote MCP paid tool: code-ready; production deployment pending.
 - x402 flow: first call returns PAYMENT-REQUIRED; retry requires PAYMENT-SIGNATURE and confirmPayment=true.
+
+## OpenAI Responses / GPT-6
+
+Use `HyperXosistAgent.toOpenAIResponsesTools(options?)` or
+`npx hyperxosist tools --format responses --json` for Responses API function tools.
+`toOpenAITools()` remains the Chat Completions adapter. Responses tools have
+top-level name/description/parameters and explicit `strict: false` to preserve
+optional arguments. Continue validating through `dispatchToolCall`. Exporting
+a schema does not call the model or authorize payment.

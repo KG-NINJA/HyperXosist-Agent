@@ -2922,11 +2922,28 @@
   }
 
   /**
-   * OpenAI Chat Completions / Responses tools array.
+   * OpenAI Chat Completions tools array (use toOpenAIResponsesTools for Responses).
    * Drop-in: tools: HyperXosistAgent.toOpenAITools()
    */
   function toOpenAITools(options) {
     return getToolDefinitions(Object.assign({}, options || {}, { format: 'openai' })).tools;
+  }
+
+  /**
+   * Responses function tools use top-level fields. Keep optional input fields
+   * optional with explicit strict:false; existing dispatcher validates inputs.
+   * This conversion does not execute tools, call an API, or authorize payment.
+   */
+  function toOpenAIResponsesTools(options) {
+    return toOpenAITools(options).map(function (tool) {
+      return {
+        type: 'function',
+        name: tool.function.name,
+        description: tool.function.description,
+        parameters: tool.function.parameters,
+        strict: false
+      };
+    });
   }
 
   /**
@@ -3498,6 +3515,7 @@
     buildRunReceipt,
     getToolDefinitions,
     toOpenAITools,
+    toOpenAIResponsesTools,
     toAnthropicTools,
     dispatchToolCall,
     runTool,

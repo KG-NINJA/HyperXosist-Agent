@@ -8,7 +8,7 @@
  * Usage:
  *   hyperxosist plan "Find product feedback about Acme" --json
  *   hyperxosist dispatch hyperxosist_plan_from_intent --args '{"intent":"..."}'
- *   hyperxosist tools --format openai|anthropic|full
+ *   hyperxosist tools --format openai|responses|anthropic|full
  *   hyperxosist keep --feedback '["bug…","love this"]' --product Acme --json
  *   hyperxosist handoff --product Acme --feedback '["…"]' --json
  *   hyperxosist pipeline --product Acme --json
@@ -45,7 +45,7 @@ Commands:
   handoff --product X --feedback <json>
   pipeline --product X [--feedback <json>]
   prompt --product X --feedback <json>   buildAgentPrompt
-  tools [--format openai|anthropic|full] [--grok]
+  tools [--format openai|responses|anthropic|full] [--grok]
   dispatch <toolName> --args <json>      real tool dispatch (any runtime)
   playbook [--mode universal|grok]
   version
@@ -438,6 +438,12 @@ function main() {
             includeGrok: toolOpts.includeGrok,
             mode: toolOpts.mode
           });
+        } else if (format === 'responses') {
+          payload = {
+            format: 'openai.responses.tools.v1',
+            tools: Agent.toOpenAIResponsesTools(toolOpts),
+            dispatch: 'HyperXosistAgent.dispatchToolCall(name, arguments)'
+          };
         } else if (format === 'anthropic') {
           payload = {
             format: 'anthropic.tools.v1',
