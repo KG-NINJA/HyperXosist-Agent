@@ -576,5 +576,12 @@
         "remoteMcpProduction": "pending explicit production Worker deployment"
       }
     }
-  ]
+  ],
+  "openaiResponsesTools": {
+    "method": "HyperXosistAgent.toOpenAIResponsesTools(options?)",
+    "cli": "npx hyperxosist tools --format responses --json",
+    "format": "openai.responses.tools.v1",
+    "strict": false,
+    "note": "GPT-6 function calling uses Responses. Schema export is local and free; existing payment boundaries still apply."
+  }
 }

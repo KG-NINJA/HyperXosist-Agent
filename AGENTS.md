@@ -249,3 +249,12 @@ Real production search URL use still requires x402; real feedback must be collec
 - `hyperxosist_execute` is implemented and tested in the Worker source but requires an explicit production Worker deployment.
 - Do not advertise the paid Remote MCP tool as deployed until live `tools/list` and `/.well-known/mcp.json` confirm it.
 - GitHub Pages WebMCP calls the existing x402 endpoint directly and does not depend on that Worker deployment.
+
+## OpenAI Responses / GPT-6
+
+Use `HyperXosistAgent.toOpenAIResponsesTools(options?)` or
+`npx hyperxosist tools --format responses --json` for Responses API function tools.
+`toOpenAITools()` remains the Chat Completions adapter. Responses tools have
+top-level name/description/parameters and explicit `strict: false` to preserve
+optional arguments. Continue validating through `dispatchToolCall`. Exporting
+a schema does not call the model or authorize payment.

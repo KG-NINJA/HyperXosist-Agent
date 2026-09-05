@@ -1,3 +1,7 @@
+## Unreleased
+
+- Add OpenAI Responses function-tool export and CLI format for GPT-6 integration; preserve Chat Completions, optional arguments, tool dispatch and payment behavior.
+
 # Changelog
 
 ## [2.6.0] - 2026-09-03

@@ -596,6 +596,34 @@ test('toOpenAITools and toAnthropicTools shapes', () => {
   assert.ok(!ant[0].function);
 });
 
+test('Responses tools preserve schemas, options and dispatch contract', () => {
+  for (const options of [{}, { includeGrok: true }]) {
+    const responses = Agent.toOpenAIResponsesTools(options);
+    const chat = Agent.toOpenAITools(options);
+    assert.strictEqual(responses.length, chat.length);
+    responses.forEach((tool, i) => {
+      assert.strictEqual(tool.type, 'function');
+      assert.strictEqual(tool.name, chat[i].function.name);
+      assert.deepStrictEqual(tool.parameters, chat[i].function.parameters);
+      assert.strictEqual(tool.strict, false);
+      assert.ok(!('function' in tool));
+    });
+  }
+  const out = Agent.dispatchToolCall({ type: 'function_call', call_id: 'offline',
+    name: 'hyperxosist_plan_from_intent', arguments: JSON.stringify({ intent: 'Find product feedback about Acme' }) });
+  assert.strictEqual(out.ok, true);
+});
+
+test('CLI exposes Responses tool schema without API access', () => {
+  const cp = require('child_process');
+  const result = cp.spawnSync(process.execPath, [path.join(__dirname, '../bin/hyperxosist.js'),
+    'tools', '--format', 'responses', '--json'], { encoding: 'utf8' });
+  assert.strictEqual(result.status, 0, result.stderr);
+  const payload = JSON.parse(result.stdout);
+  assert.strictEqual(payload.format, 'openai.responses.tools.v1');
+  assert.deepStrictEqual(payload.tools, Agent.toOpenAIResponsesTools());
+});
+
 test('getToolDefinitions format anthropic', () => {
   const t = Agent.getToolDefinitions({ format: 'anthropic' });
   assert.strictEqual(t.format, 'anthropic.tools.v1');
