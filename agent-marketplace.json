@@ -11,7 +11,7 @@
   "buyer_adapter": {
     "module": "agent-matchmaker.mjs",
     "factory": "createAgentMatchmaker",
-    "methods": ["listOffers", "match", "prepareReceipt", "discover", "diagnostics"],
+    "methods": ["listOffers", "match", "inspectFreeSample", "prepareReceipt", "discover", "diagnostics"],
     "network": "eip155:8453",
     "asset": "USDC",
     "matching_fee_atomic": "0",
@@ -20,7 +20,7 @@
   "mcp": {
     "transport": "stdio",
     "command": "node mcp/matchmaker-server.mjs",
-    "tools": ["list_agent_offers", "match_agent_service", "discover_agent_services"],
+    "tools": ["list_agent_offers", "match_agent_service", "inspect_agent_offer_sample", "discover_agent_services"],
     "availability": "local_source_only",
     "production_remote_tools_changed": false,
     "payment_tools": []
