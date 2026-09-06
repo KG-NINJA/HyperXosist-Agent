@@ -1,0 +1,22 @@
+{
+  "request": {
+    "client_request_id": "avu-buyer-probe-20260906",
+    "evidence": {
+      "media_type": "application/json",
+      "content_base64": "eyJhcnRpZmFjdF9pZCI6ImF2dS1idXllci1kZW1vIiwiaGFuZG9mZiI6InJlYWR5In0="
+    },
+    "assertions": [
+      {
+        "op": "sha256_equals",
+        "expected_hex": "36fd2649eebf6c91e91197b19a8b228d8010d88ce5db357db3c6ecd539de99da"
+      }
+    ]
+  },
+  "spend_policy": {
+    "policy_version": "agent-economy/precheck-policy/2.0",
+    "max_amount_atomic": "10000",
+    "network": "eip155:8453",
+    "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    "pay_to": "0x4D7d842536De9Eb491AE2300126B3CDdE7B0aDE3"
+  }
+}

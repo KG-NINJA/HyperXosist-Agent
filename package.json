@@ -54,10 +54,12 @@
     "README.md",
     "mcp/",
     "docs/",
-    "test/tool-selection-cases.json"
+    "test/tool-selection-cases.json",
+    "avu-buyer.mjs",
+    "avu-buyer.json"
   ],
   "scripts": {
-    "test": "node test/agent-api.test.js && node test/mcp.test.js && node test/mcp-core.test.js && node test/mcp-remote.test.js && node test/mcp-security.test.js && node test/mcp-schema.test.js && node test/mcp-consistency.test.js && node --test test/mcp-cloudflare-worker.test.mjs && node test/payment-endpoints.test.js && node test/access-policy-consistency.test.js && node test/paid-execution.test.js && node test/webmcp.test.js",
+    "test": "node test/agent-api.test.js && node test/mcp.test.js && node test/mcp-core.test.js && node test/mcp-remote.test.js && node test/mcp-security.test.js && node test/mcp-schema.test.js && node test/mcp-consistency.test.js && node --test test/mcp-cloudflare-worker.test.mjs && node test/payment-endpoints.test.js && node test/access-policy-consistency.test.js && node test/paid-execution.test.js && node test/webmcp.test.js && node --test test/avu-buyer.test.mjs",
     "test:agent": "node test/agent-api.test.js",
     "test:mcp": "node test/mcp.test.js",
     "quickstart": "node examples/quickstart.mjs",
@@ -82,7 +84,10 @@
     "test:payment-endpoints": "node test/payment-endpoints.test.js",
     "test:webmcp": "node test/webmcp.test.js",
     "test:paid-execution": "node test/paid-execution.test.js",
-    "test:access-policy": "node test/access-policy-consistency.test.js"
+    "test:access-policy": "node test/access-policy-consistency.test.js",
+    "test:avu-buyer": "node --test test/avu-buyer.test.mjs",
+    "avu:demo": "node examples/avu-artifact-handoff.mjs",
+    "avu:status": "node examples/avu-artifact-handoff.mjs --status"
   },
   "engines": {
     "node": ">=18"

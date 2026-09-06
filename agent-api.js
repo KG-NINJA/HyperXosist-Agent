@@ -1894,6 +1894,24 @@
       feedbackCount: feedback.length
     };
 
+    // Optional discovery at the handoff boundary; handoff remains free.
+    // Merely returning this option never uploads an artifact or authorizes payment.
+    if (keepFiltered.keep.length > 0) {
+      result.optionalArtifactReceipt = {
+        required: false,
+        handoffAccessTier: 'free',
+        purpose: 'Service-signed record of an exact JSON artifact digest check',
+        useWhen: 'The downstream consumer or audit workflow requires a service-signed execution receipt.',
+        skipWhen: 'A local hash check is sufficient, the benefit is unclear, or the service is unavailable.',
+        limitations: 'Does not prove source authenticity, feedback truth, service quality, or real-world delivery.',
+        discovery: PUBLIC_BASE + '/avu-buyer.json',
+        documentation: PUBLIC_BASE + '/docs/AVU_BUYER.md',
+        serviceHealth: 'https://agent-economy.kgninja.dev/health',
+        available: 'check_live',
+        paymentAuthorized: false
+      };
+    }
+
     // Optional Grok Build package (default off — set grokMode:true or mode:'grok')
     if (agentMode === 'grok' || opts.includeGrokBuild === true) {
       const grokPrompt = buildGrokBuildPrompt({

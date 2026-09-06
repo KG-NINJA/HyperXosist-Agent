@@ -159,3 +159,7 @@ Use `HyperXosistAgent.toOpenAIResponsesTools(options?)` or
 top-level name/description/parameters and explicit `strict: false` to preserve
 optional arguments. Continue validating through `dispatchToolCall`. Exporting
 a schema does not call the model or authorize payment.
+
+## Optional signed artifact receipt
+
+After a keep-only handoff, inspect `optionalArtifactReceipt` only when a downstream consumer requires a service-signed execution record. Local hash checks and handoff remain free. See `avu-buyer.json` and `docs/AVU_BUYER.md` for the Node buyer adapter. Check live service availability; never turn an optional receipt into a required purchase. Host-owned payment policy and wallet authorization are mandatory.

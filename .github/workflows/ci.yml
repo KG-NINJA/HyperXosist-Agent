@@ -39,6 +39,12 @@ jobs:
           npm run test:paid-execution
           npm run test:webmcp
 
+      - name: Validate optional artifact buyer without payment
+        run: |
+          npm run test:avu-buyer
+          npm run avu:demo
+          python3 -m unittest discover -s test -p test_avu_cost_basis.py
+
       - name: Run local stdio MCP integration tests
         run: npm run test:mcp
 
@@ -99,7 +105,7 @@ jobs:
       - name: Verify npm package contents
         run: |
           npm pack --dry-run --json > npm-pack.json
-          node -e "const p=require('./npm-pack.json')[0]; const files=new Set(p.files.map(x=>x.path)); for (const f of ['agent-api.js','paid-execution.js','webmcp.js','access-policy.json','mcp/server.js','mcp/remote-server.js','mcp/core.js','mcp/tools.js','docs/MCP.md','docs/CHATGPT_APP.md','agent-use.json','agent-tools.json','missions.json','x402-payment.json','README.md']) { if (!files.has(f)) throw new Error('Missing from npm package: '+f); }"
+          node -e "const p=require('./npm-pack.json')[0]; const files=new Set(p.files.map(x=>x.path)); for (const f of ['agent-api.js','avu-buyer.mjs','avu-buyer.json','docs/AVU_BUYER.md','paid-execution.js','webmcp.js','access-policy.json','mcp/server.js','mcp/remote-server.js','mcp/core.js','mcp/tools.js','docs/MCP.md','docs/CHATGPT_APP.md','agent-use.json','agent-tools.json','missions.json','x402-payment.json','README.md']) { if (!files.has(f)) throw new Error('Missing from npm package: '+f); }"
 
       - name: Build Remote MCP Docker image
         if: matrix.node-version == '20'

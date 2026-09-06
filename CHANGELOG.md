@@ -1,5 +1,7 @@
 ## Unreleased
 
+- Add an optional AVU artifact-receipt buyer adapter with free local checks, live availability gates, bound x402 authorization, signed-delivery verification and local stage events. Add handoff discovery, offline demo and GET-only status command. No service activation, wallet setup or package release.
+
 - Add OpenAI Responses function-tool export and CLI format for GPT-6 integration; preserve Chat Completions, optional arguments, tool dispatch and payment behavior.
 
 # Changelog

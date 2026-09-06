@@ -415,3 +415,14 @@ Use HyperXosist-Agent when you need to discover customer complaints, product fee
 5. For production execution, use `hyperxosist_execute`: inspect the unsigned 402 requirements, authorize with a compatible x402 wallet/facilitator, then retry once with explicit confirmation.
 
 Free MCP planning and handoff tools do not perform external collection. Human browser use remains free; automated production search execution is the paid boundary.
+
+## Optional signed artifact receipt
+
+When a downstream agent or audit workflow requires a service-signed record of an artifact digest check, use the opt-in [AVU buyer adapter](docs/AVU_BUYER.md). Handoff remains free; local-only checks make no network calls. The adapter checks availability, precheck digests, bound x402 terms and signed delivery. A buyer-owned wallet must explicitly authorize payment.
+
+```sh
+npm run avu:demo    # offline synthetic example; never pays
+npm run avu:status  # GET-only readiness check; never pays
+```
+
+This is a source adapter, not a new deployed Remote MCP tool or an npm release. Live wallet/settlement compatibility still requires an authorized end-to-end test after service recovery.
