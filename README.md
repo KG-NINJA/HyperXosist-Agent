@@ -426,3 +426,15 @@ npm run avu:status  # GET-only readiness check; never pays
 ```
 
 This is a source adapter, not a new deployed Remote MCP tool or an npm release. Live wallet/settlement compatibility still requires an authorized end-to-end test after service recovery.
+
+## Agent-to-agent service matching (source preview)
+
+Use `agent-matchmaker.mjs` or the new local stdio MCP server to match an agent's actual task, budget and deadline to five existing API services or an AVU artifact receipt. The client reuses the free public `/match` endpoint, checks advertised payment terms against live OpenAPI, and excludes local-only needs, unsupported capabilities and known same-operator purchases.
+
+```bash
+npm run marketplace:demo                   # offline; no purchase
+npm run marketplace:demo -- --live         # free discovery using synthetic demand
+node mcp/matchmaker-server.mjs             # connect from an MCP-capable buyer
+```
+
+See [the matching guide](docs/AGENT_MATCHMAKING.md) and [machine-readable entry](agent-marketplace.json). Six capabilities belong to one operator; external buyer demand, brokerage fees, real payment and revenue are not created by matching. The new tools are local source only and do not change the production Remote MCP deployment.

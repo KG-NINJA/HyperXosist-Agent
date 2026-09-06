@@ -501,5 +501,20 @@
     "handoffRemainsFree": true,
     "automaticPayment": false,
     "remoteMcpToolAdded": false
+  },
+  "agentServiceMatching": {
+    "manifest": "https://kg-ninja.github.io/HyperXosist-Agent/agent-marketplace.json",
+    "module": "agent-matchmaker.mjs",
+    "factory": "createAgentMatchmaker",
+    "localMcp": "node mcp/matchmaker-server.mjs",
+    "tools": [
+      "list_agent_offers",
+      "match_agent_service",
+      "discover_agent_services"
+    ],
+    "availability": "local_source_only",
+    "existingPublicMatching": "https://api.kgninja.dev/match",
+    "paymentAuthorized": false,
+    "automaticPurchases": false
   }
 }

@@ -29,7 +29,8 @@
   "main": "agent-api.js",
   "browser": "agent-api.js",
   "bin": {
-    "hyperxosist": "bin/hyperxosist.js"
+    "hyperxosist": "bin/hyperxosist.js",
+    "hyperxosist-marketplace": "bin/hyperxosist-marketplace.mjs"
   },
   "files": [
     "agent-api.js",
@@ -56,10 +57,12 @@
     "docs/",
     "test/tool-selection-cases.json",
     "avu-buyer.mjs",
-    "avu-buyer.json"
+    "avu-buyer.json",
+    "agent-matchmaker.mjs",
+    "agent-marketplace.json"
   ],
   "scripts": {
-    "test": "node test/agent-api.test.js && node test/mcp.test.js && node test/mcp-core.test.js && node test/mcp-remote.test.js && node test/mcp-security.test.js && node test/mcp-schema.test.js && node test/mcp-consistency.test.js && node --test test/mcp-cloudflare-worker.test.mjs && node test/payment-endpoints.test.js && node test/access-policy-consistency.test.js && node test/paid-execution.test.js && node test/webmcp.test.js && node --test test/avu-buyer.test.mjs",
+    "test": "node test/agent-api.test.js && node test/mcp.test.js && node test/mcp-core.test.js && node test/mcp-remote.test.js && node test/mcp-security.test.js && node test/mcp-schema.test.js && node test/mcp-consistency.test.js && node --test test/mcp-cloudflare-worker.test.mjs && node test/payment-endpoints.test.js && node test/access-policy-consistency.test.js && node test/paid-execution.test.js && node test/webmcp.test.js && node --test test/avu-buyer.test.mjs && node --test test/agent-matchmaker.test.mjs",
     "test:agent": "node test/agent-api.test.js",
     "test:mcp": "node test/mcp.test.js",
     "quickstart": "node examples/quickstart.mjs",
@@ -87,7 +90,10 @@
     "test:access-policy": "node test/access-policy-consistency.test.js",
     "test:avu-buyer": "node --test test/avu-buyer.test.mjs",
     "avu:demo": "node examples/avu-artifact-handoff.mjs",
-    "avu:status": "node examples/avu-artifact-handoff.mjs --status"
+    "avu:status": "node examples/avu-artifact-handoff.mjs --status",
+    "test:marketplace": "node --test test/agent-matchmaker.test.mjs",
+    "marketplace:demo": "node examples/agent-marketplace.mjs",
+    "marketplace:mcp": "node mcp/matchmaker-server.mjs"
   },
   "engines": {
     "node": ">=18"

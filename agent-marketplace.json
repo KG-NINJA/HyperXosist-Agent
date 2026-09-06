@@ -1,0 +1,43 @@
+{
+  "schema_version": "hyperxosist/agent-marketplace/1.0",
+  "name": "KG-NINJA agent service matching",
+  "purpose": "Route an agent's actual task and budget to a compatible service, with an explicit free alternative and purchase handoff.",
+  "seller_operators": ["kg-ninja"],
+  "intents": ["command-error", "url-summary", "shell-safety", "service-visibility", "x-search", "artifact-receipt"],
+  "existing_public_matching": "https://api.kgninja.dev/match",
+  "public_catalog": "https://api.kgninja.dev/catalog.json",
+  "offer_revisions": "https://api.kgninja.dev/offers.json",
+  "human_free_matching": "https://api.kgninja.dev/find",
+  "buyer_adapter": {
+    "module": "agent-matchmaker.mjs",
+    "factory": "createAgentMatchmaker",
+    "methods": ["listOffers", "match", "prepareReceipt", "discover", "diagnostics"],
+    "network": "eip155:8453",
+    "asset": "USDC",
+    "matching_fee_atomic": "0",
+    "payment_authority": "Host-owned wallet policy; never a model tool argument"
+  },
+  "mcp": {
+    "transport": "stdio",
+    "command": "node mcp/matchmaker-server.mjs",
+    "tools": ["list_agent_offers", "match_agent_service", "discover_agent_services"],
+    "availability": "local_source_only",
+    "production_remote_tools_changed": false,
+    "payment_tools": []
+  },
+  "bazaar": {
+    "search": "https://api.cdp.coinbase.com/platform/v2/x402/discovery/search",
+    "enabled_by_default": false,
+    "results": "Unreviewed discovery data; no automatic execution or recipient allowlisting"
+  },
+  "skip_when": ["A local solution is sufficient", "The requested capability is unsupported", "Budget is zero or inadequate", "Buyer and seller are known to have the same operator or recipient"],
+  "block_when": ["Demand expired", "Live metadata cannot be verified", "AVU is degraded or its cost basis is stale", "The same request ID is reused with a different demand"],
+  "revenue": {
+    "matching_is_a_sale": false,
+    "internal_transfers_are_external_revenue": false,
+    "brokerage_fee_implemented": false,
+    "customer_acquisition_automated": false,
+    "requirement": "An external buyer with a real need must connect and complete an authorized paid delivery."
+  },
+  "documentation": "docs/AGENT_MATCHMAKING.md"
+}

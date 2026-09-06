@@ -1908,6 +1908,13 @@
         documentation: PUBLIC_BASE + '/docs/AVU_BUYER.md',
         serviceHealth: 'https://agent-economy.kgninja.dev/health',
         available: 'check_live',
+        matchmaking: {
+          manifest: PUBLIC_BASE + '/agent-marketplace.json',
+          localMcpTool: 'match_agent_service',
+          intent: 'artifact-receipt',
+          capability: 'service_signed_json_digest_receipt',
+          availability: 'local_source_only'
+        },
         paymentAuthorized: false
       };
     }

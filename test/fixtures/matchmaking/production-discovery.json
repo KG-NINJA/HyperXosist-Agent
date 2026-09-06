@@ -1,0 +1,767 @@
+{
+  "provenance": {
+    "capturedOn": "2026-09-06",
+    "requests": [
+      "GET https://api.kgninja.dev/catalog.json",
+      "GET https://api.kgninja.dev/openapi.json",
+      "POST https://api.kgninja.dev/match"
+    ],
+    "matchInput": {
+      "intent": "x-search",
+      "max_price_usdc": "0.01",
+      "network": "eip155:8453",
+      "prefer_free": false,
+      "local_solution_sufficient": false
+    },
+    "openapiProjection": "Only payment metadata and input schemas for the five paid operations. No paid operation was called."
+  },
+  "catalog": {
+    "schema_version": "1.0",
+    "catalog_url": "https://api.kgninja.dev/catalog.json",
+    "match_url": "https://api.kgninja.dev/match",
+    "human_url": "https://api.kgninja.dev/find",
+    "subscription": {
+      "json": "https://api.kgninja.dev/offers.json",
+      "rss": "https://api.kgninja.dev/offers.xml",
+      "delivery": "Opt-in polling by the recipient's feed reader or agent. No email or webhook push is configured.",
+      "recommended_poll_seconds": 3600
+    },
+    "purchase_policy": "Discovery and subscription are free. A match is a seller-supplied candidate, not a recommendation to spend. Compare free and local options, validate the live x402 challenge, and obtain wallet-owner authorization before paying. Do not pay again while a prior result is unresolved.",
+    "free_mcp": {
+      "endpoint": "https://mcp.kgninja.dev/mcp",
+      "purpose": "Search planning, filtering and handoff only; does not execute paid API calls."
+    },
+    "support": {
+      "url": "https://buymeacoffee.com/kgninja",
+      "purpose": "Optional creator support; does not buy API credits or grant API access."
+    },
+    "offers": [
+      {
+        "id": "fix-error",
+        "intent": "command-error",
+        "title": "Command error triage / コマンドエラー診断",
+        "description": "Rule-based triage of submitted command failures. Returns response.receipt with root_cause, next_command, retry_plan, risk_note and prevention_note.",
+        "limitation": "Does not inspect your repository, execute commands, or guarantee a fix. Skip if the free example or local tools already solve the failure.",
+        "url": "https://api.kgninja.dev/buy#fix-error",
+        "method": "POST",
+        "endpoint": "https://api.kgninja.dev/fix-error",
+        "price": {
+          "amount": "0.01",
+          "currency": "USDC",
+          "atomic_amount": "10000",
+          "network": "eip155:8453",
+          "mode": "mainnet"
+        },
+        "payment": {
+          "protocol": "x402",
+          "version": 2,
+          "recipient": "0x4D7d842536De9Eb491AE2300126B3CDdE7B0aDE3",
+          "requirements": "https://api.kgninja.dev/payment-options.json",
+          "authorization_required": true
+        },
+        "input_schema": "https://api.kgninja.dev/openapi.json#/paths/~1fix-error/post/requestBody/content/application~1json/schema",
+        "example_request": {
+          "command": "npm run build",
+          "error": "Cannot find module 'hono'",
+          "environment": "Node.js"
+        },
+        "free_preview": "https://api.kgninja.dev/fix-error/preview",
+        "free_alternative": "Inspect the fixed example and use your local debugger first.",
+        "subscription": {
+          "json": "https://api.kgninja.dev/offers.json?intent=command-error",
+          "rss": "https://api.kgninja.dev/offers.xml?intent=command-error"
+        }
+      },
+      {
+        "id": "summarize-url",
+        "intent": "url-summary",
+        "title": "Public page excerpt / 公開ページの抜粋",
+        "description": "Fetches a public page and returns its title and up to 420 characters of extracted text in summary.",
+        "limitation": "Text extraction, not an AI-written synthesis. No browser rendering, login, or guarantee of useful content. Read the page directly when sufficient.",
+        "url": "https://api.kgninja.dev/buy#summarize-url",
+        "method": "POST",
+        "endpoint": "https://api.kgninja.dev/summarize-url",
+        "price": {
+          "amount": "0.01",
+          "currency": "USDC",
+          "atomic_amount": "10000",
+          "network": "eip155:8453",
+          "mode": "mainnet"
+        },
+        "payment": {
+          "protocol": "x402",
+          "version": 2,
+          "recipient": "0x4D7d842536De9Eb491AE2300126B3CDdE7B0aDE3",
+          "requirements": "https://api.kgninja.dev/payment-options.json",
+          "authorization_required": true
+        },
+        "input_schema": "https://api.kgninja.dev/openapi.json#/paths/~1summarize-url/post/requestBody/content/application~1json/schema",
+        "example_request": {
+          "url": "https://example.com"
+        },
+        "free_preview": "https://api.kgninja.dev/openapi.json",
+        "free_alternative": "Open the original public page in your browser; inspect the free API contract.",
+        "subscription": {
+          "json": "https://api.kgninja.dev/offers.json?intent=url-summary",
+          "rss": "https://api.kgninja.dev/offers.xml?intent=url-summary"
+        }
+      },
+      {
+        "id": "shell-risk-check",
+        "intent": "shell-safety",
+        "title": "Shell command precheck / シェルコマンドの事前確認",
+        "description": "Returns risk_level, explanation and safer_alternative for common shell command patterns.",
+        "limitation": "Rule-based pattern checks, not a sandbox or comprehensive security audit. A low score does not prove safety.",
+        "url": "https://api.kgninja.dev/buy#shell-risk-check",
+        "method": "POST",
+        "endpoint": "https://api.kgninja.dev/shell-risk-check",
+        "price": {
+          "amount": "0.01",
+          "currency": "USDC",
+          "atomic_amount": "10000",
+          "network": "eip155:8453",
+          "mode": "mainnet"
+        },
+        "payment": {
+          "protocol": "x402",
+          "version": 2,
+          "recipient": "0x4D7d842536De9Eb491AE2300126B3CDdE7B0aDE3",
+          "requirements": "https://api.kgninja.dev/payment-options.json",
+          "authorization_required": true
+        },
+        "input_schema": "https://api.kgninja.dev/openapi.json#/paths/~1shell-risk-check/post/requestBody/content/application~1json/schema",
+        "example_request": {
+          "command": "npm install hono"
+        },
+        "free_preview": "https://api.kgninja.dev/openapi.json",
+        "free_alternative": "Review the command and use local static checks; inspect the free API contract.",
+        "subscription": {
+          "json": "https://api.kgninja.dev/offers.json?intent=shell-safety",
+          "rss": "https://api.kgninja.dev/offers.xml?intent=shell-safety"
+        }
+      },
+      {
+        "id": "agent-visibility-report",
+        "intent": "service-visibility",
+        "title": "KG-NINJA discovery telemetry / 本サービスの発見状況",
+        "description": "Returns aggregate machine discovery and payment-readiness telemetry for this KG-NINJA service.",
+        "limitation": "Does not crawl or audit an arbitrary target website. Aggregate signals do not establish customer identity, demand, or sales.",
+        "url": "https://api.kgninja.dev/buy#agent-visibility-report",
+        "method": "POST",
+        "endpoint": "https://api.kgninja.dev/agent-visibility-report",
+        "price": {
+          "amount": "0.01",
+          "currency": "USDC",
+          "atomic_amount": "10000",
+          "network": "eip155:8453",
+          "mode": "mainnet"
+        },
+        "payment": {
+          "protocol": "x402",
+          "version": 2,
+          "recipient": "0x4D7d842536De9Eb491AE2300126B3CDdE7B0aDE3",
+          "requirements": "https://api.kgninja.dev/payment-options.json",
+          "authorization_required": true
+        },
+        "input_schema": "https://api.kgninja.dev/openapi.json#/paths/~1agent-visibility-report/post/requestBody/content/application~1json/schema",
+        "example_request": {
+          "mode": "aggregate"
+        },
+        "free_preview": "https://api.kgninja.dev/capabilities.json",
+        "free_alternative": "Inspect the service's public metadata and payment configuration first.",
+        "subscription": {
+          "json": "https://api.kgninja.dev/offers.json?intent=service-visibility",
+          "rss": "https://api.kgninja.dev/offers.xml?intent=service-visibility"
+        }
+      },
+      {
+        "id": "hyperxosist-query",
+        "intent": "x-search",
+        "title": "X search query builder / X検索クエリ作成",
+        "description": "Builds a filtered X search query and searchUrl from your keywords; returns a structured handoff.",
+        "limitation": "Does not fetch X posts, contact users, or guarantee leads. Free MCP planning and a human opening a search URL are available.",
+        "url": "https://api.kgninja.dev/buy#hyperxosist-query",
+        "method": "POST",
+        "endpoint": "https://api.kgninja.dev/hyperxosist-query",
+        "price": {
+          "amount": "0.01",
+          "currency": "USDC",
+          "atomic_amount": "10000",
+          "network": "eip155:8453",
+          "mode": "mainnet"
+        },
+        "payment": {
+          "protocol": "x402",
+          "version": 2,
+          "recipient": "0x4D7d842536De9Eb491AE2300126B3CDdE7B0aDE3",
+          "requirements": "https://api.kgninja.dev/payment-options.json",
+          "authorization_required": true
+        },
+        "input_schema": "https://api.kgninja.dev/openapi.json#/paths/~1hyperxosist-query/post/requestBody/content/application~1json/schema",
+        "example_request": {
+          "keywords": "open source CRM feedback",
+          "lang": "en"
+        },
+        "free_preview": "https://api.kgninja.dev/hyperxosist-query-dry-run",
+        "free_alternative": "Use the free dry run or MCP planning, filtering and handoff at https://mcp.kgninja.dev/mcp.",
+        "subscription": {
+          "json": "https://api.kgninja.dev/offers.json?intent=x-search",
+          "rss": "https://api.kgninja.dev/offers.xml?intent=x-search"
+        }
+      }
+    ]
+  },
+  "match": {
+    "schema_version": "1.0",
+    "decision": "review",
+    "reason": "review_candidates",
+    "matches": [
+      {
+        "id": "hyperxosist-query",
+        "intent": "x-search",
+        "title": "X search query builder / X検索クエリ作成",
+        "description": "Builds a filtered X search query and searchUrl from your keywords; returns a structured handoff.",
+        "limitation": "Does not fetch X posts, contact users, or guarantee leads. Free MCP planning and a human opening a search URL are available.",
+        "url": "https://api.kgninja.dev/buy#hyperxosist-query",
+        "method": "POST",
+        "endpoint": "https://api.kgninja.dev/hyperxosist-query",
+        "price": {
+          "amount": "0.01",
+          "currency": "USDC",
+          "atomic_amount": "10000",
+          "network": "eip155:8453",
+          "mode": "mainnet"
+        },
+        "payment": {
+          "protocol": "x402",
+          "version": 2,
+          "recipient": "0x4D7d842536De9Eb491AE2300126B3CDdE7B0aDE3",
+          "requirements": "https://api.kgninja.dev/payment-options.json",
+          "authorization_required": true
+        },
+        "input_schema": "https://api.kgninja.dev/openapi.json#/paths/~1hyperxosist-query/post/requestBody/content/application~1json/schema",
+        "example_request": {
+          "keywords": "open source CRM feedback",
+          "lang": "en"
+        },
+        "free_preview": "https://api.kgninja.dev/hyperxosist-query-dry-run",
+        "free_alternative": "Use the free dry run or MCP planning, filtering and handoff at https://mcp.kgninja.dev/mcp.",
+        "subscription": {
+          "json": "https://api.kgninja.dev/offers.json?intent=x-search&max_price_usdc=0.01&network=eip155%3A8453",
+          "rss": "https://api.kgninja.dev/offers.xml?intent=x-search&max_price_usdc=0.01&network=eip155%3A8453"
+        }
+      }
+    ],
+    "free_options": [
+      {
+        "id": "hyperxosist-query",
+        "title": "X search query builder / X検索クエリ作成",
+        "description": "Use the free dry run or MCP planning, filtering and handoff at https://mcp.kgninja.dev/mcp.",
+        "url": "https://api.kgninja.dev/hyperxosist-query-dry-run",
+        "subscription": {
+          "json": "https://api.kgninja.dev/offers.json?intent=x-search&max_price_usdc=0.01&network=eip155%3A8453",
+          "rss": "https://api.kgninja.dev/offers.xml?intent=x-search&max_price_usdc=0.01&network=eip155%3A8453"
+        }
+      }
+    ],
+    "purchase_executed": false,
+    "payment_authorized": false,
+    "policy": "Discovery and subscription are free. A match is a seller-supplied candidate, not a recommendation to spend. Compare free and local options, validate the live x402 challenge, and obtain wallet-owner authorization before paying. Do not pay again while a prior result is unresolved."
+  },
+  "openapi": {
+    "paths": {
+      "/fix-error": {
+        "post": {
+          "x-payment-info": {
+            "protocol": "x402",
+            "protocol_reference": "https://x402.org",
+            "version": 2,
+            "version_type": "number",
+            "version_required": true,
+            "scheme": "exact",
+            "network": "eip155:8453",
+            "currency": "USDC",
+            "price": "$0.01",
+            "payTo": "0x4D7d842536De9Eb491AE2300126B3CDdE7B0aDE3",
+            "accepted_headers": [
+              "X-PAYMENT",
+              "PAYMENT",
+              "PAYMENT-SIGNATURE"
+            ],
+            "payment_required_header": "PAYMENT-REQUIRED",
+            "settlement_headers": [
+              "PAYMENT-RESPONSE",
+              "X-PAYMENT-RESPONSE"
+            ],
+            "payment_options_url": "/payment-options.json",
+            "discovery_resources_url": "/.well-known/x402/discovery/resources",
+            "canonical_openapi_url": "/openapi.json",
+            "bazaar_indexing": {
+              "x402Version": 2,
+              "version_type": "number",
+              "version_required": true,
+              "scheme": "exact",
+              "network": "eip155:8453",
+              "asset": "USDC",
+              "asset_contract": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+              "resource_identity": "absolute_resource_url",
+              "resource_url_rule": "Each paid route advertises and challenges against its own absolute HTTPS resource URL.",
+              "facilitator": "cdp",
+              "facilitator_url": "https://api.cdp.coinbase.com/platform/v2/x402",
+              "cdp_facilitator_configured": true,
+              "cdp_credentials_present": true,
+              "bazaar_extension_status": "declared_on_paid_routes",
+              "bazaar_extension_note": "Each paid POST route declares a v2 Bazaar discovery extension through the installed x402 SDK. Listing still depends on facilitator settlement and external indexing.",
+              "indexing_expectation": "Bazaar visibility should be treated as route/resource-level and settlement-gated until Coinbase confirms otherwise.",
+              "debug_signals": {
+                "payment_required_header": "PAYMENT-REQUIRED",
+                "settlement_headers": [
+                  "PAYMENT-RESPONSE",
+                  "X-PAYMENT-RESPONSE"
+                ],
+                "extension_response_header": "EXTENSION-RESPONSES",
+                "local_integrity_endpoint": "/revenue-log/integrity"
+              }
+            },
+            "expected_unpaid_response": 402,
+            "expected_paid_response": 200
+          },
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "command": {
+                      "type": "string"
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "log": {
+                      "type": "string"
+                    },
+                    "environment": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "example": {
+                  "command": "npm run build",
+                  "error": "Error: Cannot find module 'hono'",
+                  "environment": "Node.js Cloudflare Worker build"
+                },
+                "examples": {
+                  "missing_dependency": {
+                    "summary": "Build fails because a dependency cannot be resolved",
+                    "value": {
+                      "command": "npm run build",
+                      "error": "Error: Cannot find module 'hono'",
+                      "environment": "Node.js Cloudflare Worker build"
+                    }
+                  },
+                  "invalid_deployment_credential": {
+                    "summary": "Deployment fails with an authorization error",
+                    "value": {
+                      "command": "npm run deploy",
+                      "error": "401 Unauthorized: API token invalid",
+                      "environment": "CI deployment"
+                    }
+                  },
+                  "unavailable_local_service": {
+                    "summary": "A local health check cannot reach the service",
+                    "value": {
+                      "command": "curl http://127.0.0.1:3000/health",
+                      "error": "Connection refused",
+                      "environment": "Linux service"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/summarize-url": {
+        "post": {
+          "x-payment-info": {
+            "protocol": "x402",
+            "protocol_reference": "https://x402.org",
+            "version": 2,
+            "version_type": "number",
+            "version_required": true,
+            "scheme": "exact",
+            "network": "eip155:8453",
+            "currency": "USDC",
+            "price": "$0.01",
+            "payTo": "0x4D7d842536De9Eb491AE2300126B3CDdE7B0aDE3",
+            "accepted_headers": [
+              "X-PAYMENT",
+              "PAYMENT",
+              "PAYMENT-SIGNATURE"
+            ],
+            "payment_required_header": "PAYMENT-REQUIRED",
+            "settlement_headers": [
+              "PAYMENT-RESPONSE",
+              "X-PAYMENT-RESPONSE"
+            ],
+            "payment_options_url": "/payment-options.json",
+            "discovery_resources_url": "/.well-known/x402/discovery/resources",
+            "canonical_openapi_url": "/openapi.json",
+            "bazaar_indexing": {
+              "x402Version": 2,
+              "version_type": "number",
+              "version_required": true,
+              "scheme": "exact",
+              "network": "eip155:8453",
+              "asset": "USDC",
+              "asset_contract": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+              "resource_identity": "absolute_resource_url",
+              "resource_url_rule": "Each paid route advertises and challenges against its own absolute HTTPS resource URL.",
+              "facilitator": "cdp",
+              "facilitator_url": "https://api.cdp.coinbase.com/platform/v2/x402",
+              "cdp_facilitator_configured": true,
+              "cdp_credentials_present": true,
+              "bazaar_extension_status": "declared_on_paid_routes",
+              "bazaar_extension_note": "Each paid POST route declares a v2 Bazaar discovery extension through the installed x402 SDK. Listing still depends on facilitator settlement and external indexing.",
+              "indexing_expectation": "Bazaar visibility should be treated as route/resource-level and settlement-gated until Coinbase confirms otherwise.",
+              "debug_signals": {
+                "payment_required_header": "PAYMENT-REQUIRED",
+                "settlement_headers": [
+                  "PAYMENT-RESPONSE",
+                  "X-PAYMENT-RESPONSE"
+                ],
+                "extension_response_header": "EXTENSION-RESPONSES",
+                "local_integrity_endpoint": "/revenue-log/integrity"
+              }
+            },
+            "expected_unpaid_response": 402,
+            "expected_paid_response": 200
+          },
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "url"
+                  ],
+                  "properties": {
+                    "url": {
+                      "type": "string",
+                      "format": "uri"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      },
+      "/shell-risk-check": {
+        "post": {
+          "x-payment-info": {
+            "protocol": "x402",
+            "protocol_reference": "https://x402.org",
+            "version": 2,
+            "version_type": "number",
+            "version_required": true,
+            "scheme": "exact",
+            "network": "eip155:8453",
+            "currency": "USDC",
+            "price": "$0.01",
+            "payTo": "0x4D7d842536De9Eb491AE2300126B3CDdE7B0aDE3",
+            "accepted_headers": [
+              "X-PAYMENT",
+              "PAYMENT",
+              "PAYMENT-SIGNATURE"
+            ],
+            "payment_required_header": "PAYMENT-REQUIRED",
+            "settlement_headers": [
+              "PAYMENT-RESPONSE",
+              "X-PAYMENT-RESPONSE"
+            ],
+            "payment_options_url": "/payment-options.json",
+            "discovery_resources_url": "/.well-known/x402/discovery/resources",
+            "canonical_openapi_url": "/openapi.json",
+            "bazaar_indexing": {
+              "x402Version": 2,
+              "version_type": "number",
+              "version_required": true,
+              "scheme": "exact",
+              "network": "eip155:8453",
+              "asset": "USDC",
+              "asset_contract": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+              "resource_identity": "absolute_resource_url",
+              "resource_url_rule": "Each paid route advertises and challenges against its own absolute HTTPS resource URL.",
+              "facilitator": "cdp",
+              "facilitator_url": "https://api.cdp.coinbase.com/platform/v2/x402",
+              "cdp_facilitator_configured": true,
+              "cdp_credentials_present": true,
+              "bazaar_extension_status": "declared_on_paid_routes",
+              "bazaar_extension_note": "Each paid POST route declares a v2 Bazaar discovery extension through the installed x402 SDK. Listing still depends on facilitator settlement and external indexing.",
+              "indexing_expectation": "Bazaar visibility should be treated as route/resource-level and settlement-gated until Coinbase confirms otherwise.",
+              "debug_signals": {
+                "payment_required_header": "PAYMENT-REQUIRED",
+                "settlement_headers": [
+                  "PAYMENT-RESPONSE",
+                  "X-PAYMENT-RESPONSE"
+                ],
+                "extension_response_header": "EXTENSION-RESPONSES",
+                "local_integrity_endpoint": "/revenue-log/integrity"
+              }
+            },
+            "expected_unpaid_response": 402,
+            "expected_paid_response": 200
+          },
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "command"
+                  ],
+                  "properties": {
+                    "command": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          }
+        }
+      },
+      "/agent-visibility-report": {
+        "post": {
+          "x-payment-info": {
+            "protocol": "x402",
+            "protocol_reference": "https://x402.org",
+            "version": 2,
+            "version_type": "number",
+            "version_required": true,
+            "scheme": "exact",
+            "network": "eip155:8453",
+            "currency": "USDC",
+            "price": "$0.01",
+            "payTo": "0x4D7d842536De9Eb491AE2300126B3CDdE7B0aDE3",
+            "accepted_headers": [
+              "X-PAYMENT",
+              "PAYMENT",
+              "PAYMENT-SIGNATURE"
+            ],
+            "payment_required_header": "PAYMENT-REQUIRED",
+            "settlement_headers": [
+              "PAYMENT-RESPONSE",
+              "X-PAYMENT-RESPONSE"
+            ],
+            "payment_options_url": "/payment-options.json",
+            "discovery_resources_url": "/.well-known/x402/discovery/resources",
+            "canonical_openapi_url": "/openapi.json",
+            "bazaar_indexing": {
+              "x402Version": 2,
+              "version_type": "number",
+              "version_required": true,
+              "scheme": "exact",
+              "network": "eip155:8453",
+              "asset": "USDC",
+              "asset_contract": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+              "resource_identity": "absolute_resource_url",
+              "resource_url_rule": "Each paid route advertises and challenges against its own absolute HTTPS resource URL.",
+              "facilitator": "cdp",
+              "facilitator_url": "https://api.cdp.coinbase.com/platform/v2/x402",
+              "cdp_facilitator_configured": true,
+              "cdp_credentials_present": true,
+              "bazaar_extension_status": "declared_on_paid_routes",
+              "bazaar_extension_note": "Each paid POST route declares a v2 Bazaar discovery extension through the installed x402 SDK. Listing still depends on facilitator settlement and external indexing.",
+              "indexing_expectation": "Bazaar visibility should be treated as route/resource-level and settlement-gated until Coinbase confirms otherwise.",
+              "debug_signals": {
+                "payment_required_header": "PAYMENT-REQUIRED",
+                "settlement_headers": [
+                  "PAYMENT-RESPONSE",
+                  "X-PAYMENT-RESPONSE"
+                ],
+                "extension_response_header": "EXTENSION-RESPONSES",
+                "local_integrity_endpoint": "/revenue-log/integrity"
+              }
+            },
+            "expected_unpaid_response": 402,
+            "expected_paid_response": 200
+          },
+          "requestBody": {
+            "required": false,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "target_url": {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    "mode": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "example": {
+                  "target_url": "https://agentos-revenue-cloudflare.fuwafuwow.workers.dev",
+                  "mode": "standard"
+                }
+              }
+            }
+          }
+        }
+      },
+      "/hyperxosist-query": {
+        "post": {
+          "x-payment-info": {
+            "protocol": "x402",
+            "protocol_reference": "https://x402.org",
+            "version": 2,
+            "version_type": "number",
+            "version_required": true,
+            "scheme": "exact",
+            "network": "eip155:8453",
+            "currency": "USDC",
+            "price": "$0.01",
+            "payTo": "0x4D7d842536De9Eb491AE2300126B3CDdE7B0aDE3",
+            "accepted_headers": [
+              "X-PAYMENT",
+              "PAYMENT",
+              "PAYMENT-SIGNATURE"
+            ],
+            "payment_required_header": "PAYMENT-REQUIRED",
+            "settlement_headers": [
+              "PAYMENT-RESPONSE",
+              "X-PAYMENT-RESPONSE"
+            ],
+            "payment_options_url": "/payment-options.json",
+            "discovery_resources_url": "/.well-known/x402/discovery/resources",
+            "canonical_openapi_url": "/openapi.json",
+            "bazaar_indexing": {
+              "x402Version": 2,
+              "version_type": "number",
+              "version_required": true,
+              "scheme": "exact",
+              "network": "eip155:8453",
+              "asset": "USDC",
+              "asset_contract": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+              "resource_identity": "absolute_resource_url",
+              "resource_url_rule": "Each paid route advertises and challenges against its own absolute HTTPS resource URL.",
+              "facilitator": "cdp",
+              "facilitator_url": "https://api.cdp.coinbase.com/platform/v2/x402",
+              "cdp_facilitator_configured": true,
+              "cdp_credentials_present": true,
+              "bazaar_extension_status": "declared_on_paid_routes",
+              "bazaar_extension_note": "Each paid POST route declares a v2 Bazaar discovery extension through the installed x402 SDK. Listing still depends on facilitator settlement and external indexing.",
+              "indexing_expectation": "Bazaar visibility should be treated as route/resource-level and settlement-gated until Coinbase confirms otherwise.",
+              "debug_signals": {
+                "payment_required_header": "PAYMENT-REQUIRED",
+                "settlement_headers": [
+                  "PAYMENT-RESPONSE",
+                  "X-PAYMENT-RESPONSE"
+                ],
+                "extension_response_header": "EXTENSION-RESPONSES",
+                "local_integrity_endpoint": "/revenue-log/integrity"
+              }
+            },
+            "expected_unpaid_response": 402,
+            "expected_paid_response": 200
+          },
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "keywords": {
+                      "type": "string",
+                      "description": "Core X/Twitter search keywords or product/topic phrase."
+                    },
+                    "exactPhrase": {
+                      "type": "string",
+                      "description": "Optional exact phrase to quote in the generated query."
+                    },
+                    "fromUser": {
+                      "type": "string",
+                      "description": "Optional source account without or with @."
+                    },
+                    "excludeWords": {
+                      "type": "string",
+                      "description": "Manual exclusions separated by spaces or commas."
+                    },
+                    "lang": {
+                      "type": "string",
+                      "pattern": "^[a-z]{2}$",
+                      "description": "X search language code, for example en or ja."
+                    },
+                    "minFaves": {
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "minimum": 0
+                    },
+                    "minRetweets": {
+                      "type": [
+                        "integer",
+                        "string"
+                      ],
+                      "minimum": 0
+                    },
+                    "mode": {
+                      "type": "string",
+                      "enum": [
+                        "live",
+                        "top"
+                      ]
+                    },
+                    "excludeLinks": {
+                      "type": "boolean"
+                    },
+                    "noise": {
+                      "type": "object",
+                      "properties": {
+                        "enabled": {
+                          "type": "boolean"
+                        },
+                        "preset": {
+                          "type": "string",
+                          "enum": [
+                            "low",
+                            "medium",
+                            "high"
+                          ]
+                        },
+                        "removed": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "keywords"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
