@@ -21,7 +21,8 @@ const DEFINITIONS = {
     delivers: 'Rule-based diagnosis and suggested next steps for a supplied command error.',
     limitation: 'Does not inspect a repository, execute a repair, or guarantee a fix.',
     freeAlternative: 'Inspect the fixed example and use your local debugger first.',
-    freePath: '/fix-error/preview', example: { command: 'npm run build', error: "Cannot find module 'hono'", environment: 'Node.js' }
+    freePath: '/fix-error/preview', inspectableSample: true,
+    example: { command: 'npm run build', error: "Cannot find module 'hono'", environment: 'Node.js' }
   },
   'url-summary': {
     path: '/summarize-url', capability: 'public_page_excerpt',
@@ -79,7 +80,7 @@ export function listAgentOffers() {
     sellerOperatorId: OPERATOR,
     offers: Object.entries(DEFINITIONS).map(([intent, d]) => ({
       intent, capability: d.capability, delivers: d.delivers, limitation: d.limitation,
-      freeAlternative: d.freeAlternative, availability: 'check_live',
+      freeAlternative: d.freeAlternative, freeSampleInspection: d.inspectableSample === true, availability: 'check_live',
       source: intent === 'artifact-receipt' ? `${AVU_ORIGIN}/agent.json` : `${API_ORIGIN}/catalog.json`
     })),
     independentSellerCount: 1, matchingFeeAtomic: '0', paymentAuthorized: false,
@@ -112,7 +113,7 @@ function demandInput(input, now) {
 // from a demand, catalog, schema, feed, or Bazaar result is ever fetched.
 function discoveryTransport(fetchImpl) {
   return async (url, body) => {
-    const allowed = [`${API_ORIGIN}/match`, `${API_ORIGIN}/openapi.json`];
+    const allowed = [`${API_ORIGIN}/match`, `${API_ORIGIN}/openapi.json`, `${API_ORIGIN}/fix-error/preview`];
     check(allowed.includes(url) || (url.startsWith(`${BAZAAR_SEARCH}?`) && body === undefined), 'DISCOVERY_URL_REFUSED');
     check(body === undefined || url === `${API_ORIGIN}/match`, 'DISCOVERY_WRITE_REFUSED');
     let response;
@@ -137,6 +138,38 @@ function discoveryTransport(fetchImpl) {
       }
       return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(parts)));
     } catch (error) { throw error instanceof MatchmakerError ? error : new MatchmakerError('INVALID_DISCOVERY_JSON'); }
+  };
+}
+
+function fixErrorSample(data, candidate, matchId, checkedAt, expiresAt) {
+  const source = `${API_ORIGIN}/fix-error/preview`;
+  check(data?.service === 'Agent Error Fix Receipt' && data.mode === 'mainnet' && data.payment === 'x402' &&
+    data.network === NETWORK && data.paid_endpoint === '/fix-error' && typeof data.version === 'string' && data.version.length > 0,
+  'FREE_SAMPLE_SCOPE_MISMATCH');
+  check(typeof data.price === 'string' && data.price.startsWith('$') &&
+    usdcAtomic(data.price.slice(1)) === candidate.amountAtomic, 'FREE_SAMPLE_PRICE_MISMATCH');
+  const input = data.request_examples?.missing_dependency?.value;
+  object(input, ['command', 'error', 'environment'], 'INVALID_FREE_SAMPLE');
+  check([input.command, input.error, input.environment].every(value => typeof value === 'string' && value.length > 0 && value.length <= 4096),
+    'INVALID_FREE_SAMPLE');
+  const output = data.response_examples?.successful_diagnosis?.value;
+  const receipt = output?.receipt;
+  object(receipt, ['root_cause', 'next_command', 'retry_plan', 'risk_note', 'prevention_note', 'generated_at'], 'INVALID_FREE_SAMPLE');
+  check(output.status === 'paid' && output.network === NETWORK &&
+    [receipt.root_cause, receipt.next_command, receipt.risk_note, receipt.prevention_note].every(value =>
+      typeof value === 'string' && value.length > 0 && value.length <= 8192) &&
+    Array.isArray(receipt.retry_plan) && receipt.retry_plan.length > 0 && receipt.retry_plan.length <= 16 &&
+    receipt.retry_plan.every(value => typeof value === 'string' && value.length > 0 && value.length <= 2048) &&
+    typeof receipt.generated_at === 'string' && Number.isFinite(Date.parse(receipt.generated_at)), 'INVALID_FREE_SAMPLE');
+  return {
+    schemaVersion: 'hyperxosist/offer-sample-inspection/1.0', state: 'seller_sample_verified',
+    matchId, offerId: candidate.offerId, source, sourceVersion: data.version, checkedAt, expiresAt,
+    termsBound: { resource: candidate.resource, amountAtomic: candidate.amountAtomic, network: candidate.network,
+      asset: candidate.asset, payTo: candidate.payTo },
+    sample: { kind: 'seller_provided_fixed_example', input: clone(input), output: { status: output.status, receipt: clone(receipt) } },
+    caveats: ['FIXED_EXAMPLE_NOT_BUYER_TASK', 'SELLER_SAMPLE_NOT_INDEPENDENT_OUTCOME_EVIDENCE', 'PAID_EXECUTION_UNVERIFIED'],
+    next: { action: 'host_compare_sample_to_actual_need', automaticPurchase: false, paymentAuthorizationRequired: true },
+    purchaseExecuted: false, paymentAuthorized: false, deliveryVerified: false, outcomeVerified: false, revenueClaimed: false
   };
 }
 
@@ -180,7 +213,7 @@ export function createAgentMatchmaker({ fetchImpl = fetch, now = Date.now, buyer
   const http = discoveryTransport(fetchImpl);
   const buyer = createAVUBuyer({ fetchImpl, now });
   const sessions = new Map();
-  const counts = { demands: 0, reviews: 0, skipped: 0, blocked: 0, receiptPreparations: 0 };
+  const counts = { demands: 0, reviews: 0, skipped: 0, blocked: 0, sampleInspections: 0, receiptPreparations: 0 };
   const self = buyerOperatorId?.toLowerCase() === OPERATOR || addressEqual(buyerAddress, SELLER_ADDRESS);
   const identity = buyerOperatorId === null ? 'buyer_operator_unknown' : 'host_supplied_not_independently_verified';
 
@@ -263,6 +296,26 @@ export function createAgentMatchmaker({ fetchImpl = fetch, now = Date.now, buyer
       entry.pending = evaluate(demand);
       try { entry.result = await entry.pending; return clone(entry.result); }
       finally { entry.pending = null; }
+    },
+    async inspectFreeSample(matchId) {
+      check(typeof matchId === 'string' && DIGEST.test(matchId), 'INVALID_MATCH_ID');
+      const entry = [...sessions.values()].find(e => e.result?.matchId === matchId);
+      check(entry?.result.decision === 'review' && Date.parse(entry.result.expiresAt) > now(), 'FRESH_MATCH_REQUIRED');
+      check(entry.demand.intent === 'command-error', 'FREE_SAMPLE_INSPECTION_UNAVAILABLE');
+      if (entry.samplePending) return clone(await entry.samplePending);
+      if (entry.sampleResult && Date.parse(entry.sampleResult.expiresAt) > now()) return clone(entry.sampleResult);
+      entry.samplePending = (async () => {
+        const candidate = entry.result.candidates.find(item => item.offerId === 'fix-error');
+        check(candidate && candidate.resource === `${API_ORIGIN}/fix-error`, 'FREE_SAMPLE_SCOPE_MISMATCH');
+        const data = await http(`${API_ORIGIN}/fix-error/preview`);
+        check(Date.parse(entry.result.expiresAt) > now(), 'FRESH_MATCH_REQUIRED');
+        const checkedAt = new Date(now()).toISOString();
+        const result = fixErrorSample(data, candidate, matchId, checkedAt, entry.result.expiresAt);
+        counts.sampleInspections++;
+        return result;
+      })();
+      try { entry.sampleResult = await entry.samplePending; return clone(entry.sampleResult); }
+      finally { entry.samplePending = null; }
     },
     async prepareReceipt(matchId, options) {
       const entry = [...sessions.values()].find(e => e.result?.matchId === matchId);
