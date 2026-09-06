@@ -284,11 +284,12 @@ test('canonicalization rejects unsupported values, sorts numeric-looking keys le
   assert.equal(Buffer.from(r.evidence.content_base64, 'base64').toString(), spaced);
 });
 
-function journalFor(t) {
+function journalSetup(t) {
   const directory = mkdtempSync(join(tmpdir(), 'avu-buyer-journal-'));
   t.after(() => rmSync(directory, { recursive: true, force: true }));
-  return createFilePurchaseJournal({ directory });
+  return { directory, journal: createFilePurchaseJournal({ directory }) };
 }
+const journalFor = t => journalSetup(t).journal;
 test('pending record exists before wallet and recovered buyer cannot sign the purchase again', async t => {
   const purchaseJournal = journalFor(t); const s = service({ purchaseJournal }); const h = await ready(s);
   const result = await s.buyer.pay(h, { authorizePayment: async request => {
@@ -331,7 +332,7 @@ test('failure to persist delivered status returns unknown with evidence for reco
   assert.ok(result.evidenceToReview.rawResponse); assert.deepEqual(states, ['submitting', 'delivered', 'unknown']);
 });
 test('saved signed delivery is reconciled offline against exact journal metadata', async t => {
-  const purchaseJournal = journalFor(t);
+  const { directory, journal: purchaseJournal } = journalSetup(t);
   const failing = { claim: purchaseJournal.claim, inspect: purchaseJournal.inspect,
     record(ticket, state) { if (state === 'delivered') throw new Error('disk full'); return purchaseJournal.record(ticket, state); } };
   const s = service({ purchaseJournal: failing }); const h = await ready(s);
@@ -339,10 +340,21 @@ test('saved signed delivery is reconciled offline against exact journal metadata
   assert.equal(unknown.state, 'unknown');
   const journalRecord = purchaseJournal.inspect(options().idempotencyKey);
   const beforeCalls = s.calls.length;
-  const result = reconcileSavedDelivery({ ...unknown.evidenceToReview, context: unknown.reconciliationContext, journalRecord });
+  const saved = { ...unknown.evidenceToReview, context: unknown.reconciliationContext };
+  const result = reconcileSavedDelivery({ ...saved, journalRecord });
   assert.equal(result.state, 'delivered'); assert.equal(result.previousJournalState, 'unknown');
   assert.equal(result.journalUpdateRequired, true); assert.equal(result.networkAccessed, false);
   assert.equal(result.walletAccessed, false); assert.equal(result.retryAuthorized, false);
+  const committed = purchaseJournal.reconcile(options().idempotencyKey, saved);
+  assert.equal(committed.state, 'delivered'); assert.equal(committed.journalUpdateRequired, false);
+  assert.equal(committed.journalUpdated, true); assert.equal(committed.networkAccessed, false);
+  const reopened = createFilePurchaseJournal({ directory });
+  const persisted = reopened.inspect(options().idempotencyKey);
+  assert.equal(persisted.state, 'delivered'); assert.equal(persisted.retryAllowed, false);
+  assert.equal(persisted.reconciliation.previousJournalState, 'unknown');
+  assert.equal(persisted.reconciliation.outcome, 'pass');
+  const repeated = reopened.reconcile(options().idempotencyKey, saved);
+  assert.equal(repeated.journalUpdated, false); assert.equal(repeated.journalUpdateRequired, false);
   assert.equal(s.calls.length, beforeCalls);
 });
 test('offline reconciliation rejects changed context, journal, response and settlement', async t => {
@@ -361,6 +373,8 @@ test('offline reconciliation rejects changed context, journal, response and sett
   assert.throws(() => reconcileSavedDelivery(changedResponse));
   const changedSettlement = structuredClone(args); changedSettlement.paymentResponse = b64({ success: false });
   assert.throws(() => reconcileSavedDelivery(changedSettlement));
+  assert.throws(() => purchaseJournal.reconcile(options().idempotencyKey, changedSettlement));
+  assert.equal(purchaseJournal.inspect(options().idempotencyKey).state, 'unknown');
 });
 test('slow persistence cannot cause expired quote submission', async () => {
   let s;

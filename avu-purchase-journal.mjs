@@ -1,12 +1,13 @@
 import { constants, mkdirSync, lstatSync, openSync, closeSync, fsyncSync, writeFileSync, readFileSync } from 'node:fs';
 import { isAbsolute, join } from 'node:path';
-import { AVUBuyerError, canonicalDigest } from './avu-buyer.mjs';
+import { AVUBuyerError, canonicalDigest, reconcileSavedDelivery } from './avu-buyer.mjs';
 
 const DIGEST = /^sha256:[a-f0-9]{64}$/;
 const fail = code => { throw new AVUBuyerError(code); };
 const fields = ['requestHash', 'evidenceDigest', 'precheckDigest', 'bindingDigest',
   'quoteId', 'amountAtomic', 'network', 'asset', 'payTo', 'expiresAt'];
 const stages = ['claimed', 'submitting', 'delivered', 'unknown', 'refused'];
+const reconciliationFields = ['schemaVersion', 'previousJournalState', 'verificationDigest', 'outcome'];
 
 // Host-owned, append-only write-ahead guard. No artifact, private key, payment
 // signature or raw response is stored. Never delete a claim to retry a payment.
@@ -44,11 +45,25 @@ export function createFilePurchaseJournal({ directory } = {}) {
         !/^0x[a-fA-F0-9]{40}$/.test(metadata.payTo) || !Number.isFinite(Date.parse(metadata.expiresAt))) fail('INVALID_JOURNAL_RECORD');
     return { schemaVersion: 'avu-purchase-journal/v1', idempotencyKeyDigest: keyDigest(key), ...metadata };
   }
+  function metadataFrom(value) {
+    const { schemaVersion, idempotencyKeyDigest, state, reconciliation, retryAllowed, ...metadata } = value;
+    return metadata;
+  }
+  function reconciliationFor(result) {
+    const verified = {
+      scope: 'avu-purchase-offline-reconciliation/v1', outcome: result.outcome, payment: result.payment,
+      evidence: result.evidence, receipt: result.receipt, independentOnchainVerification: result.independentOnchainVerification,
+      realWorldTruthVerified: result.realWorldTruthVerified, transactionId: result.transactionId,
+      quoteId: result.quoteId, receiptId: result.receiptId
+    };
+    return { schemaVersion: 'avu-purchase-reconciliation/v1', previousJournalState: 'unknown',
+      verificationDigest: canonicalDigest(verified), outcome: result.outcome };
+  }
   // Caller creates and durably provisions this private directory before use.
   // Do not chmod an existing directory or silently fall back to memory.
   privateDirectory(directory);
   syncDirectory(directory);
-  return {
+  const journal = {
     claim(key, metadata) {
       const record = recordFor(key, metadata);
       const path = join(directory, record.idempotencyKeyDigest.slice(7));
@@ -102,9 +117,58 @@ export function createFilePurchaseJournal({ directory } = {}) {
           latest = value;
           if (index === 2) terminalSeen = true;
         }
+        let reconciled;
+        try { reconciled = read(join(path, '3-reconciled.json')); }
+        catch (error) { if (error.code !== 'ENOENT') throw error; }
+        if (reconciled) {
+          const proof = reconciled.reconciliation;
+          if (latest?.state !== 'unknown' || reconciled.schemaVersion !== 'avu-purchase-journal/v1' ||
+              reconciled.idempotencyKeyDigest !== digest || reconciled.state !== 'delivered' ||
+              !proof || Object.keys(proof).sort().join() !== [...reconciliationFields].sort().join() ||
+              proof.schemaVersion !== 'avu-purchase-reconciliation/v1' || proof.previousJournalState !== 'unknown' ||
+              !DIGEST.test(proof.verificationDigest) || !['pass', 'fail'].includes(proof.outcome) ||
+              canonicalDigest(recordFor(key, metadataFrom(reconciled))) !==
+                canonicalDigest({ schemaVersion: reconciled.schemaVersion, idempotencyKeyDigest: reconciled.idempotencyKeyDigest,
+                  ...metadataFrom(reconciled) }) ||
+              canonicalDigest(metadataFrom(latest)) !== canonicalDigest(metadataFrom(reconciled))) fail('JOURNAL_READ_FAILED');
+          latest = reconciled;
+        }
         // Missing claim data is still an exclusion, not permission to retry.
         return latest ? { ...latest, retryAllowed: false } : { state: 'unknown', retryAllowed: false, reason: 'INCOMPLETE_JOURNAL_RECORD' };
       } catch { fail('JOURNAL_READ_FAILED'); }
+    },
+    reconcile(key, evidence) {
+      const before = journal.inspect(key);
+      if (!before || !['unknown', 'delivered'].includes(before.state)) fail('JOURNAL_RECONCILIATION_NOT_READY');
+      const result = reconcileSavedDelivery({ ...evidence, journalRecord: before });
+      const proof = reconciliationFor(result);
+      if (before.state === 'delivered') {
+        if (before.reconciliation && canonicalDigest(before.reconciliation) !== canonicalDigest(proof)) {
+          fail('JOURNAL_RECONCILIATION_MISMATCH');
+        }
+        return { ...result, journalUpdateRequired: false, journalUpdated: false };
+      }
+      const path = join(directory, before.idempotencyKeyDigest.slice(7));
+      const value = { ...recordFor(key, metadataFrom(before)), state: 'delivered', reconciliation: proof };
+      try {
+        privateDirectory(directory); privateDirectory(path);
+        const current = journal.inspect(key);
+        if (current.state !== 'unknown' || canonicalDigest(current) !== canonicalDigest(before)) fail('JOURNAL_RECONCILIATION_RACE');
+        try { write(join(path, '3-reconciled.json'), value); }
+        catch (error) {
+          if (error.code !== 'EEXIST') throw error;
+          const existing = read(join(path, '3-reconciled.json'));
+          if (canonicalDigest(existing) !== canonicalDigest(value)) fail('JOURNAL_RECONCILIATION_RACE');
+        }
+        syncDirectory(path);
+        const after = journal.inspect(key);
+        if (after.state !== 'delivered' || canonicalDigest(after.reconciliation) !== canonicalDigest(proof)) fail('JOURNAL_WRITE_FAILED');
+      } catch (error) {
+        if (error instanceof AVUBuyerError) throw error;
+        fail('JOURNAL_WRITE_FAILED');
+      }
+      return { ...result, journalUpdateRequired: false, journalUpdated: true };
     }
   };
+  return journal;
 }

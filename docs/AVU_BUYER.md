@@ -111,15 +111,26 @@ const result = reconcileSavedDelivery({
   context: savedUnknown.reconciliationContext,
   journalRecord: journal.inspect(stableIdempotencyKey)
 });
+
+const committed = journal.reconcile(stableIdempotencyKey, {
+  ...savedUnknown.evidenceToReview,
+  context: savedUnknown.reconciliationContext
+});
 ```
 
 This performs no fetch, wallet call, signature or retry. It revalidates the
 request, policy, precheck, paid binding, journal metadata, settlement header,
 service evidence and receipt signatures. The context includes the original
 bounded artifact bytes and public verification keys, so it is protected data.
-An offline success reports `journalUpdateRequired`; it does not mutate the
-journal or constitute independent on-chain confirmation. Keep the key excluded
-until a separately reviewed journal transition records the reconciled result.
+The standalone verifier reports `journalUpdateRequired` and does not mutate the
+journal. The file journal's `reconcile` method performs that same offline
+verification and then appends a `delivered` transition. It stores only a digest
+and outcome summary, not the response, settlement header, artifact, signature or
+key. Repeating the same verified reconciliation is idempotent; contradictory
+evidence or a non-`unknown`/non-`delivered` starting state fails closed. Neither
+path is independent on-chain confirmation. The idempotency key remains excluded
+after reconciliation, so this is bookkeeping completion rather than permission
+to pay again.
 
 `reviewedPolicy` must contain exactly these fields, set by the buyer's host:
 
