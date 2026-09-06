@@ -491,5 +491,30 @@
     "format": "openai.responses.tools.v1",
     "strict": false,
     "note": "GPT-6 function calling uses Responses. Schema export is local and free; existing payment boundaries still apply."
+  },
+  "optionalArtifactReceipt": {
+    "required": false,
+    "manifest": "https://kg-ninja.github.io/HyperXosist-Agent/avu-buyer.json",
+    "clientModule": "avu-buyer.mjs",
+    "documentation": "docs/AVU_BUYER.md",
+    "benefit": "Service-signed execution receipt for an exact artifact digest check when a downstream workflow requires it.",
+    "handoffRemainsFree": true,
+    "automaticPayment": false,
+    "remoteMcpToolAdded": false
+  },
+  "agentServiceMatching": {
+    "manifest": "https://kg-ninja.github.io/HyperXosist-Agent/agent-marketplace.json",
+    "module": "agent-matchmaker.mjs",
+    "factory": "createAgentMatchmaker",
+    "localMcp": "node mcp/matchmaker-server.mjs",
+    "tools": [
+      "list_agent_offers",
+      "match_agent_service",
+      "discover_agent_services"
+    ],
+    "availability": "local_source_only",
+    "existingPublicMatching": "https://api.kgninja.dev/match",
+    "paymentAuthorized": false,
+    "automaticPurchases": false
   }
 }

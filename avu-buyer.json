@@ -1,0 +1,48 @@
+{
+  "schema_version": "hyperxosist/optional-artifact-receipt/1.0",
+  "name": "Signed receipt for an agent artifact handoff",
+  "required_for_handoff": false,
+  "service_origin": "https://agent-economy.kgninja.dev",
+  "recipe": "signed-manifest-integrity",
+  "value": "A verifiable service signature recording a deterministic check of exact JSON artifact bytes against the buyer's trusted digest.",
+  "use_when": [
+    "A downstream consumer or audit workflow requires a service-signed execution receipt.",
+    "The buyer has a trusted expected digest and permission to upload the bounded artifact."
+  ],
+  "do_not_buy_when": [
+    "A local digest comparison satisfies the requirement.",
+    "The service is degraded or cost_basis_fresh is not true.",
+    "The task needs real-world truth, source authenticity, external retrieval, or independent on-chain verification.",
+    "The price or recipient does not match the buyer's host-owned policy."
+  ],
+  "discovery": {
+    "health": "https://agent-economy.kgninja.dev/health",
+    "offer": "https://agent-economy.kgninja.dev/agent.json",
+    "recipes": "https://agent-economy.kgninja.dev/verification-recipes.json",
+    "openapi": "https://agent-economy.kgninja.dev/openapi.json"
+  },
+  "client": {
+    "module": "avu-buyer.mjs",
+    "runtime": "Node.js >=18",
+    "factory": "createAVUBuyer",
+    "sequence": ["prepare", "requestChallenge", "pay"],
+    "prepare_creates_quote": false,
+    "requestChallenge_creates_quote": true,
+    "pay_requires_host_authorization_callback": true,
+    "automatic_paid_retries": 0,
+    "supported_payment": "x402 v2 exact with native USDC EIP-3009",
+    "wallet_keys_accepted": false,
+    "remote_mcp_tool_added": false
+  },
+  "verification": {
+    "request_and_evidence_digests": true,
+    "evidence_signature": "Ed25519",
+    "receipt_signature": "Ed25519",
+    "settlement_evidence": "facilitator response correlated with service-signed receipt",
+    "independent_onchain_verification": false,
+    "real_world_truth_verified": false
+  },
+  "documentation": "docs/AVU_BUYER.md",
+  "demo": "node examples/avu-artifact-handoff.mjs",
+  "readiness_check": "node examples/avu-artifact-handoff.mjs --status"
+}

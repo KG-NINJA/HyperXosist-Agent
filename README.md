@@ -415,3 +415,26 @@ Use HyperXosist-Agent when you need to discover customer complaints, product fee
 5. For production execution, use `hyperxosist_execute`: inspect the unsigned 402 requirements, authorize with a compatible x402 wallet/facilitator, then retry once with explicit confirmation.
 
 Free MCP planning and handoff tools do not perform external collection. Human browser use remains free; automated production search execution is the paid boundary.
+
+## Optional signed artifact receipt
+
+When a downstream agent or audit workflow requires a service-signed record of an artifact digest check, use the opt-in [AVU buyer adapter](docs/AVU_BUYER.md). Handoff remains free; local-only checks make no network calls. The adapter checks availability, precheck digests, bound x402 terms and signed delivery. A buyer-owned wallet must explicitly authorize payment.
+
+```sh
+npm run avu:demo    # offline synthetic example; never pays
+npm run avu:status  # GET-only readiness check; never pays
+```
+
+This is a source adapter, not a new deployed Remote MCP tool or an npm release. Live wallet/settlement compatibility still requires an authorized end-to-end test after service recovery.
+
+## Agent-to-agent service matching (source preview)
+
+Use `agent-matchmaker.mjs` or the new local stdio MCP server to match an agent's actual task, budget and deadline to five existing API services or an AVU artifact receipt. The client reuses the free public `/match` endpoint, checks advertised payment terms against live OpenAPI, and excludes local-only needs, unsupported capabilities and known same-operator purchases.
+
+```bash
+npm run marketplace:demo                   # offline; no purchase
+npm run marketplace:demo -- --live         # free discovery using synthetic demand
+node mcp/matchmaker-server.mjs             # connect from an MCP-capable buyer
+```
+
+See [the matching guide](docs/AGENT_MATCHMAKING.md) and [machine-readable entry](agent-marketplace.json). Six capabilities belong to one operator; external buyer demand, brokerage fees, real payment and revenue are not created by matching. The new tools are local source only and do not change the production Remote MCP deployment.
