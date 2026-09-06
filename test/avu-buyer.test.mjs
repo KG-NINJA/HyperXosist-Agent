@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createFilePurchaseJournal } from '../avu-purchase-journal.mjs';
 import { createRequire } from 'node:module';
-import { artifactRequest, canonicalDigest, canonicalJson, createAVUBuyer, requestDigest, sha256, validatePrecheck, AVU_ORIGIN } from '../avu-buyer.mjs';
+import { artifactRequest, canonicalDigest, canonicalJson, createAVUBuyer, reconcileSavedDelivery, requestDigest, sha256, validatePrecheck, AVU_ORIGIN } from '../avu-buyer.mjs';
 
 const recordedInput = JSON.parse(readFileSync(new URL('./fixtures/avu/precheck-input.json', import.meta.url)));
 const require = createRequire(import.meta.url);
@@ -329,6 +329,38 @@ test('failure to persist delivered status returns unknown with evidence for reco
   const result = await s.buyer.pay(h, { authorizePayment: s.wallet });
   assert.equal(result.state, 'unknown'); assert.equal(result.reason, 'JOURNAL_WRITE_FAILED');
   assert.ok(result.evidenceToReview.rawResponse); assert.deepEqual(states, ['submitting', 'delivered', 'unknown']);
+});
+test('saved signed delivery is reconciled offline against exact journal metadata', async t => {
+  const purchaseJournal = journalFor(t);
+  const failing = { claim: purchaseJournal.claim, inspect: purchaseJournal.inspect,
+    record(ticket, state) { if (state === 'delivered') throw new Error('disk full'); return purchaseJournal.record(ticket, state); } };
+  const s = service({ purchaseJournal: failing }); const h = await ready(s);
+  const unknown = await s.buyer.pay(h, { authorizePayment: s.wallet });
+  assert.equal(unknown.state, 'unknown');
+  const journalRecord = purchaseJournal.inspect(options().idempotencyKey);
+  const beforeCalls = s.calls.length;
+  const result = reconcileSavedDelivery({ ...unknown.evidenceToReview, context: unknown.reconciliationContext, journalRecord });
+  assert.equal(result.state, 'delivered'); assert.equal(result.previousJournalState, 'unknown');
+  assert.equal(result.journalUpdateRequired, true); assert.equal(result.networkAccessed, false);
+  assert.equal(result.walletAccessed, false); assert.equal(result.retryAuthorized, false);
+  assert.equal(s.calls.length, beforeCalls);
+});
+test('offline reconciliation rejects changed context, journal, response and settlement', async t => {
+  const purchaseJournal = journalFor(t);
+  const failing = { claim: purchaseJournal.claim, inspect: purchaseJournal.inspect,
+    record(ticket, state) { if (state === 'delivered') throw new Error('disk full'); return purchaseJournal.record(ticket, state); } };
+  const s = service({ purchaseJournal: failing }); const h = await ready(s);
+  const unknown = await s.buyer.pay(h, { authorizePayment: s.wallet });
+  const args = { ...unknown.evidenceToReview, context: unknown.reconciliationContext,
+    journalRecord: purchaseJournal.inspect(options().idempotencyKey) };
+  const changedJournal = structuredClone(args); changedJournal.journalRecord.quoteId = 'qte_changed';
+  assert.throws(() => reconcileSavedDelivery(changedJournal), { code: 'JOURNAL_RECONCILIATION_MISMATCH' });
+  const changedContext = structuredClone(args); changedContext.context.request.client_request_id = 'changed';
+  assert.throws(() => reconcileSavedDelivery(changedContext));
+  const changedResponse = structuredClone(args); changedResponse.rawResponse = '{}';
+  assert.throws(() => reconcileSavedDelivery(changedResponse));
+  const changedSettlement = structuredClone(args); changedSettlement.paymentResponse = b64({ success: false });
+  assert.throws(() => reconcileSavedDelivery(changedSettlement));
 });
 test('slow persistence cannot cause expired quote submission', async () => {
   let s;

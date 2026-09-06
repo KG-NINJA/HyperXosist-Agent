@@ -93,3 +93,15 @@ Validation on Node 24.19.0:
    demand, spam outreach, paid listing or same-operator revenue loops.
 5. Runbook repository was previously 404. VPS/Cloudflare private runtime state,
    installed buyer hosts and full-account costs remain unverified here.
+
+## Second pass: 01:58 JST
+
+PR #27 CI completed successfully and no review comments were present. Added an
+offline saved-delivery verifier to the same PR. An `unknown` paid submission now
+returns protected reconciliation context containing the exact request, policy,
+precheck, binding and public keys. Given the saved response, settlement header
+and matching journal record, the verifier repeats every receipt/evidence
+signature and binding check without network, wallet, signing, resubmission or
+journal mutation. Changed context, journal terms, response and settlement are
+rejected. The artifact remains protected data and the result remains
+service-authenticated rather than independent on-chain proof.

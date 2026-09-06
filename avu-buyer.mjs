@@ -186,6 +186,48 @@ export function verifyDelivery(data, paymentResponse, ctx, keys) {
     transactionId: data.transaction_id, quoteId: data.quote_id, receiptId: data.receipt.receipt_id };
 }
 
+function savedContext(ctx) {
+  return clone({ schemaVersion: 'avu-reconciliation-context/v1', request: ctx.request,
+    policy: ctx.policy, precheck: ctx.precheck, binding: ctx.binding, keys: ctx.keys });
+}
+
+/** Verify a previously saved response without network, wallet, signing or retry. */
+export function reconcileSavedDelivery({ rawResponse, paymentResponse, context, journalRecord } = {}) {
+  requireThat(typeof rawResponse === 'string' && Buffer.byteLength(rawResponse) > 0 &&
+    Buffer.byteLength(rawResponse) <= MAX_RESPONSE_BYTES, 'INVALID_SAVED_RESPONSE');
+  requireThat(context?.schemaVersion === 'avu-reconciliation-context/v1' && context.request &&
+    context.policy && context.precheck && context.binding && Array.isArray(context.keys), 'INVALID_RECONCILIATION_CONTEXT');
+  const ctx = clone(context);
+  delete ctx.schemaVersion;
+  spendPolicy(ctx.policy);
+  requireThat(ctx.keys.length > 0 && ctx.keys.length <= 16 && ctx.keys.every(key =>
+    key?.kty === 'OKP' && key.crv === 'Ed25519' && typeof key.kid === 'string' && !key.d), 'INVALID_RECONCILIATION_KEYS');
+  validatePrecheck({ schema_version: 'agent-economy/request-validation/3.0', valid: true, supported: true,
+    spend_authorized: true, refusal_reason: null, verification_executed: false, payment_required: false,
+    precheck_receipt: ctx.precheck, paid_execution: { price_atomic: ctx.binding.quoted_amount_atomic,
+      asset: ctx.binding.asset, network: ctx.binding.network, pay_to: ctx.binding.pay_to,
+      http_endpoint: PURCHASE_URL, mcp_tool: 'verify_evidence' } }, ctx.request, ctx.policy);
+  const expiry = Date.parse(ctx.binding.expires_at);
+  requireThat(Number.isFinite(expiry), 'INVALID_RECONCILIATION_CONTEXT');
+  validateBinding(ctx.binding, ctx, 'payment_required', expiry - 6000);
+  requireThat(journalRecord?.schemaVersion === 'avu-purchase-journal/v1' && journalRecord.retryAllowed === false &&
+    ['submitting', 'unknown', 'delivered'].includes(journalRecord.state) &&
+    journalRecord.requestHash === requestDigest(ctx.request) &&
+    journalRecord.evidenceDigest === ctx.binding.evidence_digest &&
+    journalRecord.precheckDigest === ctx.precheck.receipt_digest &&
+    journalRecord.bindingDigest === ctx.binding.binding_digest &&
+    journalRecord.quoteId === ctx.binding.quote_id && journalRecord.amountAtomic === ctx.binding.quoted_amount_atomic &&
+    journalRecord.network === ctx.policy.network && addressEqual(journalRecord.asset, ctx.policy.asset) &&
+    addressEqual(journalRecord.payTo, ctx.policy.pay_to) && journalRecord.expiresAt === ctx.binding.expires_at,
+    'JOURNAL_RECONCILIATION_MISMATCH');
+  let data;
+  try { data = JSON.parse(rawResponse); } catch { throw new AVUBuyerError('INVALID_SAVED_RESPONSE'); }
+  const summary = verifyDelivery(data, paymentResponse, ctx, ctx.keys);
+  return { ...summary, reconciliation: 'offline_saved_response_verified', previousJournalState: journalRecord.state,
+    journalUpdateRequired: journalRecord.state !== 'delivered', networkAccessed: false, walletAccessed: false,
+    retryAuthorized: false };
+}
+
 /** Fixed-origin transport with no redirects, credentials, generic retries or raw logs. */
 export function createAVUBuyer({ fetchImpl = fetch, now = Date.now, purchaseJournal } = {}) {
   requireThat(purchaseJournal === undefined || (purchaseJournal &&
@@ -293,6 +335,7 @@ export function createAVUBuyer({ fetchImpl = fetch, now = Date.now, purchaseJour
       ctx.state = 'authorizing';
       let submitted = false;
       let evidenceToReview;
+      let reconciliationContext;
       let journalTicket;
       let journalTerminal = false;
       const journalRecord = async state => {
@@ -338,6 +381,7 @@ export function createAVUBuyer({ fetchImpl = fetch, now = Date.now, purchaseJour
         if (journalTicket) await journalRecord('submitting');
         validateBinding(ctx.binding, ctx, 'payment_required', now());
         requireThat(Number(auth.validBefore) * 1000 > now(), 'INVALID_AUTHORIZATION_EXPIRY');
+        reconciliationContext = savedContext(ctx);
         event('authorized'); ctx.state = 'submitting'; submitted = true;
         const response = await http('/verify-evidence', { body: ctx.body, headers: { 'X-Quote-ID': ctx.binding.quote_id,
           'Idempotency-Key': ctx.idempotencyKey, 'PAYMENT-SIGNATURE': signed } });
@@ -357,6 +401,7 @@ export function createAVUBuyer({ fetchImpl = fetch, now = Date.now, purchaseJour
         ctx.state = submitted ? 'unknown' : 'refused'; event(ctx.state, errorCode(error));
         if (submitted) return { state: 'unknown', reason: errorCode(error), quoteId: ctx.binding.quote_id,
           ...(evidenceToReview ? { evidenceToReview } : {}),
+          ...(reconciliationContext ? { reconciliationContext } : {}),
           idempotencyKey: ctx.idempotencyKey, nextAction: 'Reconcile this exact quote; do not sign again or start a new purchase.' };
         throw new AVUBuyerError(errorCode(error));
       }

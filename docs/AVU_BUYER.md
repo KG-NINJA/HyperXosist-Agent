@@ -31,7 +31,7 @@ If checking the original artifact is required, upload those exact JSON bytes onl
 after the owner authorizes their disclosure. The maximum is 65,536 UTF-8 bytes.
 
 ```js
-import { createAVUBuyer } from './avu-buyer.mjs';
+import { createAVUBuyer, reconcileSavedDelivery } from './avu-buyer.mjs';
 import { createFilePurchaseJournal } from './avu-purchase-journal.mjs';
 
 // Inputs below come from your trusted workflow and host configuration.
@@ -100,6 +100,26 @@ recovery, a settlement lookup client, or an operator reconciliation UI. Returned
 delivery evidence must still be saved in the host's separate protected store.
 Without a `purchaseJournal`, the buyer retains its original in-process-only
 behavior for compatibility; use the durable configuration for live integration.
+
+If a paid submission returns `unknown`, save `evidenceToReview` and
+`reconciliationContext` in that protected store. When the exact HTTP response is
+available, verify it offline against the journal entry:
+
+```js
+const result = reconcileSavedDelivery({
+  ...savedUnknown.evidenceToReview,
+  context: savedUnknown.reconciliationContext,
+  journalRecord: journal.inspect(stableIdempotencyKey)
+});
+```
+
+This performs no fetch, wallet call, signature or retry. It revalidates the
+request, policy, precheck, paid binding, journal metadata, settlement header,
+service evidence and receipt signatures. The context includes the original
+bounded artifact bytes and public verification keys, so it is protected data.
+An offline success reports `journalUpdateRequired`; it does not mutate the
+journal or constitute independent on-chain confirmation. Keep the key excluded
+until a separately reviewed journal transition records the reconciled result.
 
 `reviewedPolicy` must contain exactly these fields, set by the buyer's host:
 
