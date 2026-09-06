@@ -210,17 +210,45 @@ Read the production row first in the Cloudflare D1 console:
 SELECT * FROM runtime_controls WHERE control_id = 1;
 ```
 
-Export that single row as a JSON object, then prepare a reviewable statement:
+Export that single row as a JSON object. After reading the current official
+pricing page, record every reviewed term—not only its timestamp—in a separate
+local file:
+
+```json
+{
+  "schemaVersion": "coinbase-cdp-facilitator-pricing-review/1.0",
+  "source": "https://docs.cdp.coinbase.com/x402/seller/facilitator",
+  "checkedAt": "<current UTC ISO time>",
+  "monthlyFreeOnchainTransactions": 1000,
+  "additionalOnchainTransactionUsd": "0.001",
+  "paymentVerificationUsd": "0",
+  "feeCapMicrousd": 1000
+}
+```
+
+Then prepare a reviewable statement:
 
 ```sh
-node scripts/avu-cost-basis-review.mjs --row current-row.json --fee-checked-at <UTC-ISO-review-time>
+node scripts/avu-cost-basis-review.mjs --row current-row.json --pricing-evidence reviewed-pricing.json
 ```
 
 This source-checkout helper only prints SQL. It never calls Cloudflare. Its
-compare-and-swap conditions refuse the update if price, service state or the
-reviewed row changed; a SQL-level deadline refuses execution after 24 hours.
-It updates exactly the three requested columns and preserves `updated_by`.
-Do not interpret successful SQL generation as approval or execution.
+The helper rejects a timestamp string or incomplete/changed pricing terms. It
+adds the complete evidence digest to the SQL comments. Compare-and-swap
+conditions refuse the update if price, service state or the reviewed row
+changed; a SQL-level deadline refuses execution after 24 hours. It updates
+exactly the three requested columns and preserves `updated_by`. Keep the input
+row, pricing evidence and reviewed SQL together in the operator's protected
+change record. Do not interpret successful SQL generation as approval or
+execution.
+
+The 1000-microusd cap is the documented above-free-tier fee per onchain
+transaction; usage within the first 1,000 monthly transactions is documented as
+free. At the observed 10,000-microusd service price, this leaves 9,000 microusd
+before Cloudflare and other operating costs when the cap applies. The helper
+refuses a reviewed row whose service price does not exceed that cap. This is not
+net profit: current Cloudflare/account costs and monthly tier consumption remain
+unverified and must be reconciled separately.
 
 Only after reviewing that row, confirming current official facilitator pricing,
 displaying the concrete SQL and receiving operator approval, apply the approved

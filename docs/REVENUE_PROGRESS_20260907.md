@@ -105,3 +105,31 @@ signature and binding check without network, wallet, signing, resubmission or
 journal mutation. Changed context, journal terms, response and settlement are
 rejected. The artifact remains protected data and the result remains
 service-authenticated rather than independent on-chain proof.
+
+## Later passes: 03:02–05:00 JST
+
+HyperXosist draft PR #28 separately added a read-only inspection of the public
+`/fix-error/preview` sample. It binds the seller's fixed example to the matched
+endpoint, 0.01 USDC price and Base network without uploading the buyer's error.
+It labels that example as seller-provided rather than customer outcome evidence.
+
+PR #27 completed the restart path: after offline verification of the exact saved
+response, settlement header and signatures, the file journal can append an
+`unknown` to `delivered` transition. Only a verification digest and pass/fail
+outcome are added to the journal. The key remains excluded and the operation
+does not authorize a retry. Related 43 tests, the full suite and CI passed.
+
+The cost-basis SQL helper now requires structured evidence containing every
+reviewed Coinbase pricing term: first 1,000 monthly onchain transactions free,
+USD 0.001 for each additional onchain transaction, and free payment
+verification. A timestamp string alone, changed terms, stale evidence, or a
+concurrent D1 control-row change is rejected. The evidence digest is included in
+the generated review SQL; five isolated SQLite tests pass.
+
+The production `control_id=1` row remains inaccessible from this checkout, so no
+exact SQL was generated and no D1 update was made. The operator must read the
+current row through the authorized Cloudflare path and retain that row, the
+pricing evidence and reviewed SQL together before seeking approval. Public AVU
+statistics remained degraded with zero quotes, deliveries and settled revenue;
+the main API's cumulative partial 0.15 USDC figure did not change and is not new
+income from this work.

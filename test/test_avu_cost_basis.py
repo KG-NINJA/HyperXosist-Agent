@@ -27,19 +27,27 @@ class CostBasisReviewTests(unittest.TestCase):
     def tearDown(self):
         self.db.close()
 
-    def sql(self, checked_at=None, simulated_now=None, row=None):
-        checked_at = checked_at or (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(seconds=5)).isoformat()
-        payload = json.dumps([row or self.row, checked_at, simulated_now])
+    def evidence(self, checked_at=None):
+        return dict(schemaVersion='coinbase-cdp-facilitator-pricing-review/1.0',
+                    source='https://docs.cdp.coinbase.com/x402/seller/facilitator',
+                    checkedAt=checked_at or (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(seconds=5)).isoformat(),
+                    monthlyFreeOnchainTransactions=1000,
+                    additionalOnchainTransactionUsd='0.001', paymentVerificationUsd='0',
+                    feeCapMicrousd=1000)
+
+    def sql(self, evidence=None, simulated_now=None, row=None):
+        payload = json.dumps([row or self.row, evidence or self.evidence(), simulated_now])
         script = """import {reviewCostBasis} from './scripts/avu-cost-basis-review.mjs';
         import fs from 'node:fs';
-        const [row, at, now] = JSON.parse(fs.readFileSync(0,'utf8'));
-        process.stdout.write(reviewCostBasis(row, at, now ?? Date.now()));"""
+        const [row, evidence, now] = JSON.parse(fs.readFileSync(0,'utf8'));
+        process.stdout.write(reviewCostBasis(row, evidence, now ?? Date.now()));"""
         return subprocess.run(['node', '--input-type=module', '-e', script], input=payload,
                               text=True, capture_output=True, cwd=ROOT)
 
     def test_only_three_columns_change(self):
         result = self.sql()
         self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertRegex(result.stdout, r'Evidence digest: sha256:[a-f0-9]{64}')
         self.assertEqual(len(self.db.execute(result.stdout).fetchall()), 1)
         after = dict(self.db.execute('SELECT * FROM runtime_controls').fetchone())
         self.assertEqual(after['facilitator_fee_cap_microusd'], 1000)
@@ -56,14 +64,26 @@ class CostBasisReviewTests(unittest.TestCase):
 
     def test_executing_review_after_expiry_refuses_update(self):
         old = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=2)
-        result = self.sql(old.isoformat(), int((old + datetime.timedelta(seconds=10)).timestamp() * 1000))
+        result = self.sql(self.evidence(old.isoformat()), int((old + datetime.timedelta(seconds=10)).timestamp() * 1000))
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(self.db.execute(result.stdout).fetchall(), [])
 
     def test_invalid_row_and_stale_fee_review_are_rejected(self):
         self.assertNotEqual(self.sql(row={**self.row, 'control_id': 2}).returncode, 0)
+        self.assertNotEqual(self.sql(row={**self.row, 'price_microusd': 1000}).returncode, 0)
         old = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=2)
-        self.assertNotEqual(self.sql(old.isoformat()).returncode, 0)
+        self.assertNotEqual(self.sql(self.evidence(old.isoformat())).returncode, 0)
+
+    def test_timestamp_alone_and_changed_pricing_are_rejected(self):
+        self.assertNotEqual(self.sql('2026-09-06T19:00:00Z').returncode, 0)
+        for field, value in [('monthlyFreeOnchainTransactions', 999),
+                             ('additionalOnchainTransactionUsd', '0.002'),
+                             ('paymentVerificationUsd', '0.001'),
+                             ('feeCapMicrousd', 2000),
+                             ('source', 'https://example.com/pricing')]:
+            evidence = self.evidence()
+            evidence[field] = value
+            self.assertNotEqual(self.sql(evidence).returncode, 0, field)
 
 
 if __name__ == '__main__':
