@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { generateKeyPairSync, sign } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { readFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { createFilePurchaseJournal } from '../avu-purchase-journal.mjs';
 import { createRequire } from 'node:module';
 import { artifactRequest, canonicalDigest, canonicalJson, createAVUBuyer, requestDigest, sha256, validatePrecheck, AVU_ORIGIN } from '../avu-buyer.mjs';
 
@@ -113,7 +116,7 @@ function service(overrides = {}) {
     }
     throw new Error(`Unexpected path: ${path}`);
   };
-  const buyer = createAVUBuyer({ fetchImpl, now: () => time });
+  const buyer = createAVUBuyer({ fetchImpl, now: () => time, purchaseJournal: overrides.purchaseJournal });
   const wallet = async ({ paymentRequired }) => {
     const payload = { x402Version: 2, resource: paymentRequired.resource, accepted: paymentRequired.accepts[0], extensions: paymentRequired.extensions,
       payload: { signature: `0x${'b'.repeat(130)}`, authorization: { from: `0x${'1'.repeat(40)}`, to: policy.pay_to, value: '10000',
@@ -279,4 +282,60 @@ test('canonicalization rejects unsupported values, sorts numeric-looking keys le
   const spaced = '{ "unicode": "柴犬" }\n';
   const r = artifactRequest({ jsonText: spaced, expectedSha256: sha256(spaced), clientRequestId: 'unicode-001' });
   assert.equal(Buffer.from(r.evidence.content_base64, 'base64').toString(), spaced);
+});
+
+function journalFor(t) {
+  const directory = mkdtempSync(join(tmpdir(), 'avu-buyer-journal-'));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  return createFilePurchaseJournal({ directory });
+}
+test('pending record exists before wallet and recovered buyer cannot sign the purchase again', async t => {
+  const purchaseJournal = journalFor(t); const s = service({ purchaseJournal }); const h = await ready(s);
+  const result = await s.buyer.pay(h, { authorizePayment: async request => {
+    assert.equal(purchaseJournal.inspect(options().idempotencyKey).state, 'claimed');
+    return s.wallet(request);
+  } });
+  assert.equal(result.state, 'delivered');
+  assert.equal(purchaseJournal.inspect(options().idempotencyKey).state, 'delivered');
+  const restarted = service({ purchaseJournal }); const other = await ready(restarted); let walletCalls = 0;
+  await rejects(() => restarted.buyer.pay(other, { authorizePayment: () => { walletCalls++; } }), 'PURCHASE_ALREADY_RECORDED');
+  assert.equal(walletCalls, 0); assert.equal(restarted.getSignedHeader(), undefined);
+});
+test('unknown paid result survives buyer restart and blocks new authorization', async t => {
+  const purchaseJournal = journalFor(t); const s = service({ purchaseJournal, failPaid: true }); const h = await ready(s);
+  assert.equal((await s.buyer.pay(h, { authorizePayment: s.wallet })).state, 'unknown');
+  assert.equal(purchaseJournal.inspect(options().idempotencyKey).state, 'unknown');
+  const restarted = service({ purchaseJournal }); const other = await ready(restarted);
+  await rejects(() => restarted.buyer.pay(other, { authorizePayment: restarted.wallet }), 'PURCHASE_ALREADY_RECORDED');
+});
+test('claim persistence failure prevents wallet invocation and sanitizes errors', async () => {
+  const purchaseJournal = { claim() { throw new Error('private-host-path'); }, record() {} };
+  const s = service({ purchaseJournal }); const h = await ready(s); let calls = 0;
+  await rejects(() => s.buyer.pay(h, { authorizePayment: () => { calls++; } }), 'JOURNAL_WRITE_FAILED');
+  assert.equal(calls, 0); assert.ok(!JSON.stringify(s.buyer.events()).includes('private-host-path'));
+});
+test('submission record failure prevents sending a wallet payload', async () => {
+  const purchaseJournal = { claim() { return {}; }, record() { throw new Error('disk full'); } };
+  const s = service({ purchaseJournal }); const h = await ready(s);
+  await rejects(() => s.buyer.pay(h, { authorizePayment: s.wallet }), 'JOURNAL_WRITE_FAILED');
+  assert.equal(s.getSignedHeader(), undefined);
+});
+test('failure to persist delivered status returns unknown with evidence for reconciliation', async () => {
+  const states = [];
+  const purchaseJournal = { claim() { return {}; }, record(ticket, state) {
+    states.push(state); if (state === 'delivered') throw new Error('disk full');
+  } };
+  const s = service({ purchaseJournal }); const h = await ready(s);
+  const result = await s.buyer.pay(h, { authorizePayment: s.wallet });
+  assert.equal(result.state, 'unknown'); assert.equal(result.reason, 'JOURNAL_WRITE_FAILED');
+  assert.ok(result.evidenceToReview.rawResponse); assert.deepEqual(states, ['submitting', 'delivered', 'unknown']);
+});
+test('slow persistence cannot cause expired quote submission', async () => {
+  let s;
+  const purchaseJournal = { claim() { return {}; }, record(ticket, state) {
+    if (state === 'submitting') s.setTime(NOW + 600000);
+  } };
+  s = service({ purchaseJournal }); const h = await ready(s);
+  await rejects(() => s.buyer.pay(h, { authorizePayment: s.wallet }), 'QUOTE_EXPIRED');
+  assert.equal(s.getSignedHeader(), undefined);
 });
