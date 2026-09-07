@@ -1,10 +1,10 @@
 {
-  "schema_version": "hyperxosist/buyer-quickstart/1.0",
+  "schema_version": "hyperxosist/buyer-quickstart/1.1",
   "intent": "command-error",
   "name": "Command error triage: one structured next-step receipt",
   "resource": "https://api.kgninja.dev/fix-error",
   "method": "POST",
-  "description": "Get rule-based triage for a failed build, deployment, or shell command when the next step is unclear. Submit a redacted command and error; receive root_cause, next_command, retry_plan, risk_note, prevention_note, and generated_at as JSON. Suggestions only: no code execution, repository inspection, or guaranteed repair. Read the free preview before authorizing a paid request.",
+  "description": "Get rule-based triage for a failed build, deployment, or shell command. Submit a redacted command and error; read root_cause, next_command, retry_plan, risk_note, prevention_note and generated_at inside response.receipt. Suggestions only: no code execution, repository inspection or guaranteed repair. Inspect the free preview before approving one paid request.",
   "source_of_truth": "https://api.kgninja.dev/openapi.json",
   "free_preview": "https://api.kgninja.dev/fix-error/preview",
   "guide": "docs/BUY_FIX_ERROR.md",
@@ -24,7 +24,8 @@
       "Provide an independent security audit"
     ],
     "prefer_local_when_sufficient": true,
-    "avu_required": false
+    "avu_required": false,
+    "result_path": "response.receipt"
   },
   "request_schema": {
     "type": "object",
@@ -74,35 +75,92 @@
     "type": "object",
     "additionalProperties": false,
     "required": [
-      "root_cause",
-      "next_command",
-      "retry_plan",
-      "risk_note",
-      "prevention_note",
-      "generated_at"
+      "status",
+      "service",
+      "version",
+      "mode",
+      "network",
+      "real_revenue",
+      "input_received",
+      "request_id",
+      "revenue_proof_log",
+      "durable_revenue_log",
+      "post_payment_retry_path",
+      "receipt"
     ],
     "properties": {
-      "root_cause": {
-        "type": "string"
-      },
-      "next_command": {
-        "type": "string"
-      },
-      "retry_plan": {
-        "type": "array",
-        "items": {
-          "type": "string"
-        }
-      },
-      "risk_note": {
-        "type": "string"
-      },
-      "prevention_note": {
-        "type": "string"
-      },
-      "generated_at": {
+      "status": {
         "type": "string",
-        "format": "date-time"
+        "enum": [
+          "paid"
+        ]
+      },
+      "service": {
+        "type": "string"
+      },
+      "version": {
+        "type": "string"
+      },
+      "mode": {
+        "type": "string"
+      },
+      "network": {
+        "type": "string"
+      },
+      "real_revenue": {
+        "type": "boolean",
+        "description": "Server mainnet configuration flag; not independent evidence of customer revenue."
+      },
+      "input_received": {
+        "type": "boolean"
+      },
+      "request_id": {
+        "type": "string"
+      },
+      "revenue_proof_log": {
+        "type": "string"
+      },
+      "durable_revenue_log": {
+        "type": "boolean"
+      },
+      "post_payment_retry_path": {
+        "type": "string"
+      },
+      "receipt": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "root_cause",
+          "next_command",
+          "retry_plan",
+          "risk_note",
+          "prevention_note",
+          "generated_at"
+        ],
+        "properties": {
+          "root_cause": {
+            "type": "string"
+          },
+          "next_command": {
+            "type": "string"
+          },
+          "retry_plan": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "risk_note": {
+            "type": "string"
+          },
+          "prevention_note": {
+            "type": "string"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
       }
     }
   },
@@ -158,5 +216,52 @@
   "references": [
     "https://docs.cdp.coinbase.com/agentic-wallet/cli/skills/pay-for-service",
     "https://docs.cdp.coinbase.com/x402/seller/get-discovered"
-  ]
+  ],
+  "receipt_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "root_cause",
+      "next_command",
+      "retry_plan",
+      "risk_note",
+      "prevention_note",
+      "generated_at"
+    ],
+    "properties": {
+      "root_cause": {
+        "type": "string"
+      },
+      "next_command": {
+        "type": "string"
+      },
+      "retry_plan": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "risk_note": {
+        "type": "string"
+      },
+      "prevention_note": {
+        "type": "string"
+      },
+      "generated_at": {
+        "type": "string",
+        "format": "date-time"
+      }
+    }
+  },
+  "response_handling": {
+    "diagnostic_path": "receipt",
+    "raw_api_body_required": true,
+    "local_parser": "fix-error-response.mjs#readFixErrorReceipt",
+    "checks_shape_only": true,
+    "settlement_verified_by_parser": false,
+    "cli_note": "The CLI may wrap the HTTP response. Extract its API response body first; do not mistake the CLI wrapper for the raw API body.",
+    "never_execute_returned_commands": true
+  },
+  "contract_observed_at": "2026-09-07T06:19:56Z",
+  "contract_observation_note": "Current public OpenAPI and discovery use a paid envelope containing receipt; earlier cached schemas and the v1.0 recipe showed only the inner receipt. No new paid request was made to establish this observation."
 }

@@ -15,7 +15,7 @@ receipt/settlement totals. The operator reports purchases by other users;
 AI-versus-human identity remains unverified.
 
 The marketplace example omitted the input body and displayed generic output
-rather than the six-field receipt. The service's OpenAPI already contains real
+rather than the paid envelope containing a six-field receipt. The service's OpenAPI already contains real
 request/response examples. This is a discovery-to-contract propagation gap, not
 a reason to invent a new paid product or to claim metadata is entirely absent.
 
@@ -99,3 +99,13 @@ schema read, a rank change, a new listing or a simulated payment. If purchases
 do not increase, inspect demand, output usefulness and delivery failures before
 adding services. Do not add discounting, paid ads, bulk outreach, subscriptions,
 autonomous spending, or a new schedule as part of this metadata experiment.
+
+## Contract correction observed during follow-through
+
+The fresh 2026-09-07 OpenAPI/discovery response uses `response.receipt` for the
+six diagnostic fields. The earlier v1.0 buyer recipe incorrectly described those
+fields at the top level. Recipe v1.1, the purchase guide, the local result parser
+and the readiness audit now distinguish the full envelope from its inner
+receipt. No seller deployment is claimed by this correction. A short description
+is a copy-quality suggestion, not a reason to label an officially valid payment
+endpoint broken. See [FIX_ERROR_READINESS.md](FIX_ERROR_READINESS.md).

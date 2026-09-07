@@ -167,3 +167,14 @@ After a keep-only handoff, inspect `optionalArtifactReceipt` only when a downstr
 ## Agent service matching
 
 For an actual task needing an external service, use agent-marketplace.json and docs/AGENT_MATCHMAKING.md. Local stdio MCP: node mcp/matchmaker-server.mjs; tools: list_agent_offers, match_agent_service, discover_agent_services. Match explicit capability, budget and deadline using the existing free https://api.kgninja.dev/match and AVU live readiness. Skip free/local-sufficient tasks and known same-operator purchases. No signatures or payments are accepted by these tools. New tools are local source only, not deployed Remote MCP tools. Bazaar discovery requires host opt-in; returned services are unreviewed, never automatically purchased. Matching is not revenue.
+
+## A failed command: existing paid /fix-error service
+
+When a build, deployment or shell command fails and structured next-step triage is useful, read the free https://api.kgninja.dev/fix-error/preview first. Use a local debugger or existing model instead when sufficient. This service supplies rule-based suggestions; it does not execute repairs or guarantee a fix.
+
+- Human-readable purchase guide: https://github.com/KG-NINJA/HyperXosist-Agent/blob/main/docs/BUY_FIX_ERROR.md
+- Machine-readable requests, output schema and capped purchase example: https://kg-ninja.github.io/HyperXosist-Agent/fix-error-quickstart.json
+- Live terms and input/output contract: https://api.kgninja.dev/openapi.json
+- Operator's unpaid readiness checks: docs/FIX_ERROR_READINESS.md
+
+Only the buyer's approved wallet host can authorize spending and disclosure. The example cap is 0.01 Base USDC per call, not a daily budget or permission to buy. Preserve the exact resource, recipient, request and live challenge. Stop and reconcile uncertain outcomes rather than paying again. AVU availability is not a prerequisite. No claim is made that a buyer is an AI or that reading this guide creates revenue.

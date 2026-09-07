@@ -1,0 +1,50 @@
+name: Fix-error discovery evidence
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/fix-error-readiness.mjs
+      - test/fix-error-readiness.test.mjs
+      - fix-error-quickstart.json
+      - fix-error-response.mjs
+      - .github/workflows/fix-error-readiness.yml
+permissions:
+  contents: read
+concurrency:
+  group: fix-error-evidence-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  audit:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Offline audit regression tests
+        run: node --test test/fix-error-readiness.test.mjs test/fix-error-quickstart.test.mjs
+      - name: Collect unpaid evidence (not paid-flow approval)
+        shell: bash
+        run: |
+          set +e
+          node scripts/fix-error-readiness.mjs --live --validate --out audit/fix-error-readiness.json
+          code=$?
+          set -e
+          if [ "$code" -gt 2 ]; then exit "$code"; fi
+          echo "Readiness exit=$code (0=unpaid checks passed; 1=blocked; 2=partial). This is not a paid purchase." >> "$GITHUB_STEP_SUMMARY"
+          if [ "$code" -ne 0 ]; then
+            echo "::warning::Live discovery evidence is blocked or partial. Read the report; successful evidence collection is not readiness approval."
+          fi
+      - name: Upload privacy-safe evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fix-error-discovery-evidence
+          path: audit/fix-error-readiness.json
+          if-no-files-found: error
+          retention-days: 14

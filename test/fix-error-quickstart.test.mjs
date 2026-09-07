@@ -38,12 +38,15 @@ test('three useful requests conform to the recorded request contract', () => {
     }
   }
 });
-test('response contract has the real six-field shape, not a generic result wrapper', () => {
-  assert.deepEqual(recipe.response_schema.required, fields);
+test('response envelope contains the six-field receipt at the documented path', () => {
+  assert.ok(recipe.response_schema.required.includes('receipt'));
+  assert.deepEqual(recipe.response_schema.properties.receipt.required, fields);
+  assert.equal(recipe.scope.result_path, 'response.receipt');
+  assert.deepEqual(recipe.receipt_schema, recipe.response_schema.properties.receipt);
   assert.deepEqual(recipe.scope.returns, fields);
   assert.equal(recipe.response_schema.additionalProperties, false);
-  assert.equal(recipe.response_schema.properties.retry_plan.type, 'array');
-  assert.equal(recipe.response_schema.properties.generated_at.format, 'date-time');
+  assert.equal(recipe.receipt_schema.properties.retry_plan.type, 'array');
+  assert.equal(recipe.receipt_schema.properties.generated_at.format, 'date-time');
 });
 test('base native USDC and the reviewed seller remain pinned in guidance', () => {
   assert.equal(recipe.payment.network, 'eip155:8453');
@@ -107,4 +110,14 @@ test('recipe ships with the package and regression checks join npm test', () => 
   assert.ok(pkg.files.includes('fix-error-quickstart.json'));
   assert.match(pkg.scripts.test, /node --test test\/fix-error-quickstart\.test\.mjs/);
   assert.equal(pkg.scripts['test:buyer-quickstart'], 'node --test test/fix-error-quickstart.test.mjs');
+});
+
+// The published recipe must not recreate the flat-response integration bug.
+test('guide and recipe separate the HTTP body, diagnostic receipt and settlement', () => {
+  assert.equal(recipe.response_handling.diagnostic_path, 'receipt');
+  assert.equal(recipe.response_handling.settlement_verified_by_parser, false);
+  assert.equal(recipe.response_handling.raw_api_body_required, true);
+  assert.match(guide, /response\.receipt/);
+  assert.match(guide, /not proof of settlement/);
+  assert.match(guide, /outer CLI result wrapper/);
 });
