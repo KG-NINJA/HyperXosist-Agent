@@ -4,7 +4,7 @@ import { Hono } from 'hono';
 import { paymentMiddleware, x402ResourceServer } from '@x402/hono';
 import { ExactEvmScheme } from '@x402/evm/exact/server';
 import { declareDiscoveryExtension, bazaarResourceServerExtension } from '@x402/extensions/bazaar';
-import Ajv from 'ajv';
+import Ajv from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
 import {
   addHyperxosistBazaar, discoveryOptions, INPUT_SCHEMA, OUTPUT_SCHEMA,
