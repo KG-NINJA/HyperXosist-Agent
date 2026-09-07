@@ -39,5 +39,27 @@
     "customer_acquisition_automated": false,
     "requirement": "An external buyer with a real need must connect and complete an authorized paid delivery."
   },
-  "documentation": "docs/AGENT_MATCHMAKING.md"
+  "buyer_quickstarts": {
+    "command-error": {
+      "human": "docs/BUY_FIX_ERROR.md",
+      "machine": "fix-error-quickstart.json",
+      "automatic_purchase": false,
+      "public_guide": "https://github.com/KG-NINJA/HyperXosist-Agent/blob/main/docs/BUY_FIX_ERROR.md",
+      "public_recipe": "https://kg-ninja.github.io/HyperXosist-Agent/fix-error-quickstart.json",
+      "operator_readiness_guide": "docs/FIX_ERROR_READINESS.md"
+    },
+    "url-summary": {"human":"services.md#summarize-url","machine":"service-offers.json","service_id":"summarize-url","automatic_purchase":false},
+    "shell-safety": {"human":"services.md#shell-risk-check","machine":"service-offers.json","service_id":"shell-risk-check","automatic_purchase":false},
+    "service-visibility": {"human":"services.md#agent-visibility-report","machine":"service-offers.json","service_id":"agent-visibility-report","automatic_purchase":false},
+    "x-search": {"human":"services.md#hyperxosist-query","machine":"service-offers.json","service_id":"hyperxosist-query","automatic_purchase":false}
+  },
+  "public_purchase_guide": "https://kg-ninja.github.io/HyperXosist-Agent/services.html",
+  "public_buyer_catalog": "https://kg-ninja.github.io/HyperXosist-Agent/service-offers.json",
+  "documentation": "docs/AGENT_MATCHMAKING.md",
+  "first_purchase_guide": "https://kg-ninja.github.io/HyperXosist-Agent/first-purchase.html",
+  "operations": {
+    "monitor_issue": "https://github.com/KG-NINJA/HyperXosist-Agent/issues/33",
+    "guide": "docs/X402_OPERATIONS.md",
+    "automatic_purchase": false
+  }
 }

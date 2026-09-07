@@ -1,0 +1,86 @@
+name: x402 revenue windows evidence
+on:
+  schedule:
+    # UTC -> 03:17, 09:17, 15:17, 21:17 Asia/Tokyo. Not a realtime SLA.
+    - cron: '17 0,6,12,18 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - scripts/revenue-monitor.mjs
+      - scripts/publish-revenue-monitor.mjs
+      - test/revenue-monitor.test.mjs
+      - .github/workflows/fix-error-readiness.yml
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/fix-error-readiness.mjs
+      - test/fix-error-readiness.test.mjs
+      - fix-error-quickstart.json
+      - fix-error-response.mjs
+      - service-offers.json
+      - service-receipts.mjs
+      - scripts/services-readiness.mjs
+      - test/service-windows.test.mjs
+      - test/service-validator-observation.test.mjs
+      - scripts/revenue-monitor.mjs
+      - scripts/publish-revenue-monitor.mjs
+      - test/revenue-monitor.test.mjs
+      - .github/workflows/fix-error-readiness.yml
+permissions:
+  contents: read
+concurrency:
+  group: x402-monitor-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  audit:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Offline audit, buyer contract and notification tests
+        run: node --test test/fix-error-readiness.test.mjs test/fix-error-quickstart.test.mjs test/service-windows.test.mjs test/service-validator-observation.test.mjs test/revenue-monitor.test.mjs
+      - name: Collect unsigned observations without GitHub write token or wallet
+        run: node scripts/revenue-monitor.mjs --collect
+      - name: Record collection boundaries
+        run: echo 'Evidence collection is not paid delivery or external revenue. Read individual route states. Issue 33 is updated only by trusted main runs.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload privacy-safe evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: revenue-windows-evidence
+          path: |
+            audit/revenue-windows.json
+            audit/monitor-observation.json
+          if-no-files-found: error
+          retention-days: 14
+  notify:
+    needs: audit
+    if: github.repository == 'KG-NINJA/HyperXosist-Agent' && github.ref == 'refs/heads/main' && contains(fromJSON('["push","schedule","workflow_dispatch"]'), github.event_name)
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      contents: read
+      actions: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          name: revenue-windows-evidence
+          path: audit
+      - name: Update fixed monitor issue; comment only on material changes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/publish-revenue-monitor.mjs
