@@ -29,7 +29,9 @@ export function decodeChallenge(header) {
   if (typeof header !== 'string' || !header || header.length > 65536 || !/^[A-Za-z0-9+/]+={0,2}$/.test(header)) throw new Error('INVALID_PAYMENT_REQUIRED');
   const bytes = Buffer.from(header, 'base64');
   if (bytes.toString('base64').replace(/=+$/, '') !== header.replace(/=+$/, '')) throw new Error('INVALID_PAYMENT_REQUIRED');
-  return JSON.parse(new TextDecoder('utf-8', {fatal:true}).decode(bytes));
+  const decoded = JSON.parse(new TextDecoder('utf-8', {fatal:true}).decode(bytes));
+  if (!isRecord(decoded)) throw new Error('INVALID_PAYMENT_REQUIRED');
+  return decoded;
 }
 export function validTerms(terms) {
   return isRecord(terms) && terms.scheme === 'exact' && terms.network === POLICY.network &&

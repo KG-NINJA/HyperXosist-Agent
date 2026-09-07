@@ -208,3 +208,34 @@ test('projection errors are reported with bounded deterministic codes', () => {
   const check=evaluate(o,recipe).checks.find(c=>c.id==='openapi_projection');
   assert.equal(check.reason,'OPENAPI_EXAMPLES_OR_SCHEMAS_MISSING');
 });
+
+test('P1: falsey and non-object payment-required values always block readiness', () => {
+  for (const value of [null, false, 0, '', [], 'string']) {
+    assert.throws(()=>decodeChallenge(header(value)), /INVALID_PAYMENT_REQUIRED/);
+    const o=good();o.challenge.payment_required=header(value);
+    assert.equal(evaluate(o,recipe).state,'blocked');
+  }
+});
+test('P1: all falsey and non-object metadata JSON values are rejected', () => {
+  for (const key of ['openapi','options','preview','discovery','integrity','validator','challenge']) {
+    for (const value of [null, false, 0, '', [], 'text']) {
+      const o=good();o[key].data=value;
+      assert.equal(evaluate(o,recipe).state,'blocked');
+    }
+  }
+});
+test('P2: matching field names do not permit changed output property schemas', () => {
+  const mutations = [
+    s => {s.properties.receipt.properties.next_command.type='number';},
+    s => {s.properties.receipt.properties.retry_plan.type='string';},
+    s => {s.properties.receipt.properties.retry_plan.items.type='number';},
+    s => {s.properties.receipt.properties.generated_at.format='uri';},
+    s => {s.properties.receipt.additionalProperties=true;},
+    s => {s.additionalProperties=true;},
+    s => {s.properties.durable_revenue_log.type='string';}
+  ];
+  for (const mutate of mutations) {
+    const x=copy(api);mutate(x.paths['/fix-error'].post.responses['200'].content['application/json'].schema);
+    assert.throws(()=>projectDiscovery(x,recipe),/CONTRACT_CHANGED/);
+  }
+});
