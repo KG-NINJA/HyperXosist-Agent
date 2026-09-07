@@ -50,7 +50,7 @@ npx hyperxosist handoff --product <PRODUCT> --feedback '["…"]' --json
 ```js
 // 1) Bootstrap (universal — all LLMs)
 const session = HyperXosistAgent.startAgentSession({
-  intent: 'Find product feedback about <PRODUCT>'
+  intent: 'Find product feedback about <PRODUCT> for PR specs'
 });
 
 // 2) Plan
@@ -114,7 +114,10 @@ HyperXosistAgent.buildRunReceipt({
 ### Optional Grok Build mode
 
 ```js
-const grok = HyperXosistAgent.createGrokBuildSession({ intent, mode: 'grok' });
+const grok = HyperXosistAgent.createGrokBuildSession(
+  'Grok Build code improvement for <PRODUCT>',
+  { product: '<PRODUCT>', targetArea: 'auth' }
+);
 // or: startAgentSession({ intent, mode: 'grok' })
 const gp = HyperXosistAgent.buildGrokBuildPrompt({ productName: '<PRODUCT>', feedback });
 // → paste gp.markdown into Grok Build

@@ -24,7 +24,10 @@ try{
  await page.goto(origin+'/first-purchase.html');await page.locator('#preparer').waitFor();
  assert.equal(await page.title(),'API購入準備 — KG-NINJA');assert.equal(await page.locator('#prepare').isDisabled(),true);
  await page.locator('#reviewed').check();await page.locator('#prepare').click();assert.equal(await page.locator('#prepared').isVisible(),true);
- await page.locator('#copy-command').click();assert.match(await page.locator('#action-feedback').innerText(),/コピーしました/);
+ await page.locator('#copy-command').click();
+ // Clipboard writes resolve asynchronously; verify completion, not merely a click.
+ await page.waitForFunction(()=>document.getElementById('action-feedback').textContent.includes('コピーしました'),null,{timeout:5000});
+ assert.equal(await page.evaluate(()=>navigator.clipboard.readText()),await page.locator('#command').innerText());
  const download=page.waitForEvent('download');await page.locator('#save-plan').click();const d=await download;await d.saveAs(join(out,'sample-request.json'));
  const plan=JSON.parse(await readFile(join(out,'sample-request.json'),'utf8'));assert.equal(plan.authorization.granted,false);assert.equal(plan.execution.payment_sent,false);
  await page.locator('#request').fill('{"error":"changed example"}');assert.equal(await page.locator('#prepared').isHidden(),true);assert.equal(await page.locator('#reviewed').isChecked(),false);

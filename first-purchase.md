@@ -73,7 +73,7 @@ title: API購入準備 — KG-NINJA
 <p id="action-feedback" class="hint" role="status" aria-live="polite"></p>
 <p class="hint">上限は1回分です。CLIの上限オプションだけでは、受取先・資産・ネットワーク・合計予算を固定できません。自動運用ではウォレット側の制御が別途必要です。JSONには入力内容が含まれます。</p>
 </div>
-<details class="detail"><summary>ウォレットが未準備の場合</summary><p>このサイトはカード決済や秘密鍵入力に対応していません。<a href="https://docs.cdp.coinbase.com/agentic-wallet/cli/skills/pay-for-service" target="_blank" rel="noopener noreferrer">公式CLIの設定手順</a>を確認してください。無人運用ではレビューしたバージョンンを固定します。</p></details>
+<details class="detail"><summary>ウォレットが未準備の場合</summary><p>このサイトはカード決済や秘密鍵入力に対応していません。<a href="https://docs.cdp.coinbase.com/agentic-wallet/cli/skills/pay-for-service" target="_blank" rel="noopener noreferrer">公式CLIの設定手順</a>を確認してください。無人運用ではレビューしたバージョンを固定します。</p></details>
 </aside>
 </div>
 <section class="recovery" id="recovery" aria-labelledby="recovery-title"><h2 id="recovery-title">402やタイムアウトで、何度も払わない。</h2><p>最初の402は料金提示です。同じ未払い要求を繰り返しても購入には進みません。署名付き要求の送信後に結果が不明になった場合は、新しい署名や購入を作らず、元の支払いと納品結果を照合します。入力を変えた場合も自動で再購入しません。</p><p>元の入力・request ID・応答・ウォレットの決済証跡を非公開で保管してください。HTTP 200、画面上の準備完了、集計増加だけでは、決済確定や正常納品を証明できません。この画面の支払い状況は自己申告で、再読込をまたぐ二重払い防止機能ではありません。</p><a href="services.html">結果の読み方と全サービスの詳細</a></section>
