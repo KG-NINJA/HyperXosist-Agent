@@ -7,6 +7,7 @@ on:
       - scripts/fix-error-readiness.mjs
       - test/fix-error-readiness.test.mjs
       - fix-error-quickstart.json
+      - fix-error-response.mjs
       - .github/workflows/fix-error-readiness.yml
 permissions:
   contents: read
@@ -24,7 +25,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
       - name: Offline audit regression tests
         run: node --test test/fix-error-readiness.test.mjs test/fix-error-quickstart.test.mjs
       - name: Collect unpaid evidence (not paid-flow approval)

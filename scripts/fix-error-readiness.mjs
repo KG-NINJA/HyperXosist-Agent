@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { isFixErrorReceipt, isFixErrorPaidResponse, RECEIPT_FIELDS, RESPONSE_FIELDS } from '../fix-error-response.mjs';
 
 // No wallet, credentials, paid retry, arbitrary URL, deployment or DB mutation.
 export const RESOURCE = 'https://api.kgninja.dev/fix-error';
@@ -15,7 +16,7 @@ export const URLS = Object.freeze({
   validator: 'https://api.cdp.coinbase.com/platform/v2/x402/validate'
 });
 const SAMPLE = Object.freeze({command: 'npm run build', error: "Error: Cannot find module 'hono'", environment: 'Synthetic unpaid readiness probe; not a customer'});
-const FIELDS = ['root_cause', 'next_command', 'retry_plan', 'risk_note', 'prevention_note', 'generated_at'];
+const FIELDS = RECEIPT_FIELDS;
 const INPUT_FIELDS = ['command', 'error', 'log', 'environment'];
 const POLICY = Object.freeze({network: 'eip155:8453', asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', payTo: '0x4D7d842536De9Eb491AE2300126B3CDdE7B0aDE3', amount: '10000'});
 const MAX_BYTES = 1048576;
@@ -35,31 +36,59 @@ export function validTerms(terms) {
     sameAddress(terms.asset, POLICY.asset) && sameAddress(terms.payTo, POLICY.payTo) && terms.amount === POLICY.amount &&
     Number.isSafeInteger(terms.maxTimeoutSeconds) && terms.maxTimeoutSeconds > 0;
 }
-export function receiptShape(value) {
-  return exactKeys(value, FIELDS) && FIELDS.filter(k => k !== 'retry_plan').every(k => typeof value[k] === 'string') &&
-    Array.isArray(value.retry_plan) && value.retry_plan.every(x => typeof x === 'string') && Number.isFinite(Date.parse(value.generated_at));
+export const receiptShape = isFixErrorReceipt;
+const PROJECTION_ERRORS = new Set(['OPENAPI_SCHEMA_REFERENCE_REFUSED', 'OPENAPI_CONTRACT_CHANGED', 'OPENAPI_EXAMPLES_OR_SCHEMAS_MISSING', 'OPENAPI_TERMS_CHANGED', 'RECIPE_SCOPE_CHANGED']);
+
+// Resolve only local schema references, with cycle/depth limits; never fetch URLs.
+function resolveSchema(schema, api, seen = new Set()) {
+  if (!schema?.$ref) return schema;
+  const ref = schema.$ref;
+  if (typeof ref !== 'string' || !/^#\/components\/schemas\/[A-Za-z0-9_.-]+$/.test(ref) || seen.has(ref) || seen.size >= 8) throw new Error('OPENAPI_SCHEMA_REFERENCE_REFUSED');
+  seen.add(ref);
+  return resolveSchema(api?.components?.schemas?.[ref.split('/').at(-1)], api, seen);
+}
+function validReceiptSchema(schema) {
+  return schema?.type === 'object' && schema.additionalProperties === false && exactKeys(schema.properties, FIELDS) &&
+    Array.isArray(schema.required) && [...schema.required].sort().join('|') === [...FIELDS].sort().join('|') &&
+    FIELDS.filter(k => k !== 'retry_plan').every(k => schema.properties[k]?.type === 'string') &&
+    schema.properties.retry_plan?.type === 'array' && schema.properties.retry_plan.items?.type === 'string' && schema.properties.generated_at?.format === 'date-time';
+}
+function validPaidSchema(schema, api) {
+  const booleans = ['real_revenue', 'input_received', 'durable_revenue_log'];
+  const receipt = resolveSchema(schema?.properties?.receipt, api);
+  const paid = schema?.properties?.status;
+  return schema?.type === 'object' && schema.additionalProperties === false && exactKeys(schema.properties, RESPONSE_FIELDS) &&
+    Array.isArray(schema.required) && [...schema.required].sort().join('|') === [...RESPONSE_FIELDS].sort().join('|') &&
+    RESPONSE_FIELDS.filter(k => k !== 'receipt' && !booleans.includes(k)).every(k => schema.properties[k]?.type === 'string') &&
+    booleans.every(k => schema.properties[k]?.type === 'boolean') &&
+    (paid?.const === 'paid' || (Array.isArray(paid?.enum) && paid.enum.length === 1 && paid.enum[0] === 'paid')) && validReceiptSchema(receipt);
 }
 
-/** Builds review-only SDK options from the current OpenAPI, never a replacement server. */
+/** Builds review-only SDK options from current OpenAPI, never a replacement server. */
 export function projectDiscovery(api, recipe) {
   const op = api?.paths?.['/fix-error']?.post;
   const input = op?.requestBody?.content?.['application/json'];
   const output = op?.responses?.['200']?.content?.['application/json'];
   const terms = op?.['x-payment-info'];
-  if (!input?.schema || !output?.schema || !isRecord(input.example) || !receiptShape(output.example)) throw new Error('OPENAPI_EXAMPLES_OR_SCHEMAS_MISSING');
-  if (input.schema.type !== 'object' || !exactKeys(input.schema.properties, INPUT_FIELDS) || input.schema.additionalProperties !== false ||
-    output.schema.type !== 'object' || !exactKeys(output.schema.properties, FIELDS) ||
-    !Array.isArray(output.schema.required) || [...output.schema.required].sort().join('|') !== [...FIELDS].sort().join('|')) throw new Error('OPENAPI_CONTRACT_CHANGED');
   if (terms?.protocol !== 'x402' || terms?.version !== 2 || terms?.scheme !== 'exact' || terms?.price !== '$0.01' ||
     terms.network !== POLICY.network || !sameAddress(terms.payTo, POLICY.payTo) ||
     !sameAddress(terms?.bazaar_indexing?.asset_contract, POLICY.asset)) throw new Error('OPENAPI_TERMS_CHANGED');
-  if (recipe.resource !== RESOURCE || recipe.method !== 'POST' || typeof recipe.description !== 'string' || recipe.description.length > 500 || !recipe.description.trim()) throw new Error('RECIPE_SCOPE_CHANGED');
+  const inputSchema = resolveSchema(input?.schema, api);
+  const outputSchema = resolveSchema(output?.schema, api);
+  if (inputSchema?.type !== 'object' || !exactKeys(inputSchema.properties, INPUT_FIELDS) || inputSchema.additionalProperties !== false ||
+    !INPUT_FIELDS.every(k => inputSchema.properties[k]?.type === 'string') || !validPaidSchema(outputSchema, api)) throw new Error('OPENAPI_CONTRACT_CHANGED');
+  if (!isRecord(input?.example) || !Object.keys(input.example).length ||
+    !Object.entries(input.example).every(([k,v]) => INPUT_FIELDS.includes(k) && typeof v === 'string') || !isFixErrorPaidResponse(output?.example)) throw new Error('OPENAPI_EXAMPLES_OR_SCHEMAS_MISSING');
+  if (recipe.resource !== RESOURCE || recipe.method !== 'POST' || typeof recipe.description !== 'string' || recipe.description.length > 500 ||
+    !recipe.description.trim() || recipe.scope?.result_path !== 'response.receipt' || !validPaidSchema(recipe.response_schema, recipe)) throw new Error('RECIPE_SCOPE_CHANGED');
+  // Embed the resolved inner schema so this isolated projection never relies on external $refs.
+  const resolvedOutput = {...outputSchema, properties: {...outputSchema.properties, receipt: resolveSchema(outputSchema.properties.receipt, api)}};
   return {
-    schema_version: 'hyperxosist/discovery-projection/1.0', application: 'review_only_not_deployed',
+    schema_version: 'hyperxosist/discovery-projection/1.1', application: 'review_only_not_deployed',
     resource: RESOURCE, method: 'POST', source: URLS.openapi, source_sha256: digest(api),
-    description: recipe.description,
+    description: recipe.description, diagnostic_path: 'receipt',
     sdk: 'Installed @x402/extensions/bazaar declareDiscoveryExtension; verify installed version before integration',
-    options: {method: 'POST', bodyType: 'json', input: input.example, inputSchema: input.schema, output: {example: output.example, schema: output.schema}},
+    options: {method: 'POST', bodyType: 'json', input: input.example, inputSchema, output: {example: output.example, schema: resolvedOutput}},
     invariants: {price: '$0.01', ...POLICY, payment_logic_unchanged: true, server_identity_required: true}
   };
 }
@@ -105,26 +134,28 @@ export async function collect({fetchImpl = fetch, validate = false} = {}) {
 
 export function evaluate(observations, recipe, now = new Date().toISOString()) {
   const checks = [];
-  const check = (id, state) => checks.push({id, state});
+  const check = (id, state, reason) => checks.push({id, state, ...(reason ? {reason} : {})});
   const known = (key, expected = 200) => {
     const o = observations[key];
     if (!o || o.unavailable || [401,403,429].includes(o.status) || o.status >= 500) { check(key + '_reachable', 'unknown'); return null; }
     check(key + '_http', o.status === expected ? 'pass' : 'fail');
-    return o.status === expected ? o.data : null;
+    if (o.status !== expected) return null;
+    if (!isRecord(o.data)) { check(key + '_body_shape', 'fail'); return null; }
+    return o.data;
   };
   const api = known('openapi'), options = known('options'), preview = known('preview');
   const directory = known('discovery'), integrity = known('integrity'), challengeBody = known('challenge', 402);
   let projection = null, challenge = null;
   if (api) {
     try { projection = projectDiscovery(api, recipe); check('openapi_projection', 'pass'); }
-    catch { check('openapi_projection', 'fail'); }
+    catch (error) { check('openapi_projection', 'fail', PROJECTION_ERRORS.has(error.message) ? error.message : 'PROJECTION_FAILED'); }
   }
   if (options) check('payment_options_terms', options.network === POLICY.network && options.x402Version === 2 && options.scheme === 'exact' && options.price === '0.01 USDC' && sameAddress(options.assetAddress, POLICY.asset) && sameAddress(options.payTo, POLICY.payTo) ? 'pass' : 'fail');
   if (preview) check('free_preview_available', 'pass');
   if (directory) {
     const entry = directory.resources?.find(x => x.resource === RESOURCE);
     check('public_directory_terms', entry?.x402Version === 2 && Array.isArray(entry.accepts) && entry.accepts.length === 1 && validTerms(entry.accepts[0]) ? 'pass' : 'fail');
-    check('public_directory_receipt_example', receiptShape(entry?.metadata?.output?.example) ? 'pass' : 'warning');
+    check('public_directory_receipt_example', isFixErrorPaidResponse(entry?.metadata?.output?.example) ? 'pass' : 'warning');
   }
   if (challengeBody) {
     try { challenge = decodeChallenge(observations.challenge.payment_required); }
@@ -140,10 +171,10 @@ export function evaluate(observations, recipe, now = new Date().toISOString()) {
       check('challenge_bazaar_present', isRecord(bazaar?.info) && isRecord(bazaar?.schema) ? 'pass' : 'fail');
       const input = bazaar?.info?.input;
       check('challenge_input_example', input?.type === 'http' && input.method === 'POST' && input.bodyType === 'json' && isRecord(input.body) && Object.keys(input.body).some(k => INPUT_FIELDS.includes(k) && typeof input.body[k] === 'string' && input.body[k].trim()) ? 'pass' : 'warning');
-      check('challenge_receipt_example', receiptShape(bazaar?.info?.output?.example) ? 'pass' : 'warning');
+      check('challenge_receipt_example', isFixErrorPaidResponse(bazaar?.info?.output?.example) ? 'pass' : 'warning');
       const description = challenge.resource?.description;
       check('challenge_description_limit', typeof description === 'string' && description.length > 0 && description.length <= 500 ? 'pass' : 'fail');
-      check('challenge_description_useful', typeof description === 'string' && description.length >= 80 ? 'pass' : 'warning');
+      check('challenge_description_useful', typeof description === 'string' && description.length >= 80 ? 'pass' : 'advisory', 'LOCAL_COPY_HEURISTIC_NOT_PAYMENT_VALIDATION');
     }
   }
   const validation = known('validator');
@@ -161,13 +192,14 @@ export function evaluate(observations, recipe, now = new Date().toISOString()) {
   const failed = checks.filter(x => x.state === 'fail').map(x => x.id);
   const incomplete = checks.filter(x => ['unknown','warning'].includes(x.state)).map(x => x.id);
   return {
-    schema_version: 'hyperxosist/fix-error-readiness/1.0', checked_at: now, resource: RESOURCE,
+    schema_version: 'hyperxosist/fix-error-readiness/1.1', checked_at: now, resource: RESOURCE,
     state: failed.length ? 'blocked' : incomplete.length ? 'partial' : 'unpaid_checks_passed', checks,
     safety: {synthetic_probe: true, payment_authorized: false, payment_sent: false, wallet_accessed: false, deployment_performed: false, sales_generated: false},
     boundaries: {live_paid_delivery_tested: false, buyer_identity_verified: false, new_external_sales_proven: false, worker_deployment_identity_verified: false},
     observations: Object.fromEntries(Object.entries(observations).map(([key, o]) => [key, {url: URLS[key], status: o?.status ?? null, unavailable: !o || o.unavailable === true, ...(o?.data ? {body_sha256:digest(o.data)} : {})}])),
     source_reported_revenue: integrity ? {matched: Number.isSafeInteger(integrity.matched) ? integrity.matched : null, amount: typeof integrity.confirmed_amount === 'string' && /^\d+(?:\.\d+)?$/.test(integrity.confirmed_amount) ? integrity.confirmed_amount : null, attribution: 'seller_aggregate_not_independently_verified'} : null,
     bazaar_index: index, failed_checks: failed, incomplete_checks: incomplete,
+    advisories: checks.filter(x => x.state === 'advisory').map(x => x.id),
     next_action: failed.length ? 'Resolve exact failed checks before paid promotion; do not weaken payment controls.' : incomplete.length ? 'Inspect incomplete checks; keep unavailable or missing evidence unknown.' : 'Discovery validated without payment. Measure real independent paid deliveries; no sale has been created by this audit.',
     projection
   };

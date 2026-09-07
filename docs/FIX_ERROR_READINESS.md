@@ -74,7 +74,7 @@ Never retrieve or publish raw secrets to solve an identity or connection gap.
 
 1. If OpenAPI/price/challenge terms disagree, fix that precise regression in the
    confirmed seller source before promoting paid use.
-2. If the challenge lacks a useful request body or six-field output example,
+2. If the challenge lacks a useful request body or complete paid-envelope output example,
    integrate the reviewed projection in the existing Bazaar extension, test it,
    deploy that seller only, and run the audit again.
 3. If the actual challenge and official validator are complete but Agentic
@@ -108,3 +108,19 @@ Official references, checked 2026-09-07:
 - https://docs.cdp.coinbase.com/x402/seller/get-discovered
 - https://docs.cdp.coinbase.com/api-reference/v2/rest-api/x402-facilitator/validate-x402-endpoint
 - https://docs.cdp.coinbase.com/agentic-wallet/cli/skills/pay-for-service
+
+## Current paid response contract
+
+The fresh public OpenAPI observed at 2026-09-07 06:19 UTC nests diagnostics in
+`response.receipt`. The complete paid envelope is not interchangeable with the
+inner six-field sample. Recipe v1.1 records both schemas; the dependency-free
+`fix-error-response.mjs` parser reads the raw API body and rejects a flat sample
+as a paid response. It does not verify settlement or run a suggested command.
+
+The initial audit on head `77df0c3` incorrectly expected a flat response, causing
+`openapi_projection` to fail despite the official validator accepting the
+endpoint and reporting an active Bazaar entry. The corrected audit keeps the
+strict monetary pins, validates the actual nested schema and retains diagnostic
+error codes. Description brevity is advisory and cannot alone mark a valid
+payment route blocked. Missing examples remain incomplete evidence; unknown
+transport failures never become passes.

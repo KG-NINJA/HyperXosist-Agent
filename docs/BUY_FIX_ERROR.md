@@ -67,22 +67,41 @@ is CLI-compatible documentation, not a live end-to-end wallet test.
 
 ## 3. Consume the result, not just the HTTP status
 
-A successful service response has these six fields:
+The raw HTTP response is a paid envelope. Read the six diagnostic fields from
+**`response.receipt`**, not from the top level. The complete envelope schema is
+in `fix-error-quickstart.json`; an illustrative response is:
 
 ```json
 {
-  "root_cause": "The supplied error indicates an unresolved dependency.",
-  "next_command": "npm install hono",
-  "retry_plan": ["Review the dependency change.", "Rerun the build."],
-  "risk_note": "Review package changes before deploying.",
-  "prevention_note": "Install locked dependencies before building.",
-  "generated_at": "2026-09-07T00:00:00.000Z"
+  "status": "paid",
+  "service": "Agent Error Fix Receipt",
+  "version": "2026-05-25-d1-revenue-log",
+  "mode": "mainnet",
+  "network": "eip155:8453",
+  "real_revenue": true,
+  "input_received": true,
+  "request_id": "illustrative-request-id",
+  "revenue_proof_log": "paid_fix_error_receipt_issued",
+  "durable_revenue_log": true,
+  "post_payment_retry_path": "Retry POST /fix-error with x402 payment proof.",
+  "receipt": {
+    "root_cause": "The supplied error indicates an unresolved dependency.",
+    "next_command": "npm install hono",
+    "retry_plan": [
+      "Review the dependency change.",
+      "Rerun the build."
+    ],
+    "risk_note": "Review package changes before deploying.",
+    "prevention_note": "Install locked dependencies before building.",
+    "generated_at": "2026-09-07T00:00:00.000Z"
+  }
 }
 ```
 
 This is an **illustrative output shape**, not a captured paid result. Responses
 are suggestions, not trusted commands: never automatically execute
-`next_command`. Keep the original request, returned result and payment evidence
+`response.receipt.next_command`. The `real_revenue` flag is server configuration,
+not proof of settlement, an independent customer, or new sales. Keep the original request, returned result and payment evidence
 in protected storage. A 200 response or a receipt alone is not independent proof
 of settlement. Check the wallet/settlement evidence and delivery separately.
 
@@ -90,6 +109,22 @@ If a paid call times out or its delivery is uncertain, stop and reconcile it;
 do not blindly repeat the paid command. A subsequent paid request is appropriate
 only for a new or materially changed failure, with another applicable approval.
 Re-running an unchanged error is not a useful retention loop.
+
+## Parse the API result locally
+
+```js
+import { readFixErrorReceipt } from '../fix-error-response.mjs';
+
+// apiResponseBody is the parsed raw HTTP body, not an outer CLI result wrapper.
+const receipt = readFixErrorReceipt(apiResponseBody);
+// Display/store receipt.root_cause and receipt.retry_plan. Do not execute suggestions.
+```
+
+The dependency-free parser validates the current envelope and inner receipt
+shape. It performs no network request, payment, signature check or command
+execution. Its success is not proof of settlement or actual repair. A changed
+or malformed response is rejected; never buy again just because parsing failed.
+Keep the original response in protected storage for reconciliation.
 
 ## Agent integration
 

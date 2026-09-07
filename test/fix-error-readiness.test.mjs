@@ -1,24 +1,26 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { readFixErrorReceipt, isFixErrorPaidResponse } from '../fix-error-response.mjs';
 import { collect, evaluate, projectDiscovery, decodeChallenge, validTerms, receiptShape, main, RESOURCE, URLS } from '../scripts/fix-error-readiness.mjs';
 const recipe = JSON.parse(readFileSync(new URL('../fix-error-quickstart.json', import.meta.url)));
 const copy = x => structuredClone(x);
 const result = {root_cause:'Unresolved dependency.', next_command:'npm install hono', retry_plan:['Review dependencies.'], risk_note:'Review first.', prevention_note:'Use locked dependencies.', generated_at:'2026-09-07T00:00:00Z'};
+const paid = {status:'paid',service:'Agent Error Fix Receipt',version:'2026-05-25-d1-revenue-log',mode:'mainnet',network:'eip155:8453',real_revenue:true,input_received:true,request_id:'synthetic-test',revenue_proof_log:'paid_fix_error_receipt_issued',durable_revenue_log:true,post_payment_retry_path:'Do not pay again for unknown delivery.',receipt:result};
 const terms = {scheme:'exact', network:recipe.payment.network, asset:recipe.payment.asset, payTo:recipe.payment.pay_to, amount:'10000', maxTimeoutSeconds:300};
 const api = {paths:{'/fix-error':{post:{
   requestBody:{content:{'application/json':{schema:recipe.request_schema, example:recipe.request_examples[0].request}}},
-  responses:{'200':{content:{'application/json':{schema:recipe.response_schema, example:result}}}},
+  responses:{'200':{content:{'application/json':{schema:recipe.response_schema, example:paid}}}},
   'x-payment-info':{protocol:'x402',version:2,scheme:'exact',price:'$0.01',network:terms.network,payTo:terms.payTo,bazaar_indexing:{asset_contract:terms.asset}}
 }}}};
-const challenge = {x402Version:2,resource:{url:RESOURCE,description:recipe.description},accepts:[terms],extensions:{bazaar:{info:{input:{type:'http',method:'POST',bodyType:'json',body:recipe.request_examples[0].request},output:{type:'json',example:result}},schema:{type:'object'}}}};
+const challenge = {x402Version:2,resource:{url:RESOURCE,description:recipe.description},accepts:[terms],extensions:{bazaar:{info:{input:{type:'http',method:'POST',bodyType:'json',body:recipe.request_examples[0].request},output:{type:'json',example:paid}},schema:{type:'object'}}}};
 const header = x => Buffer.from(JSON.stringify(x)).toString('base64');
 function good() {
   return copy({
     openapi:{status:200,data:api},
     options:{status:200,data:{network:terms.network,x402Version:2,scheme:'exact',price:'0.01 USDC',assetAddress:terms.asset,payTo:terms.payTo}},
     preview:{status:200,data:{expected_output_schema:recipe.response_schema}},
-    discovery:{status:200,data:{resources:[{resource:RESOURCE,x402Version:2,accepts:[terms],metadata:{output:{example:result}}}]}},
+    discovery:{status:200,data:{resources:[{resource:RESOURCE,x402Version:2,accepts:[terms],metadata:{output:{example:paid}}}]}},
     integrity:{status:200,data:{matched:15,confirmed_amount:'0.15'}},
     challenge:{status:402,data:{payment_required:challenge},payment_required:header(challenge)},
     validator:{status:200,data:{valid:true,statusCode:402,x402Version:2,simulation:{outcome:'accepted'},preflight:[{check:'reachable',severity:'required',passed:true}],index:{active:true,quality:{l30DaysTotalCalls:5,l30DaysUniquePayers:2}}}}
@@ -35,7 +37,7 @@ test('positive result states unpaid checks, never a paid purchase', () => {
 test('projected schema and examples come from OpenAPI, not copied payment authority', () => {
   const p=projectDiscovery(api,recipe);
   assert.deepEqual(p.options.inputSchema,recipe.request_schema);
-  assert.deepEqual(p.options.output.example,result);
+  assert.deepEqual(p.options.output.example,paid);
   assert.equal(p.application,'review_only_not_deployed');
   assert.match(p.source_sha256,/^sha256:[0-9a-f]{64}$/);
 });
@@ -52,7 +54,7 @@ test('changed live OpenAPI price cannot be projected', () => {
   assert.throws(()=>projectDiscovery(x,recipe),/TERMS_CHANGED/);
 });
 test('missing output field blocks publication of a false projection',()=>{
-  const x=copy(api);delete x.paths['/fix-error'].post.responses['200'].content['application/json'].example.next_command;
+  const x=copy(api);delete x.paths['/fix-error'].post.responses['200'].content['application/json'].example.receipt.next_command;
   assert.throws(()=>projectDiscovery(x,recipe));
 });
 test('generic wrapper is not the six-field receipt',()=>assert.equal(receiptShape({result:{value:'data'},paid:true}),false));
@@ -80,10 +82,12 @@ test('missing bazaar extension blocks discovery readiness',()=>{
   o.challenge.payment_required=header(c);o.challenge.data.payment_required=c;
   assert.ok(evaluate(o,recipe).failed_checks.includes('challenge_bazaar_present'));
 });
-test('generic short listing description is a warning',()=>{
+test('description brevity is advisory, not a false payment failure',()=>{
   const o=good(),c=copy(challenge);c.resource.description='Fix error';
   o.challenge.payment_required=header(c);o.challenge.data.payment_required=c;
-  assert.ok(evaluate(o,recipe).incomplete_checks.includes('challenge_description_useful'));
+  const report=evaluate(o,recipe);
+  assert.ok(report.advisories.includes('challenge_description_useful'));
+  assert.equal(report.state,'unpaid_checks_passed');
 });
 test('validator unavailable, auth-required or not requested is unknown, never accepted',()=>{
   for(const v of [undefined,{unavailable:true},{status:401},{status:502}]){
@@ -149,4 +153,58 @@ test('fetch failure is sanitized',async()=>{
 });
 test('CLI never performs network work by default',async()=>{
   await assert.rejects(main([]),/EXPLICIT_LIVE/);await assert.rejects(main(['--url','https://evil.invalid']),/UNKNOWN_ARGUMENT/);
+});
+
+test('the paid envelope parses to its inner receipt without mutating evidence', () => {
+  const body=copy(paid), receipt=readFixErrorReceipt(body);
+  assert.deepEqual(receipt,result); receipt.retry_plan.push('changed');
+  assert.deepEqual(body,paid);
+});
+test('a flat free sample or CLI wrapper is not the paid API body', () => {
+  for (const body of [result, {response:paid}, {data:paid}, {result:paid}, null, []]) {
+    assert.equal(isFixErrorPaidResponse(body),false);
+    assert.throws(()=>readFixErrorReceipt(body),/INVALID_FIX_ERROR_RESPONSE/);
+  }
+});
+test('receipt parsing rejects malformed nested data and changed network', () => {
+  for (const body of [{...paid,network:'eip155:84532'}, {...paid,receipt:{...result,next_command:42}}, {...paid,status:'unpaid'}, {...paid,extra:'unexpected'}]) {
+    assert.throws(()=>readFixErrorReceipt(body));
+  }
+});
+test('the real_revenue configuration flag is not required as revenue proof', () => {
+  assert.deepEqual(readFixErrorReceipt({...paid,real_revenue:false}),result);
+  assert.throws(()=>readFixErrorReceipt({...paid,real_revenue:'true'}));
+});
+test('local OpenAPI schema references resolve without network access', () => {
+  const x=copy(api), content=x.paths['/fix-error'].post.responses['200'].content['application/json'];
+  x.components={schemas:{FixErrorReceipt:content.schema}};
+  content.schema={$ref:'#/components/schemas/FixErrorReceipt'};
+  assert.equal(projectDiscovery(x,recipe).diagnostic_path,'receipt');
+});
+test('external and recursive OpenAPI schema references are rejected', () => {
+  for (const ref of ['https://evil.invalid/schema.json', '#/components/schemas/Loop']) {
+    const x=copy(api); x.components={schemas:{Loop:{$ref:'#/components/schemas/Loop'}}};
+    x.paths['/fix-error'].post.responses['200'].content['application/json'].schema={$ref:ref};
+    assert.throws(()=>projectDiscovery(x,recipe),/SCHEMA_REFERENCE_REFUSED/);
+  }
+});
+test('a legacy flat paid schema is a contract mismatch, not silently accepted', () => {
+  const x=copy(api); x.paths['/fix-error'].post.responses['200'].content['application/json'].schema=recipe.receipt_schema;
+  assert.throws(()=>projectDiscovery(x,recipe),/CONTRACT_CHANGED/);
+});
+test('strict terms still reject changed amounts even if examples are missing', () => {
+  const x=copy(api);x.paths['/fix-error'].post['x-payment-info'].price='$1';
+  delete x.paths['/fix-error'].post.responses['200'].content['application/json'].example;
+  assert.throws(()=>projectDiscovery(x,recipe),/TERMS_CHANGED/);
+});
+test('JSON null and arrays from metadata endpoints are not successes', () => {
+  for (const key of ['openapi','options','preview','discovery','integrity','validator','challenge']) {
+    const o=good();o[key].data=null;
+    assert.equal(evaluate(o,recipe).state,'blocked');
+  }
+});
+test('projection errors are reported with bounded deterministic codes', () => {
+  const o=good();o.openapi.data.paths['/fix-error'].post.responses['200'].content['application/json'].example={};
+  const check=evaluate(o,recipe).checks.find(c=>c.id==='openapi_projection');
+  assert.equal(check.reason,'OPENAPI_EXAMPLES_OR_SCHEMAS_MISSING');
 });
