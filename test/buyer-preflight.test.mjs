@@ -93,7 +93,7 @@ test('input changes cannot mutate an existing plan',()=>{
 test('public agent instructions no longer command retry-until-success',()=>{
  const agents=readFileSync(new URL('../AGENTS.md',import.meta.url),'utf8');
  assert.doesNotMatch(agents,/Retry until \*\*200\*\*/);assert.match(agents,/stop and reconcile/);
- const page=readFileSync(new URL('../first-purchase.md',import.meta.url),'utf8');assert.match(page,/自動送信/);assert.match(page,/Content-Security-Policy/);
+ const page=readFileSync(new URL('../first-purchase.html',import.meta.url),'utf8');assert.match(page,/自動送信/);assert.match(page,/Content-Security-Policy/);
 });
 test('UI has no upload, signer, telemetry, polling or body persistence capability',()=>{
  const source=readFileSync(new URL('../assets/purchase-preparer.mjs',import.meta.url),'utf8');

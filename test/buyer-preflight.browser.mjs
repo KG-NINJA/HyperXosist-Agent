@@ -7,11 +7,11 @@ import {createRequire} from 'node:module';
 const {chromium}=createRequire(import.meta.url)(process.env.PLAYWRIGHT_PACKAGE||'playwright');
 const root=resolve('.'),out=join(process.env.RUNNER_TEMP||'/tmp','buyer-preflight-qa');
 await mkdir(out,{recursive:true});
-const routes={'/first-purchase.html':['first-purchase.md','text/html'],'/buyer-preflight.mjs':['buyer-preflight.mjs','text/javascript'],'/assets/purchase-preparer.mjs':['assets/purchase-preparer.mjs','text/javascript'],'/assets/purchase-preparer.css':['assets/purchase-preparer.css','text/css'],'/service-offers.json':['service-offers.json','application/json'],'/favicon.svg':['favicon.svg','image/svg+xml']};
+const routes={'/first-purchase.html':['first-purchase.html','text/html'],'/buyer-preflight.mjs':['buyer-preflight.mjs','text/javascript'],'/assets/purchase-preparer.mjs':['assets/purchase-preparer.mjs','text/javascript'],'/assets/purchase-preparer.css':['assets/purchase-preparer.css','text/css'],'/service-offers.json':['service-offers.json','application/json'],'/favicon.svg':['favicon.svg','image/svg+xml']};
 const server=createServer(async(req,res)=>{
   const row=routes[new URL(req.url,'http://localhost').pathname];
   if(req.method!=='GET'||!row){res.writeHead(404);res.end();return;}
-  try{let text=await readFile(join(root,row[0]),'utf8');if(row[0].endsWith('.md'))text=text.replace(/^---\n[\s\S]*?\n---\n/,'');res.writeHead(200,{'Content-Type':row[1]+'; charset=utf-8'});res.end(text);}
+  try{let text=await readFile(join(root,row[0]),'utf8');if(row[1]==='text/html')text=text.replace(/^---\n[\s\S]*?\n---\n/,'');res.writeHead(200,{'Content-Type':row[1]+'; charset=utf-8'});res.end(text);}
   catch{res.writeHead(500);res.end();}
 });
 await new Promise(done=>server.listen(0,'127.0.0.1',done));
@@ -22,7 +22,7 @@ try{
  await context.route('**/*',async route=>{const r=route.request();calls.push({url:r.url(),method:r.method()});if(!r.url().startsWith(origin+'/'))await route.abort();else await route.continue();});
  const page=await context.newPage();page.on('pageerror',e=>errors.push(String(e)));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
  await page.goto(origin+'/first-purchase.html');await page.locator('#preparer').waitFor();
- assert.equal(await page.title(),'API購入準備 — KG-NINJA');assert.equal(await page.locator('#prepare').isDisabled(),true);
+ assert.equal(await page.title(),'API購入準備 — KG-NINJA');assert.equal(await page.evaluate(()=>document.compatMode),'CSS1Compat');assert.equal(await page.locator('#prepare').isDisabled(),true);
  await page.locator('#reviewed').check();await page.locator('#prepare').click();assert.equal(await page.locator('#prepared').isVisible(),true);
  await page.locator('#copy-command').click();
  // Clipboard writes resolve asynchronously; verify completion, not merely a click.
