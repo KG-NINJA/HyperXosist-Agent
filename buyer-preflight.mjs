@@ -63,6 +63,14 @@ function matches(value,schema,depth=0) {
 function sensitive(text) {
   return /-----BEGIN (?:[A-Z ]+ )?PRIVATE KEY-----|\bBearer\s+[A-Za-z0-9._~+\/-]{8,}|\bsk-(?:proj-)?[A-Za-z0-9_-]{16,}|\b(?:api[_-]?key|access[_-]?token|password|payment[-_]?signature|private[_-]?key)\s*[:=]\s*["']?[^\s"',}{]{8,}/i.test(text);
 }
+// Called only after the bounded known schema passes. Never echo matched values.
+function sensitiveTree(value,depth=0) {
+  if(depth>12)return true;
+  if(typeof value==='string')return sensitive(value);
+  if(Array.isArray(value))return value.some(v=>sensitiveTree(v,depth+1));
+  if(record(value))return Object.values(value).some(v=>sensitiveTree(v,depth+1));
+  return false;
+}
 function publicUrl(value) {
   try{
     const u=new URL(value),h=u.hostname.toLowerCase();
@@ -79,8 +87,8 @@ export function inspectInput(catalog,id,text) {
   if(typeof text!=='string'||new TextEncoder().encode(text).length>MAX_BYTES)return fail('input_too_large');
   let input;try{input=JSON.parse(text);}catch{return fail('invalid_json');}
   if(!record(input))return fail('object_required');
-  if(sensitive(Object.values(input).filter(x=>typeof x==='string').join('\n')))return fail('secret_detected');
   if(!matches(input,offer.request_schema))return fail('schema_mismatch');
+  if(sensitiveTree(input))return fail('secret_detected');
   if(id==='fix-error'&&![input.error,input.log].some(v=>typeof v==='string'&&v.trim()))return fail('failure_evidence_required');
   if(id==='shell-risk-check'&&!input.command?.trim())return fail('empty_command');
   if(id==='summarize-url'&&!publicUrl(input.url))return fail('public_url_required');

@@ -100,3 +100,17 @@ test('UI has no upload, signer, telemetry, polling or body persistence capabilit
  assert.equal((source.match(/fetch\(/g)||[]).length,1);assert.match(source,/\.\.\/service-offers\.json/);
  assert.doesNotMatch(source,/localStorage|sessionStorage|sendBeacon|setInterval|innerHTML|console\.log|ethereum\.request/);
 });
+
+test('P2: credential patterns in supported nested arrays are blocked before command creation',()=>{
+ for(const token of ['api_key=SUPER_SECRET_VALUE_123','Authorization: Bearer NESTED_SECRET_TOKEN','PAYMENT-SIGNATURE: abcdefghijklmnop']){
+  const input={keywords:'hello',noise:{removed:[token]}};
+  const r=preparePurchase(catalog,'hyperxosist-query',JSON.stringify(input),{reviewed:true});
+  assert.equal(r.code,'secret_detected');assert.ok(!JSON.stringify(r).includes(token));
+  assert.equal(r.command,undefined);assert.equal(r.plan,undefined);
+ }
+ assert.equal(inspect('hyperxosist-query',{keywords:'hello',noise:{removed:['giveaway','sponsored']}}).ok,true);
+});
+test('P2: unrelated Grok example preserves the original two-argument API',()=>{
+ const agents=readFileSync(new URL('../AGENTS.md',import.meta.url),'utf8');
+ assert.match(agents,/createGrokBuildSession\(\s*'Grok Build code improvement for <PRODUCT>',\s*\{ product: '<PRODUCT>', targetArea: 'auth' \}/);
+});
