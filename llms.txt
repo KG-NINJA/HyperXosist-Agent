@@ -83,7 +83,7 @@ Local CLI:
 
 ```bash
 npx hyperxosist plan "Find product feedback about Acme for PR specs" --json
-npx hyperxosist keep --product Acme --feedback '["Users cannot complete onboarding"]' --json
+npx hyperxosist keep --product Acme --feedback '["Users cannot complete onboarding"]' --export-keep-only --json
 npx hyperxosist handoff --product Acme --feedback '["Users cannot complete onboarding"]' --json
 ```
 
