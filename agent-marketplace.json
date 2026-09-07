@@ -43,7 +43,10 @@
     "command-error": {
       "human": "docs/BUY_FIX_ERROR.md",
       "machine": "fix-error-quickstart.json",
-      "automatic_purchase": false
+      "automatic_purchase": false,
+      "public_guide": "https://github.com/KG-NINJA/HyperXosist-Agent/blob/main/docs/BUY_FIX_ERROR.md",
+      "public_recipe": "https://kg-ninja.github.io/HyperXosist-Agent/fix-error-quickstart.json",
+      "operator_readiness_guide": "docs/FIX_ERROR_READINESS.md"
     }
   },
   "documentation": "docs/AGENT_MATCHMAKING.md"
