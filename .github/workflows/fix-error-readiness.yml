@@ -1,4 +1,4 @@
-name: Fix-error discovery evidence
+name: x402 revenue windows evidence
 on:
   workflow_dispatch:
   pull_request:
@@ -8,6 +8,10 @@ on:
       - test/fix-error-readiness.test.mjs
       - fix-error-quickstart.json
       - fix-error-response.mjs
+      - service-offers.json
+      - service-receipts.mjs
+      - scripts/services-readiness.mjs
+      - test/service-windows.test.mjs
       - .github/workflows/fix-error-readiness.yml
 permissions:
   contents: read
@@ -18,7 +22,7 @@ jobs:
   audit:
     if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
-    timeout-minutes: 4
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
         with:
@@ -26,25 +30,25 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Offline audit regression tests
-        run: node --test test/fix-error-readiness.test.mjs test/fix-error-quickstart.test.mjs
-      - name: Collect unpaid evidence (not paid-flow approval)
+      - name: Offline audit and buyer contract tests
+        run: node --test test/fix-error-readiness.test.mjs test/fix-error-quickstart.test.mjs test/service-windows.test.mjs
+      - name: Collect five-route unpaid evidence (not paid-delivery approval)
         shell: bash
         run: |
           set +e
-          node scripts/fix-error-readiness.mjs --live --validate --out audit/fix-error-readiness.json
+          node scripts/services-readiness.mjs --live --validate --out audit/revenue-windows.json
           code=$?
           set -e
           if [ "$code" -gt 2 ]; then exit "$code"; fi
-          echo "Readiness exit=$code (0=unpaid checks passed; 1=blocked; 2=partial). This is not a paid purchase." >> "$GITHUB_STEP_SUMMARY"
+          echo "Audit exit=$code. Read route-specific readiness, indexing and metadata gaps; evidence collection is not a paid delivery." >> "$GITHUB_STEP_SUMMARY"
           if [ "$code" -ne 0 ]; then
-            echo "::warning::Live discovery evidence is blocked or partial. Read the report; successful evidence collection is not readiness approval."
+            echo "::warning::One or more routes are blocked or unknown. Read the evidence; green workflow does not approve payments."
           fi
       - name: Upload privacy-safe evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: fix-error-discovery-evidence
-          path: audit/fix-error-readiness.json
+          name: revenue-windows-evidence
+          path: audit/revenue-windows.json
           if-no-files-found: error
           retention-days: 14
