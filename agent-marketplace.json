@@ -39,5 +39,12 @@
     "customer_acquisition_automated": false,
     "requirement": "An external buyer with a real need must connect and complete an authorized paid delivery."
   },
+  "buyer_quickstarts": {
+    "command-error": {
+      "human": "docs/BUY_FIX_ERROR.md",
+      "machine": "fix-error-quickstart.json",
+      "automatic_purchase": false
+    }
+  },
   "documentation": "docs/AGENT_MATCHMAKING.md"
 }

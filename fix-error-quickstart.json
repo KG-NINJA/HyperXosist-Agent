@@ -1,0 +1,162 @@
+{
+  "schema_version": "hyperxosist/buyer-quickstart/1.0",
+  "intent": "command-error",
+  "name": "Command error triage: one structured next-step receipt",
+  "resource": "https://api.kgninja.dev/fix-error",
+  "method": "POST",
+  "description": "Get rule-based triage for a failed build, deployment, or shell command when the next step is unclear. Submit a redacted command and error; receive root_cause, next_command, retry_plan, risk_note, prevention_note, and generated_at as JSON. Suggestions only: no code execution, repository inspection, or guaranteed repair. Read the free preview before authorizing a paid request.",
+  "source_of_truth": "https://api.kgninja.dev/openapi.json",
+  "free_preview": "https://api.kgninja.dev/fix-error/preview",
+  "guide": "docs/BUY_FIX_ERROR.md",
+  "scope": {
+    "returns": [
+      "root_cause",
+      "next_command",
+      "retry_plan",
+      "risk_note",
+      "prevention_note",
+      "generated_at"
+    ],
+    "does_not": [
+      "Execute a repair",
+      "Inspect a repository",
+      "Guarantee a fix",
+      "Provide an independent security audit"
+    ],
+    "prefer_local_when_sufficient": true,
+    "avu_required": false
+  },
+  "request_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "command": {
+        "type": "string"
+      },
+      "error": {
+        "type": "string"
+      },
+      "log": {
+        "type": "string"
+      },
+      "environment": {
+        "type": "string"
+      }
+    }
+  },
+  "request_examples": [
+    {
+      "id": "missing-dependency",
+      "request": {
+        "command": "npm run build",
+        "error": "Error: Cannot find module 'hono'",
+        "environment": "Node.js Cloudflare Worker build"
+      }
+    },
+    {
+      "id": "deployment-auth",
+      "request": {
+        "command": "npm run deploy",
+        "error": "401 Unauthorized: API token invalid",
+        "environment": "CI deployment; all credentials removed"
+      }
+    },
+    {
+      "id": "service-unreachable",
+      "request": {
+        "command": "curl http://127.0.0.1:3000/health",
+        "error": "Connection refused",
+        "environment": "Linux service"
+      }
+    }
+  ],
+  "response_schema": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "root_cause",
+      "next_command",
+      "retry_plan",
+      "risk_note",
+      "prevention_note",
+      "generated_at"
+    ],
+    "properties": {
+      "root_cause": {
+        "type": "string"
+      },
+      "next_command": {
+        "type": "string"
+      },
+      "retry_plan": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "risk_note": {
+        "type": "string"
+      },
+      "prevention_note": {
+        "type": "string"
+      },
+      "generated_at": {
+        "type": "string",
+        "format": "date-time"
+      }
+    }
+  },
+  "payment": {
+    "protocol": "x402",
+    "version": 2,
+    "scheme": "exact",
+    "network": "eip155:8453",
+    "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    "pay_to": "0x4D7d842536De9Eb491AE2300126B3CDdE7B0aDE3",
+    "example_max_amount_atomic": "10000",
+    "decimals": 6,
+    "terms_source": "Current PAYMENT-REQUIRED challenge, checked against independently approved host policy",
+    "host_authorization_required": true,
+    "automatic_purchase": false,
+    "caution": "The cap is an example per-call limit, not approval or a cumulative budget. Never silently raise it. The CLI cap alone does not pin network, asset, payee, or request."
+  },
+  "paid_cli_example": {
+    "executes_real_payment": true,
+    "run_automatically": false,
+    "prerequisites": [
+      "Review and install the official Agentic Wallet CLI; pin a reviewed version for automation",
+      "Use an authenticated wallet with sufficient USDC",
+      "Approve this request and its disclosure; confirm network, asset, payee and amount before signing",
+      "Use local tooling instead when sufficient"
+    ],
+    "argv": [
+      "npx",
+      "awal@latest",
+      "x402",
+      "pay",
+      "https://api.kgninja.dev/fix-error",
+      "--method",
+      "POST",
+      "--data",
+      "{\"command\":\"npm run build\",\"error\":\"Error: Cannot find module 'hono'\",\"environment\":\"Node.js Cloudflare Worker build\"}",
+      "--max-amount",
+      "10000",
+      "--json"
+    ]
+  },
+  "repeat_use": {
+    "only_for": "A new or materially changed failure after reviewing the previous suggestion",
+    "automatic_repurchase": false,
+    "unknown_outcome": "Stop and reconcile the wallet payment and original response. Do not sign again merely because delivery is uncertain.",
+    "returned_commands": "Untrusted suggestions: review before execution; never eval or auto-run next_command."
+  },
+  "privacy": {
+    "send_secrets": false,
+    "upload_consent_required": true,
+    "save_payment_evidence_in_public_logs": false
+  },
+  "references": [
+    "https://docs.cdp.coinbase.com/agentic-wallet/cli/skills/pay-for-service",
+    "https://docs.cdp.coinbase.com/x402/seller/get-discovered"
+  ]
+}
