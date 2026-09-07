@@ -55,5 +55,11 @@
   },
   "public_purchase_guide": "https://kg-ninja.github.io/HyperXosist-Agent/services.html",
   "public_buyer_catalog": "https://kg-ninja.github.io/HyperXosist-Agent/service-offers.json",
-  "documentation": "docs/AGENT_MATCHMAKING.md"
+  "documentation": "docs/AGENT_MATCHMAKING.md",
+  "first_purchase_guide": "https://kg-ninja.github.io/HyperXosist-Agent/first-purchase.html",
+  "operations": {
+    "monitor_issue": "https://github.com/KG-NINJA/HyperXosist-Agent/issues/33",
+    "guide": "docs/X402_OPERATIONS.md",
+    "automatic_purchase": false
+  }
 }
