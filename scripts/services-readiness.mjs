@@ -48,7 +48,9 @@ export function validValidation(v) {
   if (!record(v) || v.valid!==true || v.statusCode!==402 || v.x402Version!==2 || v.simulation?.outcome!=='accepted' || !Array.isArray(v.preflight)) return false;
   if (!v.preflight.every(x=>record(x)&&typeof x.check==='string'&&typeof x.passed==='boolean'&& (x.severity!=='required'||x.passed))) return false;
   const names=new Set(v.preflight.filter(x=>x.passed).map(x=>x.check.replace(/[^a-z0-9]/gi,'').toLowerCase()));
-  return ['reachable','returns402','hasbazaarextension','parse'].every(x=>names.has(x));
+  // Support documented names and expanded names observed from the live CDP validator.
+  // All mandatory checks must still pass; names alone never establish validity.
+  return [['reachable','endpointreachable'],['returns402'],['hasbazaarextension'],['parse','validjson']].every(group=>group.some(x=>names.has(x)));
 }
 function observation(o, expected) {
   if (!o || o.unavailable || [401,403,429].includes(o.status) || o.status>=500) return 'unknown';

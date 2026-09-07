@@ -12,6 +12,7 @@ on:
       - service-receipts.mjs
       - scripts/services-readiness.mjs
       - test/service-windows.test.mjs
+      - test/service-validator-observation.test.mjs
       - .github/workflows/fix-error-readiness.yml
 permissions:
   contents: read
@@ -31,7 +32,7 @@ jobs:
         with:
           node-version: '22'
       - name: Offline audit and buyer contract tests
-        run: node --test test/fix-error-readiness.test.mjs test/fix-error-quickstart.test.mjs test/service-windows.test.mjs
+        run: node --test test/fix-error-readiness.test.mjs test/fix-error-quickstart.test.mjs test/service-windows.test.mjs test/service-validator-observation.test.mjs
       - name: Collect five-route unpaid evidence (not paid-delivery approval)
         shell: bash
         run: |
