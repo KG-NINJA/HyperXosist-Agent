@@ -97,14 +97,14 @@ export function evaluateRoute(spec, common, own) {
     if(!matchesPinnedSchema(entry?.metadata?.output?.example,spec.response_schema)) gaps.push('local_discovery_output_example_missing_or_incomplete');
   } else gaps.push('local_discovery_unavailable');
   const v=own.validator?.data;
-  const validation=observation(own.validator,200)==='pass' ? validValidation(v)?'accepted':'rejected' : observation(own.validator,200)==='fail'?'rejected':'unknown';
+  const validation=observation(own.validator,200)==='pass' ? validValidation(v)?'accepted':v?.valid===false||v?.simulation?.outcome==='rejected'?'rejected':'unknown' : 'unknown';
   let indexing='unknown';
-  if(validation==='accepted') {
+  if(observation(own.validator,200)==='pass') {
     if(v.index===null) indexing='not_indexed';
     else if(record(v.index)&&typeof v.index.active==='boolean') indexing=v.index.active?'active':'inactive';
   }
   const state=checks.some(x=>x.state==='fail')?'blocked':checks.some(x=>x.state==='unknown')?'unknown':'unpaid_checks_passed';
-  return {id:spec.id,resource:spec.resource,payment_readiness:state,checks,official_validation:validation,bazaar_index:indexing,metadata_gaps:gaps,paid_delivery_verified:false,new_external_revenue_verified:false};
+  return {id:spec.id,resource:spec.resource,payment_readiness:state,checks,official_validation:validation,validator_observation:{valid:typeof v?.valid==='boolean'?v.valid:null,status_code:Number.isInteger(v?.statusCode)?v.statusCode:null,version:Number.isInteger(v?.x402Version)?v.x402Version:null,simulation:['accepted','rejected'].includes(v?.simulation?.outcome)?v.simulation.outcome:null,preflight:Array.isArray(v?.preflight)?v.preflight.slice(0,20).map(x=>({check:typeof x?.check==='string'&&/^[A-Za-z0-9_-]{1,80}$/.test(x.check)?x.check:null,passed:typeof x?.passed==='boolean'?x.passed:null,severity:['required','optional','recommended'].includes(x?.severity)?x.severity:null})):null},bazaar_index:indexing,metadata_gaps:gaps,paid_delivery_verified:false,new_external_revenue_verified:false};
 }
 export async function collectAll({fetchImpl=fetch,validate=false}={}) {
   const allowedGet=new Set(Object.entries(URLS).filter(([k])=>k!=='validator').map(([,v])=>v));
