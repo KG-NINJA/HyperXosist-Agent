@@ -92,7 +92,7 @@
     "test:avu-buyer": "node --test test/avu-buyer.test.mjs",
     "avu:demo": "node examples/avu-artifact-handoff.mjs",
     "avu:status": "node examples/avu-artifact-handoff.mjs --status",
-    "test:marketplace": "node --test test/agent-matchmaker.test.mjs",
+    "test:marketplace": "node --test test/agent-matchmaker.test.mjs test/fix-error-quickstart.test.mjs",
     "marketplace:demo": "node examples/agent-marketplace.mjs",
     "marketplace:mcp": "node mcp/matchmaker-server.mjs",
     "test:buyer-quickstart": "node --test test/fix-error-quickstart.test.mjs"
