@@ -47,7 +47,7 @@ create a second overlapping schedule to conceal that issue.
 
 ## One external-user experiment
 
-Publish [the first-use guide](../first-purchase.md) and link it from the public
+Publish [the first-use guide](../first-purchase.html) and link it from the public
 agent marketplace. Focus first on the already-used command-error route, and use
 the X query route only for a genuine query-building task. Do not buy from yourself,
 create fake customers or generate bulk unsolicited outreach. No paid advertising,
