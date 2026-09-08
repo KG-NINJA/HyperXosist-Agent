@@ -73,9 +73,9 @@ function sensitiveTree(value,depth=0) {
 }
 function publicUrl(value) {
   try{
-    const u=new URL(value),h=u.hostname.toLowerCase();
+    const u=new URL(value),h=u.hostname.toLowerCase().replace(/\.+$/, '');
     if(!['http:','https:'].includes(u.protocol)||u.username||u.password||u.hash)return false;
-    if(!h.includes('.')||h.startsWith('[')||/^\d+(\.\d+){3}$/.test(h)||/(?:^|\.)(?:localhost|local|internal|lan|test|invalid)$/.test(h))return false;
+    if(h.endsWith('.home.arpa')||h==='home.arpa'||!h.includes('.')||h.startsWith('[')||/^\d+(\.\d+){3}$/.test(h)||/(?:^|\.)(?:localhost|local|internal|lan|test|invalid)$/.test(h))return false;
     if([...u.searchParams.keys()].some(k=>/(?:token|secret|password|signature|api.?key|authorization|^sig$)/i.test(k)))return false;
     return true;
   }catch{return false;}

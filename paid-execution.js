@@ -1,313 +1,236 @@
 'use strict';
 
-/**
- * Shared x402 execution bridge for browser Site Tools and MCP adapters.
- *
- * This module never creates or stores wallet keys. It performs the existing
- * HyperXosist paid HTTP request, surfaces PAYMENT-REQUIRED on 402, and accepts
- * an opaque x402 V2 PAYMENT-SIGNATURE for an explicitly confirmed retry.
- */
+/** Existing x402 client bridge. No signer, payment loop, storage or chain verifier. */
 (function exposePaidExecution(root, factory) {
   const api = factory(root);
   if (typeof module === 'object' && module.exports) module.exports = api;
   if (root) root.HyperXosistPaidExecution = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function createPaidExecution(root) {
-  const VERSION = '1.0.0';
+  const VERSION = '1.1.0';
   const TYPE = 'hyperxosist.x402_execution.v1';
-  const MAX_PAYMENT_SIGNATURE_LENGTH = 65536;
-  const DEFAULT_TIMEOUT_MS = 30000;
-  const HEADER_NAMES = Object.freeze({
-    paymentRequired: 'PAYMENT-REQUIRED',
-    paymentSignature: 'PAYMENT-SIGNATURE',
-    paymentResponse: 'PAYMENT-RESPONSE'
-  });
-
-  const PaymentEndpoints =
-    (root && root.HyperXosistPaymentEndpoints) ||
+  const MAX_HEADER = 65536;
+  const MAX_BODY = 1048576;
+  const MAX_INPUT = 65536;
+  const POLICY = Object.freeze({network: 'eip155:8453', asset: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', payTo: '0x4D7d842536De9Eb491AE2300126B3CDdE7B0aDE3', amount: '10000'});
+  const HEADER_NAMES = Object.freeze({paymentRequired: 'PAYMENT-REQUIRED', paymentSignature: 'PAYMENT-SIGNATURE', paymentResponse: 'PAYMENT-RESPONSE'});
+  const PaymentEndpoints = (root && root.HyperXosistPaymentEndpoints) ||
     (typeof module === 'object' && module.exports ? require('./payment-endpoints.js') : null);
-
-  function resolvePayment(options) {
-    if (!PaymentEndpoints || typeof PaymentEndpoints.resolve !== 'function') {
-      return null;
-    }
-    const opts = options || {};
-    return PaymentEndpoints.resolve(opts.paymentEnvironment || 'production');
-  }
+  const record = value => value !== null && typeof value === 'object' && !Array.isArray(value);
+  const byteLength = value => new TextEncoder().encode(value).length;
+  const address = (a, b) => typeof a === 'string' && a.toLowerCase() === b.toLowerCase();
+  const canonical = value => Array.isArray(value) ? value.map(canonical) : record(value) ?
+    Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical(value[key])])) : value;
+  const same = (a, b) => JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
 
   function safeHeader(headers, name) {
-    if (!headers || typeof headers.get !== 'function') return null;
-    const value = headers.get(name);
-    return value == null || value === '' ? null : String(value);
+    const value = headers && typeof headers.get === 'function' ? headers.get(name) : null;
+    if (value == null || value === '') return null;
+    if (typeof value !== 'string' || value.length > MAX_HEADER || /[\r\n]/.test(value)) throw new Error('invalid_response_header');
+    return value;
   }
-
   function decodeBase64Json(value) {
-    if (!value || typeof value !== 'string') return null;
+    if (typeof value !== 'string' || !value || value.length > MAX_HEADER || !/^[A-Za-z0-9+/_-]+={0,2}$/.test(value)) return null;
     try {
-      const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
-      const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4);
-      let jsonText;
-      if (typeof atob === 'function') {
-        const binary = atob(padded);
-        const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
-        jsonText = new TextDecoder().decode(bytes);
-      } else {
-        jsonText = Buffer.from(padded, 'base64').toString('utf8');
-      }
-      return JSON.parse(jsonText);
-    } catch (_error) {
-      return null;
-    }
+      const normalized = value.replace(/-/g, '+').replace(/_/g, '/').replace(/=+$/, '');
+      if (normalized.length % 4 === 1) return null;
+      const binary = atob(normalized + '='.repeat((4 - normalized.length % 4) % 4));
+      if (btoa(binary).replace(/=+$/, '') !== normalized) return null;
+      const decoded = JSON.parse(new TextDecoder('utf-8', {fatal: true}).decode(Uint8Array.from(binary, c => c.charCodeAt(0))));
+      return record(decoded) ? decoded : null;
+    } catch (_) { return null; }
   }
-
   function normalizeSignature(value) {
-    if (value == null || value === '') return { ok: true, value: null };
-    if (typeof value !== 'string') {
-      return { ok: false, code: 'invalid_payment_signature', message: 'paymentSignature must be a string.' };
+    if (value == null || value === '') return {ok: true, value: null};
+    if (typeof value !== 'string' || !value.trim() || value.length > MAX_HEADER || /[\r\n]/.test(value) || !/^[A-Za-z0-9+/_=-]+$/.test(value.trim())) {
+      return {ok: false, code: 'invalid_payment_signature', message: 'paymentSignature must be a bounded opaque Base64 x402 payload without line breaks.'};
     }
-    const signature = value.trim();
-    if (!signature) {
-      return { ok: false, code: 'invalid_payment_signature', message: 'paymentSignature must not be empty.' };
-    }
-    if (/[\r\n]/.test(signature)) {
-      return { ok: false, code: 'invalid_payment_signature', message: 'paymentSignature must not contain line breaks.' };
-    }
-    if (signature.length > MAX_PAYMENT_SIGNATURE_LENGTH) {
-      return { ok: false, code: 'invalid_payment_signature', message: 'paymentSignature is too large.' };
-    }
-    if (!/^[A-Za-z0-9+/_=-]+$/.test(signature)) {
-      return {
-        ok: false,
-        code: 'invalid_payment_signature',
-        message: 'paymentSignature must be an opaque Base64 or Base64URL x402 payload.'
-      };
-    }
-    return { ok: true, value: signature };
+    return {ok: true, value: value.trim()};
   }
-
   function baseResult(payment) {
-    return {
-      type: TYPE,
-      version: VERSION,
-      accessTier: 'paid',
-      endpoint: payment ? payment.paymentEndpoint : null,
+    return {type: TYPE, version: VERSION, accessTier: 'paid', endpoint: payment ? payment.paymentEndpoint : null,
       paymentOptionsEndpoint: payment ? payment.paymentOptionsEndpoint : null,
       canonicalOpenApi: payment ? `${payment.baseUrl}/openapi.json` : null,
-      x402: {
-        version: 2,
-        scheme: 'exact',
-        network: 'eip155:8453',
-        networkName: 'Base',
-        asset: 'USDC',
-        amount: '0.01',
-        requestHeader: HEADER_NAMES.paymentRequired,
-        signatureHeader: HEADER_NAMES.paymentSignature,
-        responseHeader: HEADER_NAMES.paymentResponse
-      }
-    };
+      status: 0, requestId: null, ok: false, stage: 'failed', paid: false, paymentRequired: false,
+      paymentAttempted: false, reconciliationRequired: false, automaticRetryAllowed: false,
+      settlement: {state: 'not_observed', independentlyVerified: false},
+      delivery: {state: 'not_received', outcomeVerified: false},
+      x402: {version: 2, scheme: 'exact', network: POLICY.network, networkName: 'Base', asset: 'USDC', amount: '0.01',
+        requestHeader: HEADER_NAMES.paymentRequired, signatureHeader: HEADER_NAMES.paymentSignature, responseHeader: HEADER_NAMES.paymentResponse}};
+  }
+  function failure(result, code) {
+    const reconcile = result.paymentAttempted || result.settlement.state === 'reported_success';
+    const messages = {aborted: 'Request or response-body read was aborted.', network_error: 'Request or response-body read failed.',
+      invalid_input: 'Input must be a serializable bounded JSON object.', invalid_result: 'The delivered body does not match the paid query contract.',
+      invalid_challenge: 'The 402 challenge is missing, inconsistent, or differs from the pinned payment policy.',
+      settlement_unconfirmed: 'No consistent successful settlement report was received.', upstream_error: 'The paid endpoint did not return HTTP 200.',
+      unexpected_unpaid_success: 'The paid endpoint returned a result without an authorized signed request.',
+      response_too_large: 'The response exceeded the client size limit.', invalid_response_json: 'The response is not a JSON object.',
+      invalid_response_header: 'An invalid response header was received.', invalid_payment_environment: 'Unknown payment environment.',
+      payment_configuration_unavailable: 'Payment endpoint configuration is unavailable.', fetch_unavailable: 'Fetch is unavailable.',
+      payment_confirmation_required: 'Explicit confirmation is required before transmitting a payment signature.',
+      invalid_payment_signature: 'Invalid payment signature format.'};
+    return Object.assign(result, {ok: false, stage: reconcile ? 'outcome_unknown' : 'failed', paymentRequired: false,
+      reconciliationRequired: reconcile, error: {code, message: messages[code] || messages.network_error},
+      nextAction: reconcile ? 'Stop. Reconcile the original wallet settlement and delivery. Do not create a new signature or automatically repeat the paid request.' :
+        'Inspect the failure before any new request; no automatic retry was performed.'});
   }
 
-  function failed(payment, code, message, extra) {
-    return Object.assign(baseResult(payment), {
-      ok: false,
-      stage: 'failed',
-      status: 0,
-      paid: false,
-      paymentRequired: false,
-      error: { code, message }
-    }, extra || {});
-  }
-
-  function validInput(input) {
-    return input && typeof input === 'object' && !Array.isArray(input);
-  }
-
-  async function readResponseBody(response) {
-    if (!response || typeof response.text !== 'function') return null;
-    const text = await response.text();
-    if (!text) return null;
-    try {
-      return JSON.parse(text);
-    } catch (_error) {
-      return { text };
-    }
-  }
-
+  // The deadline remains active through body consumption, not just receipt of headers.
   function createAbortState(externalSignal, timeoutMs) {
-    const Controller = root && root.AbortController ? root.AbortController : typeof AbortController !== 'undefined' ? AbortController : null;
-    if (!Controller) return { signal: externalSignal || undefined, cleanup() {} };
-
-    const controller = new Controller();
-    let timer = null;
-    let abortListener = null;
-
-    if (externalSignal && typeof externalSignal.addEventListener === 'function') {
-      abortListener = function () {
-        try {
-          controller.abort(externalSignal.reason);
-        } catch (_error) {
-          controller.abort();
-        }
-      };
-      if (externalSignal.aborted) abortListener();
-      else externalSignal.addEventListener('abort', abortListener, { once: true });
+    const controller = new AbortController();
+    const forward = () => controller.abort();
+    if (externalSignal) {
+      if (externalSignal.aborted) forward();
+      else externalSignal.addEventListener('abort', forward, {once: true});
     }
-
-    const duration = Number.isFinite(Number(timeoutMs)) ? Math.max(1, Number(timeoutMs)) : DEFAULT_TIMEOUT_MS;
-    timer = setTimeout(function () {
+    const duration = Number.isFinite(Number(timeoutMs)) ? Math.min(120000, Math.max(1, Number(timeoutMs))) : 30000;
+    const timer = setTimeout(forward, duration);
+    return {signal: controller.signal, cleanup() {
+      clearTimeout(timer);
+      if (externalSignal) externalSignal.removeEventListener('abort', forward);
+    }};
+  }
+  function boundedWait(work, signal) {
+    if (signal.aborted) return Promise.reject(new Error('aborted'));
+    return new Promise((resolve, reject) => {
+      const abort = () => reject(new Error('aborted'));
+      signal.addEventListener('abort', abort, {once: true});
+      Promise.resolve().then(() => { if (signal.aborted) throw new Error('aborted'); return work(); })
+        .then(resolve, reject).finally(() => signal.removeEventListener('abort', abort));
+    });
+  }
+  function cancelBody(response) {
+    try { if (response && response.body) Promise.resolve(response.body.cancel()).catch(() => {}); } catch (_) {}
+  }
+  async function readResponseBody(response, signal) {
+    const length = safeHeader(response.headers, 'Content-Length');
+    if (length && (!/^\d+$/.test(length) || Number(length) > MAX_BODY)) { cancelBody(response); throw new Error('response_too_large'); }
+    let text;
+    if (response.body && typeof response.body.getReader === 'function') {
+      const reader = response.body.getReader();
+      let size = 0; const chunks = [];
       try {
-        controller.abort(new Error('HyperXosist paid execution timed out.'));
-      } catch (_error) {
-        controller.abort();
-      }
-    }, duration);
-
-    return {
-      signal: controller.signal,
-      cleanup() {
-        if (timer) clearTimeout(timer);
-        if (externalSignal && abortListener && typeof externalSignal.removeEventListener === 'function') {
-          externalSignal.removeEventListener('abort', abortListener);
+        for (;;) {
+          const part = await boundedWait(() => reader.read(), signal);
+          if (part.done) break;
+          size += part.value.byteLength;
+          if (size > MAX_BODY) throw new Error('response_too_large');
+          chunks.push(part.value);
         }
-      }
-    };
+        const bytes = new Uint8Array(size); let offset = 0;
+        for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+        text = new TextDecoder('utf-8', {fatal: true}).decode(bytes);
+      } catch (error) {
+        try { Promise.resolve(reader.cancel()).catch(() => {}); } catch (_) {}
+        throw error;
+      } finally { try { reader.releaseLock(); } catch (_) {} }
+    } else if (typeof response.text === 'function') {
+      // Compatibility with existing fetch adapters; native fetch takes the bounded stream path.
+      text = await boundedWait(() => response.text(), signal);
+      if (typeof text !== 'string' || byteLength(text) > MAX_BODY) throw new Error('response_too_large');
+    } else throw new Error('invalid_response_json');
+    let body;
+    try { body = JSON.parse(text); } catch (_) { throw new Error('invalid_response_json'); }
+    if (!record(body)) throw new Error('invalid_response_json');
+    return body;
+  }
+  function challengeMatches(challenge, body, payment) {
+    if (!record(challenge) || challenge.x402Version !== 2 || challenge.resource?.url !== payment.paymentEndpoint || !Array.isArray(challenge.accepts) || challenge.accepts.length !== 1) return false;
+    const t = challenge.accepts[0];
+    if (!record(t) || t.scheme !== 'exact' || t.network !== POLICY.network || t.amount !== POLICY.amount ||
+      !address(t.asset, POLICY.asset) || !address(t.payTo, POLICY.payTo) || !Number.isSafeInteger(t.maxTimeoutSeconds) || t.maxTimeoutSeconds <= 0 || t.maxTimeoutSeconds > 3600) return false;
+    const echoed = Object.hasOwn(body, 'payment_required') ? body.payment_required : body.x402Version === 2 && record(body.resource) ? body : undefined;
+    if (echoed !== undefined) {
+      if (!record(echoed)) return false;
+      const pick = x => ({x402Version: x.x402Version, resource: x.resource, accepts: x.accepts, extensions: x.extensions});
+      if (!same(pick(challenge), pick(echoed))) return false;
+    }
+    return true;
+  }
+  function applySettlement(result, primary, legacy) {
+    const p = decodeBase64Json(primary), l = decodeBase64Json(legacy);
+    result.x402.paymentResponseHeader = primary || legacy;
+    result.x402.paymentResponse = p || l;
+    if (!primary && !legacy) return;
+    const valid = (!primary || p) && (!legacy || l) && !(p && l && !same(p, l));
+    const data = p || l;
+    if (!valid || !data || data.network !== POLICY.network || typeof data.success !== 'boolean') {
+      result.settlement.state = 'invalid_report'; return;
+    }
+    if (data.success === false) { result.settlement.state = 'reported_failure'; result.paid = false; return; }
+    if (!/^0x[0-9a-fA-F]{64}$/.test(data.transaction || '') || !/^0x[0-9a-fA-F]{40}$/.test(data.payer || '')) {
+      result.settlement.state = 'invalid_report'; return;
+    }
+    result.settlement.state = 'reported_success'; result.paid = true;
+    // This is a server report, NOT a chain lookup or independent verification.
+  }
+  function validQueryResult(body) {
+    const fields = ['status','service','query','searchUrl','mode','appliedNoiseTerms','excludeTerms','generated_at','version','payment'];
+    if (!record(body) || Object.keys(body).sort().join('|') !== fields.sort().join('|') || body.status !== 'paid' || body.service !== 'HyperXosist Query Builder' ||
+      !['live','top'].includes(body.mode) || !['query','searchUrl','generated_at','version'].every(k => typeof body[k] === 'string') ||
+      !['appliedNoiseTerms','excludeTerms'].every(k => Array.isArray(body[k]) && body[k].every(x => typeof x === 'string')) ||
+      !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?(?:Z|[+-]\d\d:\d\d)$/.test(body.generated_at) || !Number.isFinite(Date.parse(body.generated_at))) return false;
+    const p = body.payment;
+    if (!record(p) || p.protocol !== 'x402' || p.paid !== true || p.demo === true || p.bypass || p.price !== '$0.01' || p.network !== POLICY.network || typeof p.real_revenue !== 'boolean' ||
+      Object.keys(p).some(k => !['protocol','paid','demo','bypass','price','network','real_revenue'].includes(k)) ||
+      (Object.hasOwn(p, 'demo') && typeof p.demo !== 'boolean') || (Object.hasOwn(p, 'bypass') && typeof p.bypass !== 'string')) return false;
+    try { const url = new URL(body.searchUrl); return url.origin === 'https://x.com' && url.pathname === '/search' && !url.username && !url.password; } catch (_) { return false; }
   }
 
   async function execute(input, options) {
-    const opts = options || {};
-    let payment;
+    const opts = options || {}; let payment;
+    try { payment = PaymentEndpoints && PaymentEndpoints.resolve(opts.paymentEnvironment || 'production'); }
+    catch (_) { return failure(baseResult(null), 'invalid_payment_environment'); }
+    const result = baseResult(payment);
+    if (!payment) return failure(result, 'payment_configuration_unavailable');
+    let serialized, copiedInput;
     try {
-      payment = resolvePayment(opts);
-    } catch (error) {
-      return failed(null, 'invalid_payment_environment', error && error.message ? error.message : String(error));
-    }
-
-    if (!payment) {
-      return failed(null, 'payment_configuration_unavailable', 'HyperXosist payment endpoint configuration is unavailable.');
-    }
-    if (!validInput(input)) {
-      return failed(payment, 'invalid_input', 'input must be a JSON object.');
-    }
-
-    const signatureResult = normalizeSignature(opts.paymentSignature);
-    if (!signatureResult.ok) {
-      return failed(payment, signatureResult.code, signatureResult.message);
-    }
-    const paymentSignature = signatureResult.value;
-    if (paymentSignature && opts.confirmPayment !== true) {
-      return failed(
-        payment,
-        'payment_confirmation_required',
-        'confirmPayment must be true before a PAYMENT-SIGNATURE is sent. No network request was made.'
-      );
-    }
-
-    if (opts.signal && opts.signal.aborted) {
-      return failed(payment, 'aborted', 'Paid execution was aborted before the network request.');
-    }
-
-    const fetchImpl =
-      opts.fetch ||
-      (root && typeof root.fetch === 'function' ? root.fetch.bind(root) : null);
-    if (typeof fetchImpl !== 'function') {
-      return failed(payment, 'fetch_unavailable', 'No fetch implementation is available.');
-    }
-
-    const headers = {
-      Accept: 'application/json',
-      'Content-Type': 'application/json'
-    };
-    if (paymentSignature) headers[HEADER_NAMES.paymentSignature] = paymentSignature;
-
-    const abortState = createAbortState(opts.signal, opts.timeoutMs);
-    let response;
+      if (!record(input)) throw new Error();
+      serialized = JSON.stringify(input);
+      if (typeof serialized !== 'string' || byteLength(serialized) > MAX_INPUT || !record(copiedInput = JSON.parse(serialized))) throw new Error();
+    } catch (_) { return failure(result, 'invalid_input'); }
+    const signature = normalizeSignature(opts.paymentSignature);
+    if (!signature.ok) return failure(result, signature.code);
+    if (signature.value && opts.confirmPayment !== true) return failure(result, 'payment_confirmation_required');
+    if (opts.signal && opts.signal.aborted) return failure(result, 'aborted');
+    const fetchImpl = opts.fetch || (root && typeof root.fetch === 'function' ? root.fetch.bind(root) : null);
+    if (typeof fetchImpl !== 'function') return failure(result, 'fetch_unavailable');
+    const headers = {Accept: 'application/json', 'Content-Type': 'application/json'};
+    if (signature.value) headers[HEADER_NAMES.paymentSignature] = signature.value;
+    const abort = createAbortState(opts.signal, opts.timeoutMs); let response;
     try {
-      response = await fetchImpl(payment.paymentEndpoint, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(input),
-        cache: 'no-store',
-        credentials: 'omit',
-        redirect: 'error',
-        signal: abortState.signal
-      });
+      response = await boundedWait(() => {
+        result.paymentAttempted = Boolean(signature.value);
+        result.paid = signature.value ? null : false;
+        return fetchImpl(payment.paymentEndpoint, {method: 'POST', headers, body: serialized, cache: 'no-store', credentials: 'omit', redirect: 'error', signal: abort.signal});
+      }, abort.signal);
+      result.status = Number(response.status) || 0;
+      if (response.redirected) throw new Error('invalid_response_header');
+      const id = safeHeader(response.headers, 'X-Request-Id');
+      result.requestId = id && /^[A-Za-z0-9_.:-]{1,128}$/.test(id) ? id : null;
+      result.x402.paymentRequiredHeader = safeHeader(response.headers, HEADER_NAMES.paymentRequired);
+      result.x402.paymentRequired = decodeBase64Json(result.x402.paymentRequiredHeader);
+      applySettlement(result, safeHeader(response.headers, HEADER_NAMES.paymentResponse), safeHeader(response.headers, 'X-PAYMENT-RESPONSE'));
+      const body = await readResponseBody(response, abort.signal);
+      if (result.status === 402) {
+        if (signature.value) return failure(result, 'settlement_unconfirmed');
+        if (!challengeMatches(result.x402.paymentRequired, body, payment)) return failure(result, 'invalid_challenge');
+        return Object.assign(result, {stage: 'payment_required', paymentRequired: true, requirements: body,
+          nextAction: 'Review this challenge against trusted wallet policy. Only the wallet host can authorize one identical request. Do not repeat unsigned requests in a loop.',
+          retry: {tool: 'hyperxosist_execute', arguments: {input: copiedInput, paymentSignature: '<Base64 PAYMENT-SIGNATURE>', confirmPayment: true, paymentEnvironment: payment.environment}}});
+      }
+      if (result.status !== 200) return failure(result, 'upstream_error');
+      if (!validQueryResult(body)) { result.delivery.state = 'invalid_result'; return failure(result, 'invalid_result'); }
+      result.delivery.state = 'received'; result.result = body;
+      if (!signature.value) return failure(result, 'unexpected_unpaid_success');
+      if (result.settlement.state !== 'reported_success') return failure(result, 'settlement_unconfirmed');
+      return Object.assign(result, {ok: true, stage: 'completed', nextAction: 'Keep the result and verify settlement independently. Do not automatically execute suggestions or create another purchase.'});
     } catch (error) {
-      const aborted =
-        (abortState.signal && abortState.signal.aborted) ||
-        (error && error.name === 'AbortError');
-      return failed(
-        payment,
-        aborted ? 'aborted' : 'network_error',
-        aborted ? 'HyperXosist paid execution was aborted.' : 'Unable to reach the HyperXosist x402 endpoint.'
-      );
-    } finally {
-      abortState.cleanup();
-    }
-
-    const body = await readResponseBody(response);
-    const paymentRequiredHeader = safeHeader(response.headers, HEADER_NAMES.paymentRequired);
-    const paymentResponseHeader = safeHeader(response.headers, HEADER_NAMES.paymentResponse);
-    const requestId = safeHeader(response.headers, 'X-Request-Id');
-    const common = Object.assign(baseResult(payment), {
-      status: Number(response.status) || 0,
-      requestId,
-      x402: Object.assign({}, baseResult(payment).x402, {
-        paymentRequiredHeader,
-        paymentRequired: decodeBase64Json(paymentRequiredHeader),
-        paymentResponseHeader,
-        paymentResponse: decodeBase64Json(paymentResponseHeader)
-      })
-    });
-
-    if (response.status === 402) {
-      return Object.assign(common, {
-        ok: false,
-        stage: 'payment_required',
-        paid: false,
-        paymentRequired: true,
-        requirements: body,
-        nextAction:
-          'Authorize x402 payment with a compatible wallet/facilitator, then call hyperxosist_execute again with paymentSignature and confirmPayment=true.',
-        retry: {
-          tool: 'hyperxosist_execute',
-          arguments: {
-            input,
-            paymentSignature: '<Base64 PAYMENT-SIGNATURE>',
-            confirmPayment: true,
-            paymentEnvironment: payment.environment
-          }
-        }
-      });
-    }
-
-    if (response.ok) {
-      return Object.assign(common, {
-        ok: true,
-        stage: 'completed',
-        paid: Boolean(paymentSignature || paymentResponseHeader),
-        paymentRequired: false,
-        result: body
-      });
-    }
-
-    return Object.assign(common, {
-      ok: false,
-      stage: 'failed',
-      paid: Boolean(paymentSignature),
-      paymentRequired: false,
-      error: {
-        code: 'upstream_error',
-        message: `HyperXosist paid endpoint returned HTTP ${response.status}.`
-      },
-      upstream: body
-    });
+      const allowed = ['response_too_large','invalid_response_json','invalid_response_header'];
+      const code = abort.signal.aborted || error?.message === 'aborted' ? 'aborted' : allowed.includes(error?.message) ? error.message : 'network_error';
+      cancelBody(response);
+      return failure(result, code);
+    } finally { abort.cleanup(); }
   }
-
-  return Object.freeze({
-    version: VERSION,
-    type: TYPE,
-    headers: HEADER_NAMES,
-    execute,
-    decodeBase64Json,
-    normalizeSignature
-  });
+  return Object.freeze({version: VERSION, type: TYPE, headers: HEADER_NAMES, execute, decodeBase64Json, normalizeSignature});
 });

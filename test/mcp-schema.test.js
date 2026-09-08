@@ -22,36 +22,21 @@ async function main() {
   assert.strictEqual(paid.annotations.destructiveHint, true);
   assert.strictEqual(paid.inputSchema.properties.confirmPayment.type, 'boolean');
   assert.strictEqual(paid.outputSchema.properties.type.const, 'hyperxosist.x402_execution.v1');
+  assert.ok(paid.outputSchema.properties.stage.enum.includes('outcome_unknown'));
+  assert.deepStrictEqual(paid.outputSchema.properties.paid.type, ['boolean', 'null']);
+  assert.strictEqual(paid.outputSchema.properties.automaticRetryAllowed.const, false);
 
   const dispatch = createToolDispatcher();
   const cases = [
-    [
-      'hyperxosist_search_plan',
-      { intent: 'Find complaints on X about Acme' },
-      'hyperxosist.search_plan.v1',
-    ],
-    [
-      'hyperxosist_filter_signals',
-      { feedback: ['Acme crashes on Safari 18.'] },
-      'hyperxosist.signal_filter.v1',
-    ],
-    [
-      'hyperxosist_build_handoff',
-      { productName: 'Acme', feedback: ['Acme crashes on Safari 18.'] },
-      'hyperxosist.handoff.v1',
-    ],
+    ['hyperxosist_search_plan', { intent: 'Find complaints on X about Acme' }, 'hyperxosist.search_plan.v1'],
+    ['hyperxosist_filter_signals', { feedback: ['Acme crashes on Safari 18.'] }, 'hyperxosist.signal_filter.v1'],
+    ['hyperxosist_build_handoff', { productName: 'Acme', feedback: ['Acme crashes on Safari 18.'] }, 'hyperxosist.handoff.v1'],
   ];
-
   for (const [name, args, expectedType] of cases) {
     const result = await dispatch(name, args);
     assert.strictEqual(result.structuredContent.type, expectedType);
     assert.deepStrictEqual(JSON.parse(result.content[0].text), JSON.parse(JSON.stringify(result.structuredContent)));
   }
-
   console.log('MCP schema tests passed.');
 }
-
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+main().catch((error) => { console.error(error); process.exit(1); });
