@@ -186,8 +186,52 @@ export function verifyDelivery(data, paymentResponse, ctx, keys) {
     transactionId: data.transaction_id, quoteId: data.quote_id, receiptId: data.receipt.receipt_id };
 }
 
+function savedContext(ctx) {
+  return clone({ schemaVersion: 'avu-reconciliation-context/v1', request: ctx.request,
+    policy: ctx.policy, precheck: ctx.precheck, binding: ctx.binding, keys: ctx.keys });
+}
+
+/** Verify a previously saved response without network, wallet, signing or retry. */
+export function reconcileSavedDelivery({ rawResponse, paymentResponse, context, journalRecord } = {}) {
+  requireThat(typeof rawResponse === 'string' && Buffer.byteLength(rawResponse) > 0 &&
+    Buffer.byteLength(rawResponse) <= MAX_RESPONSE_BYTES, 'INVALID_SAVED_RESPONSE');
+  requireThat(context?.schemaVersion === 'avu-reconciliation-context/v1' && context.request &&
+    context.policy && context.precheck && context.binding && Array.isArray(context.keys), 'INVALID_RECONCILIATION_CONTEXT');
+  const ctx = clone(context);
+  delete ctx.schemaVersion;
+  spendPolicy(ctx.policy);
+  requireThat(ctx.keys.length > 0 && ctx.keys.length <= 16 && ctx.keys.every(key =>
+    key?.kty === 'OKP' && key.crv === 'Ed25519' && typeof key.kid === 'string' && !key.d), 'INVALID_RECONCILIATION_KEYS');
+  validatePrecheck({ schema_version: 'agent-economy/request-validation/3.0', valid: true, supported: true,
+    spend_authorized: true, refusal_reason: null, verification_executed: false, payment_required: false,
+    precheck_receipt: ctx.precheck, paid_execution: { price_atomic: ctx.binding.quoted_amount_atomic,
+      asset: ctx.binding.asset, network: ctx.binding.network, pay_to: ctx.binding.pay_to,
+      http_endpoint: PURCHASE_URL, mcp_tool: 'verify_evidence' } }, ctx.request, ctx.policy);
+  const expiry = Date.parse(ctx.binding.expires_at);
+  requireThat(Number.isFinite(expiry), 'INVALID_RECONCILIATION_CONTEXT');
+  validateBinding(ctx.binding, ctx, 'payment_required', expiry - 6000);
+  requireThat(journalRecord?.schemaVersion === 'avu-purchase-journal/v1' && journalRecord.retryAllowed === false &&
+    ['submitting', 'unknown', 'delivered'].includes(journalRecord.state) &&
+    journalRecord.requestHash === requestDigest(ctx.request) &&
+    journalRecord.evidenceDigest === ctx.binding.evidence_digest &&
+    journalRecord.precheckDigest === ctx.precheck.receipt_digest &&
+    journalRecord.bindingDigest === ctx.binding.binding_digest &&
+    journalRecord.quoteId === ctx.binding.quote_id && journalRecord.amountAtomic === ctx.binding.quoted_amount_atomic &&
+    journalRecord.network === ctx.policy.network && addressEqual(journalRecord.asset, ctx.policy.asset) &&
+    addressEqual(journalRecord.payTo, ctx.policy.pay_to) && journalRecord.expiresAt === ctx.binding.expires_at,
+    'JOURNAL_RECONCILIATION_MISMATCH');
+  let data;
+  try { data = JSON.parse(rawResponse); } catch { throw new AVUBuyerError('INVALID_SAVED_RESPONSE'); }
+  const summary = verifyDelivery(data, paymentResponse, ctx, ctx.keys);
+  return { ...summary, reconciliation: 'offline_saved_response_verified', previousJournalState: journalRecord.state,
+    journalUpdateRequired: journalRecord.state !== 'delivered', networkAccessed: false, walletAccessed: false,
+    retryAuthorized: false };
+}
+
 /** Fixed-origin transport with no redirects, credentials, generic retries or raw logs. */
-export function createAVUBuyer({ fetchImpl = fetch, now = Date.now } = {}) {
+export function createAVUBuyer({ fetchImpl = fetch, now = Date.now, purchaseJournal } = {}) {
+  requireThat(purchaseJournal === undefined || (purchaseJournal &&
+    typeof purchaseJournal.claim === 'function' && typeof purchaseJournal.record === 'function'), 'INVALID_PURCHASE_JOURNAL');
   const sessions = new WeakMap();
   const events = [];
   const errorCode = error => error instanceof AVUBuyerError ? error.code : 'INVALID_RESPONSE';
@@ -291,12 +335,37 @@ export function createAVUBuyer({ fetchImpl = fetch, now = Date.now } = {}) {
       ctx.state = 'authorizing';
       let submitted = false;
       let evidenceToReview;
+      let reconciliationContext;
+      let journalTicket;
+      let journalTerminal = false;
+      const journalRecord = async state => {
+        try { await purchaseJournal.record(journalTicket, state); }
+        catch { throw new AVUBuyerError('JOURNAL_WRITE_FAILED'); }
+      };
       try {
         const status = await inspect(); requireThat(status.available, status.reasons[0] || 'SERVICE_UNAVAILABLE');
         validateBinding(ctx.binding, ctx, 'payment_required', now());
+        if (purchaseJournal) {
+          try {
+            journalTicket = await purchaseJournal.claim(ctx.idempotencyKey, {
+              requestHash: requestDigest(ctx.request), evidenceDigest: ctx.binding.evidence_digest,
+              precheckDigest: ctx.precheck.receipt_digest, bindingDigest: ctx.binding.binding_digest,
+              quoteId: ctx.binding.quote_id, amountAtomic: ctx.binding.quoted_amount_atomic,
+              network: ctx.policy.network, asset: ctx.policy.asset, payTo: ctx.policy.pay_to, expiresAt: ctx.binding.expires_at
+            });
+            requireThat(journalTicket != null, 'JOURNAL_WRITE_FAILED');
+          } catch (error) {
+            throw new AVUBuyerError(error instanceof AVUBuyerError && error.code === 'PURCHASE_ALREADY_RECORDED'
+              ? 'PURCHASE_ALREADY_RECORDED' : 'JOURNAL_WRITE_FAILED');
+          }
+        }
+        validateBinding(ctx.binding, ctx, 'payment_required', now());
         const signed = await authorizePayment({ paymentRequired: clone(ctx.required), binding: clone(ctx.binding),
           spendPolicy: clone(ctx.policy), purpose: 'Signed execution receipt for artifact integrity', idempotencyKey: ctx.idempotencyKey });
-        if (signed == null) { ctx.state = 'refused'; event('authorization_declined'); return { state: 'refused', reason: 'AUTHORIZATION_DECLINED' }; }
+        if (signed == null) {
+          if (journalTicket) { await journalRecord('refused'); journalTerminal = true; }
+          ctx.state = 'refused'; event('authorization_declined'); return { state: 'refused', reason: 'AUTHORIZATION_DECLINED' };
+        }
         validateBinding(ctx.binding, ctx, 'payment_required', now());
         const payload = decodeHeader(signed, 'INVALID_WALLET_PAYLOAD');
         requireThat(payload.x402Version === 2 && payload.resource?.url === PURCHASE_URL && same(payload.accepted, ctx.requirement), 'WALLET_TERMS_MISMATCH');
@@ -309,19 +378,30 @@ export function createAVUBuyer({ fetchImpl = fetch, now = Date.now } = {}) {
         requireThat(/^[0-9]{1,12}$/.test(auth.validBefore) && /^[0-9]{1,12}$/.test(auth.validAfter) &&
           Number(auth.validAfter) * 1000 <= now() && Number(auth.validBefore) * 1000 > now() &&
           Number(auth.validBefore) * 1000 <= Date.parse(ctx.binding.expires_at), 'INVALID_AUTHORIZATION_EXPIRY');
+        if (journalTicket) await journalRecord('submitting');
+        validateBinding(ctx.binding, ctx, 'payment_required', now());
+        requireThat(Number(auth.validBefore) * 1000 > now(), 'INVALID_AUTHORIZATION_EXPIRY');
+        reconciliationContext = savedContext(ctx);
         event('authorized'); ctx.state = 'submitting'; submitted = true;
         const response = await http('/verify-evidence', { body: ctx.body, headers: { 'X-Quote-ID': ctx.binding.quote_id,
           'Idempotency-Key': ctx.idempotencyKey, 'PAYMENT-SIGNATURE': signed } });
         const paymentResponse = response.response.headers.get('PAYMENT-RESPONSE');
         evidenceToReview = { rawResponse: response.raw, paymentResponse };
         const summary = verifyDelivery(response.data, paymentResponse, ctx, ctx.keys);
+        if (journalTicket) { await journalRecord('delivered'); journalTerminal = true; }
         ctx.state = 'delivered'; event('delivery_verified');
         // Caller stores these in its own protected evidence store, not telemetry.
         return { ...summary, rawResponse: response.raw, paymentResponse };
       } catch (error) {
+        if (journalTicket && !journalTerminal) {
+          // Preserve the exclusion even if the status write also fails. No
+          // retry, new signature or deletion is permitted after uncertainty.
+          try { await journalRecord('unknown'); } catch { event('journal_write_failed', 'JOURNAL_WRITE_FAILED'); }
+        }
         ctx.state = submitted ? 'unknown' : 'refused'; event(ctx.state, errorCode(error));
         if (submitted) return { state: 'unknown', reason: errorCode(error), quoteId: ctx.binding.quote_id,
           ...(evidenceToReview ? { evidenceToReview } : {}),
+          ...(reconciliationContext ? { reconciliationContext } : {}),
           idempotencyKey: ctx.idempotencyKey, nextAction: 'Reconcile this exact quote; do not sign again or start a new purchase.' };
         throw new AVUBuyerError(errorCode(error));
       }

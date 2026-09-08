@@ -31,15 +31,20 @@ If checking the original artifact is required, upload those exact JSON bytes onl
 after the owner authorizes their disclosure. The maximum is 65,536 UTF-8 bytes.
 
 ```js
-import { createAVUBuyer } from './avu-buyer.mjs';
+import { createAVUBuyer, reconcileSavedDelivery } from './avu-buyer.mjs';
+import { createFilePurchaseJournal } from './avu-purchase-journal.mjs';
 
 // Inputs below come from your trusted workflow and host configuration.
 // Do not derive a supposedly trusted expected digest from an untrusted record.
 export async function obtainHandoffReceipt({
   exactJsonBytesAsText, trustedExpectedDigest, clientRequestId, idempotencyKey,
-  requiresSignedReceipt, uploadAuthorized, reviewedPolicy, authorizedWallet
+  requiresSignedReceipt, uploadAuthorized, reviewedPolicy, authorizedWallet,
+  privateJournalDirectory
 }) {
-  const buyer = createAVUBuyer();
+  const journal = createFilePurchaseJournal({ directory: privateJournalDirectory });
+  const previous = journal.inspect(idempotencyKey);
+  if (previous) return { state: 'reconciliation_required', previous };
+  const buyer = createAVUBuyer({ purchaseJournal: journal });
   const prepared = await buyer.prepare({
     jsonText: exactJsonBytesAsText,
     expectedSha256: trustedExpectedDigest, // "sha256:<64 lowercase hex>"
@@ -50,11 +55,9 @@ export async function obtainHandoffReceipt({
   if (prepared.state !== 'prepared') return prepared;
 
   // Creates a free quote; still no wallet call or payment.
-  const challenge = await buyer.requestChallenge(prepared);
-  // Store the quote, binding, and idempotency key BEFORE wallet authorization.
-  // Use your existing durable store here; a new process must not start another
-  // purchase while this quote's payment outcome is unknown.
-  await authorizedWallet.recordPending(challenge.binding, idempotencyKey);
+  await buyer.requestChallenge(prepared);
+  // pay() must durably claim the stable key before invoking the wallet.
+  // A second process with the same directory/key cannot authorize it again.
 
   return buyer.pay(prepared, {
     // A host-owned function, not a model-supplied tool argument or boolean.
@@ -64,6 +67,70 @@ export async function obtainHandoffReceipt({
   });
 }
 ```
+
+### Durable purchase exclusion and restart handling
+
+The host must provision an absolute, owner-only (mode `0700`) directory on a
+durable local POSIX filesystem before creating the journal. Keep it outside this
+repository and outside telemetry, shared folders and artifact uploads. This
+adapter requires working file and directory `fsync`; it does not claim Windows,
+network-filesystem or multi-machine guarantees. A host with those requirements
+must supply a reviewed transactional implementation of `claim(key, metadata)`
+and `record(ticket, state)` with the same exclusion and durability guarantees.
+Do not silently fall back to an in-memory store on persistence errors.
+
+The journal atomically claims the idempotency key before calling the wallet,
+records `submitting` before sending the signed request, and records `delivered`,
+`unknown` or `refused` afterward. It contains request/evidence/binding digests,
+quote ID, terms and expiry, **not** the artifact bytes, raw idempotency key,
+wallet signature, raw HTTP response or private keys. Digests and quote metadata
+are still private operational information. `delivered` records the buyer's
+signature verification result; the journal itself is not settlement evidence.
+
+Every recovered claim excludes another authorization, even if the process died
+before writing its complete metadata. Expiry does not release it. After a
+restart call `journal.inspect(stableKey)` and reconcile the exact quote with the
+host's protected response/settlement evidence. Do not delete a journal entry or
+mint another key to work around an unknown result. The host must assign stable
+keys to business intents and use the same journal across workers/restarts;
+arbitrarily different keys or directories are not deduplicated.
+
+This change provides durable **exclusion and inspectable metadata**, not automatic
+recovery, a settlement lookup client, or an operator reconciliation UI. Returned
+delivery evidence must still be saved in the host's separate protected store.
+Without a `purchaseJournal`, the buyer retains its original in-process-only
+behavior for compatibility; use the durable configuration for live integration.
+
+If a paid submission returns `unknown`, save `evidenceToReview` and
+`reconciliationContext` in that protected store. When the exact HTTP response is
+available, verify it offline against the journal entry:
+
+```js
+const result = reconcileSavedDelivery({
+  ...savedUnknown.evidenceToReview,
+  context: savedUnknown.reconciliationContext,
+  journalRecord: journal.inspect(stableIdempotencyKey)
+});
+
+const committed = journal.reconcile(stableIdempotencyKey, {
+  ...savedUnknown.evidenceToReview,
+  context: savedUnknown.reconciliationContext
+});
+```
+
+This performs no fetch, wallet call, signature or retry. It revalidates the
+request, policy, precheck, paid binding, journal metadata, settlement header,
+service evidence and receipt signatures. The context includes the original
+bounded artifact bytes and public verification keys, so it is protected data.
+The standalone verifier reports `journalUpdateRequired` and does not mutate the
+journal. The file journal's `reconcile` method performs that same offline
+verification and then appends a `delivered` transition. It stores only a digest
+and outcome summary, not the response, settlement header, artifact, signature or
+key. Repeating the same verified reconciliation is idempotent; contradictory
+evidence or a non-`unknown`/non-`delivered` starting state fails closed. Neither
+path is independent on-chain confirmation. The idempotency key remains excluded
+after reconciliation, so this is bookkeeping completion rather than permission
+to pay again.
 
 `reviewedPolicy` must contain exactly these fields, set by the buyer's host:
 
@@ -143,17 +210,45 @@ Read the production row first in the Cloudflare D1 console:
 SELECT * FROM runtime_controls WHERE control_id = 1;
 ```
 
-Export that single row as a JSON object, then prepare a reviewable statement:
+Export that single row as a JSON object. After reading the current official
+pricing page, record every reviewed term—not only its timestamp—in a separate
+local file:
+
+```json
+{
+  "schemaVersion": "coinbase-cdp-facilitator-pricing-review/1.0",
+  "source": "https://docs.cdp.coinbase.com/x402/seller/facilitator",
+  "checkedAt": "<current UTC ISO time>",
+  "monthlyFreeOnchainTransactions": 1000,
+  "additionalOnchainTransactionUsd": "0.001",
+  "paymentVerificationUsd": "0",
+  "feeCapMicrousd": 1000
+}
+```
+
+Then prepare a reviewable statement:
 
 ```sh
-node scripts/avu-cost-basis-review.mjs --row current-row.json --fee-checked-at <UTC-ISO-review-time>
+node scripts/avu-cost-basis-review.mjs --row current-row.json --pricing-evidence reviewed-pricing.json
 ```
 
 This source-checkout helper only prints SQL. It never calls Cloudflare. Its
-compare-and-swap conditions refuse the update if price, service state or the
-reviewed row changed; a SQL-level deadline refuses execution after 24 hours.
-It updates exactly the three requested columns and preserves `updated_by`.
-Do not interpret successful SQL generation as approval or execution.
+The helper rejects a timestamp string or incomplete/changed pricing terms. It
+adds the complete evidence digest to the SQL comments. Compare-and-swap
+conditions refuse the update if price, service state or the reviewed row
+changed; a SQL-level deadline refuses execution after 24 hours. It updates
+exactly the three requested columns and preserves `updated_by`. Keep the input
+row, pricing evidence and reviewed SQL together in the operator's protected
+change record. Do not interpret successful SQL generation as approval or
+execution.
+
+The 1000-microusd cap is the documented above-free-tier fee per onchain
+transaction; usage within the first 1,000 monthly transactions is documented as
+free. At the observed 10,000-microusd service price, this leaves 9,000 microusd
+before Cloudflare and other operating costs when the cap applies. The helper
+refuses a reviewed row whose service price does not exceed that cap. This is not
+net profit: current Cloudflare/account costs and monthly tier consumption remain
+unverified and must be reconciled separately.
 
 Only after reviewing that row, confirming current official facilitator pricing,
 displaying the concrete SQL and receiving operator approval, apply the approved
