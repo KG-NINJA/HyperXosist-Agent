@@ -3,6 +3,7 @@
 const assert = require('node:assert');
 const { createToolDispatcher } = require('../mcp/core.js');
 const { TOOL_DEFINITIONS } = require('../mcp/tools.js');
+const fixture = require('./fixtures/paid-flow.cjs');
 
 function encoded(value) {
   return Buffer.from(JSON.stringify(value), 'utf8').toString('base64');
@@ -75,7 +76,7 @@ async function main() {
   assert.ok(handoff.structuredContent.agentPrompt.markdown);
 
   let unpaidRequest;
-  const requirement = { x402Version: 2, accepts: [{ network: 'eip155:8453' }] };
+  const requirement = fixture.challenge();
   const unpaidDispatch = createToolDispatcher(undefined, {
     fetch: async (url, init) => {
       unpaidRequest = { url, init };
@@ -95,8 +96,8 @@ async function main() {
   const paidDispatch = createToolDispatcher(undefined, {
     fetch: async (url, init) => {
       paidRequest = { url, init };
-      return fakeResponse(200, { query: 'HyperXosist-Agent -spam' }, {
-        'PAYMENT-RESPONSE': encoded({ success: true, transaction: '0xabc' }),
+      return fakeResponse(200, fixture.output(), {
+        'PAYMENT-RESPONSE': encoded(fixture.settlement()),
       });
     },
   });
@@ -108,6 +109,12 @@ async function main() {
   assert.strictEqual(paid.structuredContent.stage, 'completed');
   assert.strictEqual(paid.structuredContent.paid, true);
   assert.strictEqual(paidRequest.init.headers['PAYMENT-SIGNATURE'], signature);
+  const uncertainDispatch = createToolDispatcher(undefined, {fetch: async () => fakeResponse(500, {error: 'upstream'})});
+  const uncertain = await uncertainDispatch('hyperxosist_execute', {input: {keywords:'Acme'}, paymentSignature: signature, confirmPayment:true});
+  assert.strictEqual(uncertain.structuredContent.stage, 'outcome_unknown');
+  assert.strictEqual(uncertain.structuredContent.paid, null);
+  assert.strictEqual(uncertain.structuredContent.reconciliationRequired, true);
+  assert.strictEqual(uncertain.structuredContent.retry, undefined);
 
   let blockedCalls = 0;
   const blocked = await createToolDispatcher(undefined, {
@@ -128,18 +135,11 @@ async function main() {
   assert.strictEqual((await dispatch('unknown_tool', {})).isError, true);
 
   const failingDispatch = createToolDispatcher({
-    startAgentSession() {
-      throw new Error('SECRET_STACK_MARKER');
-    },
+    startAgentSession() { throw new Error('SECRET_STACK_MARKER'); },
   });
   const failure = await failingDispatch('hyperxosist_search_plan', { intent: 'X bugs' });
   assert.strictEqual(failure.isError, true);
   assert.doesNotMatch(failure.content[0].text, /SECRET_STACK_MARKER|at createToolDispatcher/);
-
   console.log('MCP core tests passed.');
 }
-
-main().catch((error) => {
-  console.error(error);
-  process.exit(1);
-});
+main().catch((error) => { console.error(error); process.exit(1); });

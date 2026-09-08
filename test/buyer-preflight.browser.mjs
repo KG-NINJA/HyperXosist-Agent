@@ -11,7 +11,7 @@ const routes={'/first-purchase.html':['first-purchase.html','text/html'],'/buyer
 const server=createServer(async(req,res)=>{
   const row=routes[new URL(req.url,'http://localhost').pathname];
   if(req.method!=='GET'||!row){res.writeHead(404);res.end();return;}
-  try{let text=await readFile(join(root,row[0]),'utf8');if(row[1]==='text/html')text=text.replace(/^---\n[\s\S]*?\n---\n/,'');res.writeHead(200,{'Content-Type':row[1]+'; charset=utf-8'});res.end(text);}
+  try{let text=await readFile(join(root,row[0]),'utf8');res.writeHead(200,{'Content-Type':row[1]+'; charset=utf-8'});res.end(text);}
   catch{res.writeHead(500);res.end();}
 });
 await new Promise(done=>server.listen(0,'127.0.0.1',done));
@@ -36,6 +36,7 @@ try{
  for(const id of ['fix-error','summarize-url','shell-risk-check','agent-visibility-report','hyperxosist-query']){
   await page.locator('#service').selectOption(id);assert.match(await page.locator('#input-feedback').innerText(),/合格/);await page.locator('#reviewed').check();await page.locator('#prepare').click();assert.ok((await page.locator('#command').innerText()).includes('/'+id));
  }
+ await page.locator('#service').selectOption('summarize-url');await page.locator('#request').fill('{"url":"http://localhost."}');assert.match(await page.locator('#input-feedback').innerText(),/公開HTTP/);assert.equal(await page.locator('#prepare').isDisabled(),true);
  await page.locator('#service').selectOption('fix-error');await page.locator('#request').fill('{"error":"Authorization: Bearer DEMO_CREDENTIAL_123"}');assert.match(await page.locator('#input-feedback').innerText(),/認証情報/);assert.equal(await page.locator('#prepare').isDisabled(),true);
  await page.locator('#request').fill('{"error":"<img src=https://example.com/x onerror=alert(1)>"}');await page.locator('#reviewed').check();await page.locator('#prepare').click();assert.equal(await page.locator('img').count(),0);
  await page.locator('#example').click();await page.locator('#reviewed').check();await page.locator('#prepare').click();assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await page.screenshot({path:join(out,'desktop.png'),fullPage:true});
