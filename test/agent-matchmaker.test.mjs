@@ -21,6 +21,15 @@ const prepareOptions = (extra = {}) => ({ jsonText: body, expectedSha256: sha256
   spendPolicy: structuredClone(policy), idempotencyKey: 'synthetic-marketplace-001', ...extra });
 const json = (value, status = 200, headers = {}) => new Response(JSON.stringify(value), { status, headers });
 const rejects = (fn, code) => assert.rejects(fn, error => error.code === code);
+const fixErrorPreview = () => ({
+  service: 'Agent Error Fix Receipt', version: 'synthetic-preview-v1', mode: 'mainnet', price: '$0.01',
+  payment: 'x402', network: NETWORK, paid_endpoint: '/fix-error',
+  request_examples: { missing_dependency: { value: { command: 'npm run build', error: "Cannot find module 'hono'", environment: 'Node.js' } } },
+  response_examples: { successful_diagnosis: { value: { status: 'paid', network: NETWORK, receipt: {
+    root_cause: 'A dependency cannot be resolved.', next_command: 'npm install', retry_plan: ['Confirm the failing command.', 'Retry once.'],
+    risk_note: 'Review destructive commands.', prevention_note: 'Add a dependency preflight.', generated_at: '2026-09-06T12:00:00.000Z'
+  } } } }
+});
 
 function harness(options = {}) {
   let clock = NOW; const calls = [];
@@ -39,6 +48,9 @@ function harness(options = {}) {
       options.match?.(result); return json(result);
     }
     if (url === `${API_ORIGIN}/openapi.json`) { const api = structuredClone(fixture.openapi); options.openapi?.(api); return json(api); }
+    if (url === `${API_ORIGIN}/fix-error/preview`) {
+      const value = fixErrorPreview(); options.sample?.(value); return json(value);
+    }
     if (url === `${AVU_ORIGIN}/health`) return json({ status: options.degraded ? 'degraded' : 'ok', version: '0.4.3', service: 'agent-verification-utility',
       time: new Date(clock - (options.stale ? 180000 : 0)).toISOString(),
       checks: { deploy_enabled: true, runtime_enabled: true, payments_enabled: true, cost_basis_fresh: !options.degraded } });
@@ -92,6 +104,50 @@ test('five real catalog contracts match without visiting paid endpoints or sendi
     assert.equal(h.calls.find(c => c.url.endsWith('/match')).init.method, 'POST');
     assert.ok(h.calls.every(c => !c.url.endsWith(offer.endpoint.slice(API_ORIGIN.length))));
     assert.equal(result.buyerIdentity, 'buyer_operator_unknown');
+  }
+});
+test('a matched command-error offer can validate its free fixed sample without uploading the buyer error', async () => {
+  const h = harness();
+  const matched = await h.matcher.match(request({ intent: 'command-error' }));
+  const [first, duplicate] = await Promise.all([
+    h.matcher.inspectFreeSample(matched.matchId), h.matcher.inspectFreeSample(matched.matchId)
+  ]);
+  assert.deepEqual(first, duplicate);
+  assert.equal(first.state, 'seller_sample_verified');
+  assert.equal(first.termsBound.amountAtomic, '10000');
+  assert.equal(first.termsBound.resource, `${API_ORIGIN}/fix-error`);
+  assert.equal(first.sample.kind, 'seller_provided_fixed_example');
+  assert.equal(first.sample.output.receipt.next_command, 'npm install');
+  assert.equal(first.purchaseExecuted, false); assert.equal(first.paymentAuthorized, false);
+  assert.equal(first.deliveryVerified, false); assert.equal(first.outcomeVerified, false);
+  assert.deepEqual(first.caveats, ['FIXED_EXAMPLE_NOT_BUYER_TASK', 'SELLER_SAMPLE_NOT_INDEPENDENT_OUTCOME_EVIDENCE', 'PAID_EXECUTION_UNVERIFIED']);
+  const previewCall = h.calls.find(call => call.url.endsWith('/fix-error/preview'));
+  assert.equal(previewCall.init.method, 'GET'); assert.equal(previewCall.init.body, undefined);
+  assert.equal(h.calls.filter(call => call.url.endsWith('/fix-error/preview')).length, 1);
+  assert.ok(h.calls.every(call => !call.url.endsWith('/fix-error')));
+  assert.equal(h.matcher.diagnostics().sampleInspections, 1);
+});
+test('free sample inspection fails closed on stale matches, unsupported offers and contradictory samples', async () => {
+  const unsupported = harness();
+  const xMatch = await unsupported.matcher.match(request());
+  await rejects(() => unsupported.matcher.inspectFreeSample(xMatch.matchId), 'FREE_SAMPLE_INSPECTION_UNAVAILABLE');
+  await rejects(() => unsupported.matcher.inspectFreeSample('invented'), 'INVALID_MATCH_ID');
+
+  const stale = harness(); const staleMatch = await stale.matcher.match(request({ intent: 'command-error' }));
+  stale.setTime(NOW + 61000);
+  await rejects(() => stale.matcher.inspectFreeSample(staleMatch.matchId), 'FRESH_MATCH_REQUIRED');
+  assert.equal(stale.calls.length, 2);
+
+  for (const mutate of [
+    value => { value.price = '$0.02'; }, value => { value.paid_endpoint = '/other'; },
+    value => { delete value.response_examples.successful_diagnosis.value.receipt.next_command; },
+    value => { value.response_examples.successful_diagnosis.value.network = 'eip155:84532'; }
+  ]) {
+    const h = harness({ sample: mutate });
+    const match = await h.matcher.match(request({ intent: 'command-error' }));
+    await assert.rejects(() => h.matcher.inspectFreeSample(match.matchId));
+    assert.equal(h.matcher.diagnostics().sampleInspections, 0);
+    assert.ok(h.calls.every(call => !call.url.endsWith('/fix-error')));
   }
 });
 test('free, unsupported, zero-budget and expired demands do not contact a seller', async () => {
@@ -255,7 +311,7 @@ test('Bazaar outage is unknown availability, not a fabricated zero-demand result
   assert.equal(result.state, 'unavailable'); assert.equal(result.reason, 'DISCOVERY_UNAVAILABLE');
 });
 test('MCP exposes matching and discovery with no payment or policy-changing tool', async () => {
-  assert.deepEqual(MARKETPLACE_TOOLS.map(t => t.name), ['list_agent_offers', 'match_agent_service', 'discover_agent_services']);
+  assert.deepEqual(MARKETPLACE_TOOLS.map(t => t.name), ['list_agent_offers', 'match_agent_service', 'inspect_agent_offer_sample', 'discover_agent_services']);
   assert.ok(MARKETPLACE_TOOLS.every(t => t.annotations.readOnlyHint && !t.annotations.destructiveHint && t.inputSchema.additionalProperties === false));
   const h = harness(); const dispatch = createMarketplaceDispatcher(h.matcher);
   assert.equal((await dispatch('pay', {})).isError, true);
@@ -263,6 +319,10 @@ test('MCP exposes matching and discovery with no payment or policy-changing tool
   const result = await dispatch('match_agent_service', request());
   assert.deepEqual(JSON.parse(result.content[0].text), result.structuredContent);
   assert.equal(result.structuredContent.decision, 'review');
+  const sampleMatch = await dispatch('match_agent_service', request({ requestId: 'sample-via-mcp', intent: 'command-error' }));
+  const sample = await dispatch('inspect_agent_offer_sample', { matchId: sampleMatch.structuredContent.matchId });
+  assert.equal(sample.structuredContent.state, 'seller_sample_verified');
+  assert.equal(sample.structuredContent.paymentAuthorized, false);
 });
 test('existing handoff and agent manifest identify the local matching entry without inventing deployed tools', () => {
   const require = createRequire(import.meta.url);

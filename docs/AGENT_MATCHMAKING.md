@@ -51,9 +51,10 @@ host configuration, not model arguments. They are useful exclusions, not
 independently verified identities. Unknown identity is reported as unknown and
 must not be used to claim an external customer purchase.
 
-Tools are `list_agent_offers`, `match_agent_service`, and
-`discover_agent_services`. None accepts payment signatures, wallet secrets,
-arbitrary service URLs, or payment authorization. The existing production
+Tools are `list_agent_offers`, `match_agent_service`,
+`inspect_agent_offer_sample`, and `discover_agent_services`. None accepts
+payment signatures, wallet secrets, arbitrary service URLs, or payment
+authorization. The existing production
 `https://mcp.kgninja.dev/mcp` tool list has not changed: this new server is local
 source until the operator installs it. It is not published as a new npm release.
 
@@ -79,6 +80,10 @@ const result = await matcher.match(demand);
 // result.decision: review | skip | blocked
 // result.candidates include exact scope, price, endpoint, input schema and example.
 // This example makes only free discovery calls. It does not buy or execute a fix.
+
+const sample = await matcher.inspectFreeSample(result.matchId);
+// For command-error, this checks the fixed public example against the matched
+// endpoint, price and rail. It sends no buyer error or task content.
 ```
 
 `host` represents your existing runtime configuration and task store, not an
@@ -109,6 +114,17 @@ for X query execution. Other routes require the host's reviewed x402 adapter.
 No generic automatic payer is supplied. Always validate the live 402 challenge
 against host policy before signing, keep the exact request/intent, and reconcile
 uncertain payment or delivery outcomes before another purchase.
+
+For `command-error`, call `inspect_agent_offer_sample` (or
+`inspectFreeSample(matchId)`) while the match is fresh. The buyer fetches only
+the pinned GET `/fix-error/preview` URL, verifies that its paid endpoint, 0.01
+USDC price and Base network agree with the matched candidate, and validates the
+fixed example's repair-receipt fields. The response deliberately labels the
+example as seller-provided: it is useful for a fit decision but is not a test on
+the buyer's error, an independent outcome, paid delivery, settlement, or a
+reason to bypass host spending approval. Other offers currently return
+`FREE_SAMPLE_INSPECTION_UNAVAILABLE`; their metadata links are not silently
+treated as equivalent proof.
 
 For AVU, matching first requires fresh health and available status. Include the
 artifact's trusted `sha256`, `mediaType: application/json`, and `byteLength` in
