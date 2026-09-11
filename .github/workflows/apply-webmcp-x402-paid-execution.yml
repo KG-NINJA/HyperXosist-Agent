@@ -1,0 +1,126 @@
+name: Apply WebMCP x402 paid execution
+
+on:
+  push:
+    branches:
+      - codex/webmcp-x402-paid-execution-v2
+
+permissions:
+  contents: write
+
+concurrency:
+  group: webmcp-x402-paid-execution
+  cancel-in-progress: false
+
+jobs:
+  implement-and-validate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout implementation branch
+        uses: actions/checkout@v4
+        with:
+          ref: codex/webmcp-x402-paid-execution-v2
+          fetch-depth: 0
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm --prefix workers/remote-mcp ci
+
+      - name: Apply implementation
+        run: |
+          python3 scripts/apply-webmcp-x402-v2.py
+          git rm scripts/apply-webmcp-x402-v2.py
+
+      - name: Validate WebMCP and access boundary
+        run: |
+          npm run test:webmcp
+          npm run test:access-policy
+          npm run test:agent
+
+      - name: Validate MCP compatibility
+        run: |
+          npm run test:mcp
+          npm run test:mcp:core
+          npm run test:mcp:remote
+          npm run test:mcp:security
+          npm run test:mcp:schema
+          npm run test:mcp:consistency
+          npm run test:mcp:cloudflare
+
+      - name: Validate selection, examples and Worker build
+        run: |
+          npm run test:tool-selection
+          npm run quickstart
+          npm --prefix workers/remote-mcp run check -- --env production
+          npm pack --dry-run >/tmp/npm-pack.txt
+          cat /tmp/npm-pack.txt
+
+      - name: Validate manifests and diff scope
+        shell: bash
+        run: |
+          node -e "for (const f of ['access-policy.json','agent-use.json','agent-tools.json','.well-known/mcp.json','mcp-catalog.json','x402-payment.json','package.json','package-lock.json']) JSON.parse(require('fs').readFileSync(f,'utf8'))"
+          python3 - <<'PY'
+          import subprocess
+          import sys
+
+          allowed = {
+              '.well-known/mcp.json',
+              'AGENTS.md',
+              'CHANGELOG.md',
+              'README.md',
+              'access-policy.json',
+              'agent-api.js',
+              'agent-tools.json',
+              'agent-use.json',
+              'docs/CHATGPT_APP.md',
+              'index.html',
+              'llms.txt',
+              'mcp-catalog.json',
+              'package-lock.json',
+              'package.json',
+              'test/access-policy-consistency.test.js',
+              'test/mcp-cloudflare-worker.test.mjs',
+              'test/webmcp.test.js',
+              'webmcp.js',
+              'workers/remote-mcp/src/index.js',
+              'x402-payment.json',
+              'scripts/apply-webmcp-x402-v2.py',
+          }
+          changed = set(subprocess.check_output(['git', 'diff', '--name-only'], text=True).splitlines())
+          unexpected = sorted(changed - allowed)
+          if unexpected:
+              raise SystemExit('Unexpected changed files: ' + ', '.join(unexpected))
+
+          diff = subprocess.check_output(['git', 'diff', '--unified=0', '--no-color'], text=True, errors='replace')
+          bad = []
+          for line in diff.splitlines():
+              if not line.startswith('+') or line.startswith('+++'):
+                  continue
+              content = line[1:].rstrip('\r')
+              if content.endswith(' ') or content.endswith('\t'):
+                  bad.append(line)
+          if bad:
+              print('New trailing whitespace:', file=sys.stderr)
+              for line in bad[:20]:
+                  print(repr(line), file=sys.stderr)
+              raise SystemExit(1)
+          print('Changed files:', ', '.join(sorted(changed)))
+          PY
+          git diff --stat
+
+      - name: Commit validated implementation
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Add x402 paid WebMCP execution gateway"
+          git push origin HEAD:codex/webmcp-x402-paid-execution-v2

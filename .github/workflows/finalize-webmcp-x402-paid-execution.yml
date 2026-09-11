@@ -1,0 +1,172 @@
+name: Finalize WebMCP x402 paid execution
+
+on:
+  push:
+    branches:
+      - codex/webmcp-x402-paid-execution-v2
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+  actions: read
+
+concurrency:
+  group: finalize-webmcp-x402-paid-execution
+  cancel-in-progress: false
+
+jobs:
+  validate-create-and-merge:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      BRANCH: codex/webmcp-x402-paid-execution-v2
+      SELF_WORKFLOW: .github/workflows/finalize-webmcp-x402-paid-execution.yml
+    steps:
+      - name: Checkout implementation branch
+        uses: actions/checkout@v4
+        with:
+          ref: codex/webmcp-x402-paid-execution-v2
+          fetch-depth: 0
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Verify implementation is present
+        shell: bash
+        run: |
+          test -f access-policy.json
+          test -f test/access-policy-consistency.test.js
+          grep -q "hyperxosist_execute" webmcp.js
+          grep -q '"version": "2.6.0"' package.json
+          if test -f scripts/apply-webmcp-x402-v2.py; then
+            echo "Staging script still exists; implementation job did not finish." >&2
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          npm --prefix workers/remote-mcp ci
+
+      - name: Run focused and compatibility tests
+        run: |
+          npm run test:webmcp
+          npm run test:access-policy
+          npm run test:agent
+          npm run test:mcp
+          npm run test:mcp:core
+          npm run test:mcp:remote
+          npm run test:mcp:security
+          npm run test:mcp:schema
+          npm run test:mcp:consistency
+          npm run test:mcp:cloudflare
+          npm run test:tool-selection
+          npm run quickstart
+          npm --prefix workers/remote-mcp run check -- --env production
+          npm pack --dry-run
+
+      - name: Wait until this temporary workflow is removed from the branch
+        shell: bash
+        run: |
+          removed=0
+          for attempt in $(seq 1 60); do
+            git fetch origin "$BRANCH"
+            if ! git cat-file -e "origin/$BRANCH:$SELF_WORKFLOW" 2>/dev/null; then
+              removed=1
+              break
+            fi
+            sleep 5
+          done
+          if [ "$removed" -ne 1 ]; then
+            echo "Temporary finalizer workflow was not removed from the branch." >&2
+            exit 1
+          fi
+          git reset --hard "origin/$BRANCH"
+          test ! -e "$SELF_WORKFLOW"
+
+      - name: Create or reuse pull request
+        id: pr
+        shell: bash
+        run: |
+          pr_number=$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$BRANCH" --base main --state open --json number --jq '.[0].number // empty')
+          if [ -z "$pr_number" ]; then
+            pr_url=$(gh pr create \
+              --repo "$GITHUB_REPOSITORY" \
+              --head "$BRANCH" \
+              --base main \
+              --title "Add x402 paid WebMCP execution gateway" \
+              --body-file - <<'EOF'
+## Summary
+- keeps the three existing WebMCP Site Tools free and read-only
+- adds `hyperxosist_execute` as a two-step x402 production gateway
+- obtains live HTTP 402 requirements before any paid retry
+- requires explicit `CONFIRM_X402_PAYMENT` approval and accepts only an opaque proof
+- pins the production endpoint and rejects wallet/signing secrets
+- aligns public MCP authentication and agent/payment metadata
+- adds `access-policy.json` and cross-manifest regression tests
+
+## Validation
+- WebMCP adapter tests
+- access-policy consistency tests
+- Agent API tests
+- stdio/Remote/Cloudflare MCP tests
+- tool-selection evaluation
+- quickstart
+- Cloudflare Worker production dry-run
+- npm package dry-run
+EOF
+            )
+            pr_number=${pr_url##*/}
+          fi
+          echo "number=$pr_number" >> "$GITHUB_OUTPUT"
+          echo "Pull request: #$pr_number"
+
+      - name: Wait for pull-request checks
+        shell: bash
+        run: |
+          pr_number='${{ steps.pr.outputs.number }}'
+          seen=0
+          for attempt in $(seq 1 90); do
+            checks=$(gh pr checks "$pr_number" --repo "$GITHUB_REPOSITORY" --json name,bucket,state 2>/dev/null || echo '[]')
+            count=$(printf '%s' "$checks" | jq 'length')
+            failed=$(printf '%s' "$checks" | jq '[.[] | select(.bucket == "fail" or .bucket == "cancel")] | length')
+            pending=$(printf '%s' "$checks" | jq '[.[] | select(.bucket == "pending")] | length')
+            if [ "$failed" -gt 0 ]; then
+              printf '%s\n' "$checks"
+              echo "A pull-request check failed." >&2
+              exit 1
+            fi
+            if [ "$count" -gt 0 ]; then
+              seen=1
+            fi
+            if [ "$seen" -eq 1 ] && [ "$pending" -eq 0 ]; then
+              printf '%s\n' "$checks"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Timed out waiting for pull-request checks." >&2
+          exit 1
+
+      - name: Squash merge validated pull request
+        shell: bash
+        run: |
+          pr_number='${{ steps.pr.outputs.number }}'
+          gh pr merge "$pr_number" \
+            --repo "$GITHUB_REPOSITORY" \
+            --squash \
+            --delete-branch \
+            --subject "Add x402 paid WebMCP execution gateway" \
+            --body "Keep discovery, planning, filtering, and handoff free; gate only automated production execution through the existing x402 Worker."
+
+      - name: Verify merged main contains the paid Site Tool
+        shell: bash
+        run: |
+          git fetch origin main
+          git show origin/main:webmcp.js | grep -q "hyperxosist_execute"
+          git show origin/main:access-policy.json | grep -q '"requiresPaymentForProductionExecution": true'
+          echo "Merged main: $(git rev-parse origin/main)"
