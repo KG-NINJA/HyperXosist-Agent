@@ -180,6 +180,74 @@ function fakeResponse(status, body, headers = {}) {
     assert.deepStrictEqual(PaidExecution.decodeBase64Json(encoded({label:'日本語'})),{label:'日本語'});
     for(const value of ['!bad','a'.repeat(65537),encoded(null),encoded(false),encoded([])])assert.strictEqual(PaidExecution.decodeBase64Json(value),null);
   });
+  await test('search URL requires one nonempty q exactly matching the delivered query', async () => {
+    const cases = [
+      ['Acme -spam', 'https://x.com/search'],
+      ['Acme -spam', 'https://x.com/search?q='],
+      ['Acme -spam', 'https://x.com/search?q=Acme'],
+      ['', 'https://x.com/search?q='],
+      ['   ', 'https://x.com/search?q=+++'],
+      ['Acme -spam', 'https://x.com/search?q=Acme%20-spam&q=other'],
+      ['Acme -spam', 'https://x.com/search?q=Acme%2520-spam'],
+      ['Acme -spam', 'https://x.com/search?q=acme%20-spam']
+    ];
+    for (const [query, searchUrl] of cases) {
+      const body = {...fixture.output(), query, searchUrl};
+      const result = await PaidExecution.execute({keywords:'Acme'}, signed(async()=>fakeResponse(200,body,headers())));
+      assert.strictEqual(result.error.code,'invalid_result');
+      assert.strictEqual(result.delivery.state,'invalid_result');
+      assert.strictEqual(result.result,undefined);
+      assert.strictEqual(result.settlement.state,'reported_success');
+      assert.strictEqual(result.reconciliationRequired,true);
+      assert.strictEqual(result.retry,undefined);
+    }
+  });
+  await test('decoded q preserves Unicode, operators, literal plus and both space encodings', async () => {
+    for (const query of ['Acme -spam', '柴犬 "大阪 公園" -spam C++ 100% &猫']) {
+      for (const q of [encodeURIComponent(query), new URLSearchParams({q:query}).toString().slice(2)]) {
+        const body = {...fixture.output(), query, searchUrl:`https://x.com/search?q=${q}&f=live`};
+        const result = await PaidExecution.execute({keywords:'Acme'}, signed(async()=>fakeResponse(200,body,headers())));
+        assert.strictEqual(result.ok,true);
+        assert.strictEqual(result.stage,'completed');
+        assert.strictEqual(result.result.query,query);
+      }
+    }
+  });
+  await test('unsigned challenges with any settlement report stop before retry or body consumption', async () => {
+    const success = fixture.settlement();
+    const reports = [
+      [encoded(success),'reported_success',true],
+      [encoded({...success,success:false}),'reported_failure',false],
+      ['!malformed','invalid_report',false]
+    ];
+    for (const name of ['PAYMENT-RESPONSE','X-PAYMENT-RESPONSE']) {
+      for (const [value,state,paid] of reports) {
+        let calls=0, reads=0, canceled=false;
+        const ch=fixture.challenge();
+        const response=fakeResponse(402,ch,{'PAYMENT-REQUIRED':encoded(ch),[name]:value});
+        response.text=()=>{reads++;return new Promise(()=>{});};
+        response.body={cancel(){canceled=true;}};
+        const result=await PaidExecution.execute({keywords:'Acme'},{fetch:async()=>{calls++;return response;}});
+        assert.strictEqual(calls,1);assert.strictEqual(reads,0);assert.strictEqual(canceled,true);
+        assert.strictEqual(result.stage,'outcome_unknown');assert.strictEqual(result.ok,false);
+        assert.strictEqual(result.paymentAttempted,false);assert.strictEqual(result.paid,paid);
+        assert.strictEqual(result.settlement.state,state);assert.strictEqual(result.settlement.independentlyVerified,false);
+        assert.strictEqual(result.reconciliationRequired,true);assert.strictEqual(result.automaticRetryAllowed,false);
+        assert.strictEqual(result.paymentRequired,false);assert.strictEqual(result.retry,undefined);
+        assert.match(result.nextAction,/Do not create a new signature/);
+      }
+    }
+  });
+  await test('conflicting settlement headers on an unsigned challenge require reconciliation', async () => {
+    const ch=fixture.challenge();
+    const result=await PaidExecution.execute({keywords:'Acme'},{fetch:async()=>fakeResponse(402,ch,{
+      'PAYMENT-REQUIRED':encoded(ch),...headers(),
+      'X-PAYMENT-RESPONSE':encoded({...fixture.settlement(),success:false})
+    })});
+    assert.strictEqual(result.settlement.state,'invalid_report');
+    assert.strictEqual(result.reconciliationRequired,true);assert.strictEqual(result.retry,undefined);
+    assert.strictEqual(result.paymentRequired,false);
+  });
   console.log(`\n${passed} passed, ${failed} failed`);
   if(failed>0)process.exit(1);
 })();

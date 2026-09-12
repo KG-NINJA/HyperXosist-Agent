@@ -58,7 +58,7 @@
         requestHeader: HEADER_NAMES.paymentRequired, signatureHeader: HEADER_NAMES.paymentSignature, responseHeader: HEADER_NAMES.paymentResponse}};
   }
   function failure(result, code) {
-    const reconcile = result.paymentAttempted || result.settlement.state === 'reported_success';
+    const reconcile = result.paymentAttempted || result.settlement.state !== 'not_observed';
     const messages = {aborted: 'Request or response-body read was aborted.', network_error: 'Request or response-body read failed.',
       invalid_input: 'Input must be a serializable bounded JSON object.', invalid_result: 'The delivered body does not match the paid query contract.',
       invalid_challenge: 'The 402 challenge is missing, inconsistent, or differs from the pinned payment policy.',
@@ -174,7 +174,11 @@
     if (!record(p) || p.protocol !== 'x402' || p.paid !== true || p.demo === true || p.bypass || p.price !== '$0.01' || p.network !== POLICY.network || typeof p.real_revenue !== 'boolean' ||
       Object.keys(p).some(k => !['protocol','paid','demo','bypass','price','network','real_revenue'].includes(k)) ||
       (Object.hasOwn(p, 'demo') && typeof p.demo !== 'boolean') || (Object.hasOwn(p, 'bypass') && typeof p.bypass !== 'string')) return false;
-    try { const url = new URL(body.searchUrl); return url.origin === 'https://x.com' && url.pathname === '/search' && !url.username && !url.password; } catch (_) { return false; }
+    try {
+      const url = new URL(body.searchUrl), queries = url.searchParams.getAll('q');
+      return url.origin === 'https://x.com' && url.pathname === '/search' && !url.username && !url.password &&
+        queries.length === 1 && body.query.trim().length > 0 && queries[0] === body.query;
+    } catch (_) { return false; }
   }
 
   async function execute(input, options) {
@@ -211,6 +215,11 @@
       result.x402.paymentRequiredHeader = safeHeader(response.headers, HEADER_NAMES.paymentRequired);
       result.x402.paymentRequired = decodeBase64Json(result.x402.paymentRequiredHeader);
       applySettlement(result, safeHeader(response.headers, HEADER_NAMES.paymentResponse), safeHeader(response.headers, 'X-PAYMENT-RESPONSE'));
+      // A settlement report on a challenge must never produce another authorization recipe.
+      if (result.status === 402 && result.settlement.state !== 'not_observed') {
+        cancelBody(response);
+        return failure(result, 'settlement_unconfirmed');
+      }
       const body = await readResponseBody(response, abort.signal);
       if (result.status === 402) {
         if (signature.value) return failure(result, 'settlement_unconfirmed');
