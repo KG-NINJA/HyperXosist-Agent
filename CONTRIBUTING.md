@@ -11,6 +11,8 @@ Thanks for helping improve HyperXosist Agent.
 
 ## Dev loop
 
+For a reusable Codex cloud setup, see [Cloud environment development](docs/CLOUD_ENVIRONMENT.md).
+
 ```bash
 git clone https://github.com/KG-NINJA/HyperXosist-Agent.git
 cd HyperXosist-Agent
