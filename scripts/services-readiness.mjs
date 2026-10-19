@@ -44,6 +44,43 @@ export function normalizeSchema(s, api, seen = [], depth = 0) {
 export function contractMatches(actual, expected, api) {
   try { return same(normalizeSchema(actual,api),normalizeSchema(expected,{})); } catch { return false; }
 }
+const compactString = x => /^[A-Za-z0-9_.:/-]{1,120}$/.test(x) ? x : `sha256:${createHash('sha256').update(x).digest('hex')}:bytes=${Buffer.byteLength(x)}`;
+const pointer = parts => parts.length ? '/'+parts.map(x=>compactString(String(x)).replaceAll('~','~0').replaceAll('/','~1')).join('/') : '/';
+const scalar = x => typeof x==='string' ? compactString(x) : x===null || ['number','boolean'].includes(typeof x) ? x : Array.isArray(x) ? `array(${x.length})` : record(x) ? 'object' : typeof x;
+function firstDifference(actual,expected,path=[]) {
+  if (Object.is(actual,expected)) return null;
+  if (Array.isArray(actual) || Array.isArray(expected)) {
+    if (!Array.isArray(actual) || !Array.isArray(expected)) return {path:pointer(path),kind:'type_mismatch',actual:scalar(actual),expected:scalar(expected)};
+    const length=Math.max(actual.length,expected.length);
+    for(let i=0;i<length;i++) {
+      if(i>=actual.length)return {path:pointer([...path,i]),kind:'missing_actual',actual:null,expected:scalar(expected[i])};
+      if(i>=expected.length)return {path:pointer([...path,i]),kind:'unexpected_actual',actual:scalar(actual[i]),expected:null};
+      const diff=firstDifference(actual[i],expected[i],[...path,i]);if(diff)return diff;
+    }
+    return null;
+  }
+  if (record(actual) || record(expected)) {
+    if (!record(actual) || !record(expected)) return {path:pointer(path),kind:'type_mismatch',actual:scalar(actual),expected:scalar(expected)};
+    for(const key of [...new Set([...Object.keys(actual),...Object.keys(expected)])].sort()) {
+      if(!Object.hasOwn(actual,key))return {path:pointer([...path,key]),kind:'missing_actual',actual:null,expected:scalar(expected[key])};
+      if(!Object.hasOwn(expected,key))return {path:pointer([...path,key]),kind:'unexpected_actual',actual:scalar(actual[key]),expected:null};
+      const diff=firstDifference(actual[key],expected[key],[...path,key]);if(diff)return diff;
+    }
+    return null;
+  }
+  return {path:pointer(path),kind:typeof actual===typeof expected?'value_mismatch':'type_mismatch',actual:scalar(actual),expected:scalar(expected)};
+}
+export function contractDiagnostic(actual,expected,api) {
+  try {
+    const observed=normalizeSchema(actual,api), pinned=normalizeSchema(expected,{}), difference=firstDifference(observed,pinned);
+    return {state:difference?'mismatch':'match',actual_sha256:hash(observed),expected_sha256:hash(pinned),difference};
+  } catch {
+    // Schemas are public, but keep the artifact bounded and deterministic. Never
+    // copy parser exceptions or raw remote schema content into monitor output.
+    const safeHash=x=>{try{return hash(x);}catch{return null;}};
+    return {state:'unsupported',actual_sha256:safeHash(actual),expected_sha256:safeHash(expected),difference:null};
+  }
+}
 export function validValidation(v) {
   if (!record(v) || v.valid!==true || v.statusCode!==402 || v.x402Version!==2 || v.simulation?.outcome!=='accepted' || !Array.isArray(v.preflight)) return false;
   if (!v.preflight.every(x=>record(x)&&typeof x.check==='string'&&typeof x.passed==='boolean'&& (x.severity!=='required'||x.passed))) return false;
@@ -61,11 +98,14 @@ export function evaluateRoute(spec, common, own) {
   const check=(id,ok)=>checks.push({id,state:ok===null?'unknown':ok?'pass':'fail'});
   for (const name of ['openapi','catalog']) checks.push({id:name+'_http',state:observation(common[name],200)});
   const op=common.openapi?.data?.paths?.['/'+spec.id]?.post;
+  let requestDiagnostic=null,responseDiagnostic=null;
   if (observation(common.openapi,200)==='pass') {
     const p=op?.['x-payment-info'];
     check('openapi_payment',p?.version===2&&p.protocol==='x402'&&p.scheme==='exact'&&p.price==='$0.01'&&p.network===offers.payment_policy.network&&address(p.payTo,offers.payment_policy.payTo)&&address(p.bazaar_indexing?.asset_contract,offers.payment_policy.asset));
-    check('request_contract',contractMatches(op?.requestBody?.content?.['application/json']?.schema,spec.request_schema,common.openapi.data));
-    check('response_contract',contractMatches(op?.responses?.['200']?.content?.['application/json']?.schema,spec.response_schema,common.openapi.data));
+    requestDiagnostic=contractDiagnostic(op?.requestBody?.content?.['application/json']?.schema,spec.request_schema,common.openapi.data);
+    responseDiagnostic=contractDiagnostic(op?.responses?.['200']?.content?.['application/json']?.schema,spec.response_schema,common.openapi.data);
+    check('request_contract',requestDiagnostic.state==='match');
+    check('response_contract',responseDiagnostic.state==='match');
     check('buyer_input_example',matchesPinnedSchema(spec.example_request,spec.request_schema));
     const example=op?.responses?.['200']?.content?.['application/json']?.example;
     if (!matchesPinnedSchema(example,spec.response_schema)) gaps.push('openapi_output_example_missing_or_incomplete');
@@ -106,7 +146,7 @@ export function evaluateRoute(spec, common, own) {
     else if(record(v.index)&&typeof v.index.active==='boolean') indexing=v.index.active?'active':'inactive';
   }
   const state=checks.some(x=>x.state==='fail')?'blocked':checks.some(x=>x.state==='unknown')?'unknown':'unpaid_checks_passed';
-  return {id:spec.id,resource:spec.resource,payment_readiness:state,checks,official_validation:validation,validator_observation:{valid:typeof v?.valid==='boolean'?v.valid:null,status_code:Number.isInteger(v?.statusCode)?v.statusCode:null,version:Number.isInteger(v?.x402Version)?v.x402Version:null,simulation:['accepted','rejected'].includes(v?.simulation?.outcome)?v.simulation.outcome:null,preflight:Array.isArray(v?.preflight)?v.preflight.slice(0,20).map(x=>({check:typeof x?.check==='string'&&/^[A-Za-z0-9_-]{1,80}$/.test(x.check)?x.check:null,passed:typeof x?.passed==='boolean'?x.passed:null,severity:['required','optional','recommended'].includes(x?.severity)?x.severity:null})):null},bazaar_index:indexing,metadata_gaps:gaps,paid_delivery_verified:false,new_external_revenue_verified:false};
+  return {id:spec.id,resource:spec.resource,payment_readiness:state,checks,contract_diagnostics:{request:requestDiagnostic,response:responseDiagnostic},official_validation:validation,validator_observation:{valid:typeof v?.valid==='boolean'?v.valid:null,status_code:Number.isInteger(v?.statusCode)?v.statusCode:null,version:Number.isInteger(v?.x402Version)?v.x402Version:null,simulation:['accepted','rejected'].includes(v?.simulation?.outcome)?v.simulation.outcome:null,preflight:Array.isArray(v?.preflight)?v.preflight.slice(0,20).map(x=>({check:typeof x?.check==='string'&&/^[A-Za-z0-9_-]{1,80}$/.test(x.check)?x.check:null,passed:typeof x?.passed==='boolean'?x.passed:null,severity:['required','optional','recommended'].includes(x?.severity)?x.severity:null})):null},bazaar_index:indexing,metadata_gaps:gaps,paid_delivery_verified:false,new_external_revenue_verified:false};
 }
 export async function collectAll({fetchImpl=fetch,validate=false}={}) {
   const allowedGet=new Set(Object.entries(URLS).filter(([k])=>k!=='validator').map(([,v])=>v));
