@@ -1,0 +1,83 @@
+{
+  "source": "https://api.kgninja.dev/openapi.json",
+  "note": "Public metadata snapshot, not paid delivery evidence. See git commit time for collection session.",
+  "privacy_guarantee": {
+    "raw_ip_exposed": false,
+    "raw_user_agent_exposed": false,
+    "wallet_addresses_exposed": false,
+    "event_level_logs_exposed": false,
+    "aggregation_only": true
+  },
+  "response": {
+    "schema": {
+      "type": "object",
+      "required": [
+        "report_type",
+        "generated_at",
+        "agent_visibility_score",
+        "payment_readiness_score",
+        "machine_discovery_score",
+        "detected_gaps",
+        "matched_real_world_patterns",
+        "recommended_next_fix",
+        "privacy"
+      ],
+      "properties": {
+        "report_type": {
+          "type": "string"
+        },
+        "generated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "agent_visibility_score": {
+          "type": "number"
+        },
+        "payment_readiness_score": {
+          "type": "number"
+        },
+        "machine_discovery_score": {
+          "type": "number"
+        },
+        "detected_gaps": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "matched_real_world_patterns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "recommended_next_fix": {
+          "type": "string"
+        },
+        "privacy": {
+          "type": "string"
+        }
+      }
+    },
+    "example": {
+      "report_type": "agent_visibility_aggregate_report",
+      "generated_at": "2026-09-08T00:00:00.000Z",
+      "mode": "aggregate",
+      "agent_visibility_score": 0,
+      "payment_readiness_score": 0,
+      "machine_discovery_score": 0,
+      "detected_gaps": [
+        "Some core discovery routes have not received aggregate traffic yet.",
+        "No aggregate payment-header attempts observed.",
+        "No aggregate payment-response completions observed."
+      ],
+      "matched_real_world_patterns": [
+        "No aggregate discovery probes observed yet.",
+        "Discovery has not consistently converted into payment attempts.",
+        "No paid receipt aggregate count observed."
+      ],
+      "recommended_next_fix": "Promote /payment-options.json and /.well-known/x402/discovery/resources in agent metadata.",
+      "privacy": "Aggregate-only report. No per-call identifiers, transaction artifacts, paid content, event times, or individual records are included."
+    }
+  }
+}

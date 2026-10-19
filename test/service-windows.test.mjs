@@ -1,8 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {offers,getOffer,readServiceResult,matchesPinnedSchema} from '../service-receipts.mjs';
 import {validTerms,decodeChallenge,normalizeSchema,contractMatches,validValidation,evaluateRoute,collectAll,makeReport,main,URLS} from '../scripts/services-readiness.mjs';
 const copy=x=>structuredClone(x);
+const visibilityPublic=JSON.parse(readFileSync(new URL('./fixtures/visibility-public-contract.json',import.meta.url),'utf8'));
 const p=offers.payment_policy;
 const terms={scheme:'exact',network:p.network,amount:p.amount,asset:p.asset,payTo:p.payTo,maxTimeoutSeconds:300};
 const receipt={root_cause:'Example only',next_command:'npm install',retry_plan:['Review first'],risk_note:'No execution',prevention_note:'Check lockfile',generated_at:'2026-09-07T00:00:00Z'};
@@ -10,7 +12,7 @@ const example={
  'fix-error':{status:'paid',service:'Agent Error Fix Receipt',version:'test',mode:'mainnet',network:p.network,real_revenue:false,input_received:true,request_id:'synthetic',revenue_proof_log:'test',durable_revenue_log:true,post_payment_retry_path:'reconcile',receipt},
  'summarize-url':{status:'paid',summary:'Example excerpt',title:'Example Domain',url:'https://example.com'},
  'shell-risk-check':{status:'paid',risk_level:'low',explanation:'Example',safer_alternative:'Review first'},
- 'agent-visibility-report':{report_type:'agent_visibility_report',generated_at:'2026-09-07T00:00:00Z',agent_visibility_score:80,payment_readiness_score:40,machine_discovery_score:50,detected_gaps:['example'],matched_real_world_patterns:['example'],recommended_next_fix:{action:'inspect'},privacy:{aggregation_only:true}},
+ 'agent-visibility-report':{report_type:'agent_visibility_report',generated_at:'2026-09-07T00:00:00Z',agent_visibility_score:80,payment_readiness_score:40,machine_discovery_score:50,detected_gaps:['example'],matched_real_world_patterns:['example'],recommended_next_fix:'Inspect public discovery metadata.',privacy:'Aggregate-only report; no individual records.'},
  'hyperxosist-query':{status:'paid',service:'HyperXosist Query Builder',query:'example',searchUrl:'https://x.com/search?q=example',mode:'live',appliedNoiseTerms:[],excludeTerms:[],generated_at:'2026-09-07T00:00:00Z',version:'test',payment:{protocol:'x402',paid:true,price:'$0.01',network:p.network,real_revenue:false}}
 };
 const validation={valid:true,statusCode:402,x402Version:2,simulation:{outcome:'accepted'},preflight:['reachable','returns_402','has_bazaar_extension','parse'].map(check=>({check,passed:true,severity:'required'})),index:{active:true}};
@@ -122,4 +124,33 @@ test('AVU requires recent green health but is never silently promoted',()=>{
 });
 test('no network without explicit CLI opt-in; arbitrary URLs are rejected',async()=>{
  await assert.rejects(main([]),/LIVE_OPT_IN_REQUIRED/);await assert.rejects(main(['--live','--url','https://evil.invalid']),/INVALID_ARGUMENTS/);
+});
+
+test('visibility public string contract matches without weakening the comparator',()=>{
+ const spec=getOffer('agent-visibility-report'), published=visibilityPublic.response;
+ const legacy=copy(spec.response_schema);
+ for(const field of ['privacy','recommended_next_fix'])legacy.properties[field]={type:'object'};
+ assert.equal(contractMatches(published.schema,legacy,{}),false);
+ assert.equal(contractMatches(published.schema,spec.response_schema,{}),true);
+ assert.equal(matchesPinnedSchema(published.example,spec.response_schema),true);
+ assert.deepEqual(readServiceResult(spec.id,published.example),published.example);
+ const f=fixture(spec);
+ f.common.openapi.data.paths['/'+spec.id].post.responses['200'].content['application/json']=copy(published);
+ assert.equal(evaluateRoute(spec,f.common,f.own).payment_readiness,'unpaid_checks_passed');
+ assert.equal(evaluateRoute({...spec,response_schema:legacy},f.common,f.own).payment_readiness,'blocked');
+});
+
+test('visibility privacy and next-fix remain required strings, never object/string unions',()=>{
+ const spec=getOffer('agent-visibility-report');
+ for(const field of ['privacy','recommended_next_fix']){
+  assert.deepEqual(spec.response_schema.properties[field],{type:'string'});
+  for(const value of [{aggregation_only:true},[],null,false,42]){
+   const raw=copy(visibilityPublic.response.example);raw[field]=value;
+   assert.throws(()=>readServiceResult(spec.id,raw),/INVALID_SERVICE_RESPONSE/);
+  }
+  const raw=copy(visibilityPublic.response.example);delete raw[field];
+  assert.throws(()=>readServiceResult(spec.id,raw),/INVALID_SERVICE_RESPONSE/);
+  const changed=copy(visibilityPublic.response.schema);changed.properties[field]={type:'object'};
+  assert.equal(contractMatches(changed,spec.response_schema,{}),false);
+ }
 });
