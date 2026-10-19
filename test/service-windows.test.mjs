@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {offers,getOffer,readServiceResult,matchesPinnedSchema} from '../service-receipts.mjs';
-import {validTerms,decodeChallenge,normalizeSchema,contractMatches,validValidation,evaluateRoute,collectAll,makeReport,main,URLS} from '../scripts/services-readiness.mjs';
+import {validTerms,decodeChallenge,normalizeSchema,contractMatches,contractDiagnostic,validValidation,evaluateRoute,collectAll,makeReport,main,URLS} from '../scripts/services-readiness.mjs';
 const copy=x=>structuredClone(x);
 const p=offers.payment_policy;
 const terms={scheme:'exact',network:p.network,amount:p.amount,asset:p.asset,payTo:p.payTo,maxTimeoutSeconds:300};
@@ -43,10 +43,21 @@ for(const spec of offers.services){
  test(spec.id+': complete fixture validates without paying',()=>{
   const f=fixture(spec),r=evaluateRoute(spec,f.common,f.own);
   assert.equal(r.payment_readiness,'unpaid_checks_passed');assert.equal(r.official_validation,'accepted');assert.equal(r.bazaar_index,'active');assert.deepEqual(r.metadata_gaps,[]);assert.equal(r.paid_delivery_verified,false);
+  assert.equal(r.contract_diagnostics.request.state,'match');assert.equal(r.contract_diagnostics.response.state,'match');
  });
  test(spec.id+': live schema drift blocks even when example is unchanged',()=>{
-  const f=fixture(spec);f.common.openapi.data.paths['/'+spec.id].post.responses['200'].content['application/json'].schema.properties.generated_at={type:'number'};
-  assert.equal(evaluateRoute(spec,f.common,f.own).payment_readiness,'blocked');
+  const field=Object.keys(spec.response_schema.properties).find(key=>typeof spec.response_schema.properties[key]?.type==='string');
+  assert.ok(field);
+  const f=fixture(spec),property=f.common.openapi.data.paths['/'+spec.id].post.responses['200'].content['application/json'].schema.properties[field];
+  property.type=property.type==='string'?'number':'string';
+  const r=evaluateRoute(spec,f.common,f.own);
+  assert.equal(r.payment_readiness,'blocked');
+  assert.equal(r.contract_diagnostics.response.difference.path,`/properties/${field}/type`);
+  assert.equal(r.contract_diagnostics.response.difference.kind,'value_mismatch');
+  assert.equal(r.contract_diagnostics.response.difference.actual,property.type);
+  assert.equal(r.contract_diagnostics.response.difference.expected,spec.response_schema.properties[field].type);
+  assert.match(r.contract_diagnostics.response.actual_sha256,/^sha256:[a-f0-9]{64}$/);
+  assert.match(r.contract_diagnostics.response.expected_sha256,/^sha256:[a-f0-9]{64}$/);
  });
 }
 test('metadata annotations do not hide validation changes',()=>{
@@ -56,10 +67,15 @@ test('metadata annotations do not hide validation changes',()=>{
 });
 test('external or recursive schema references are refused',()=>{
  for(const ref of ['https://evil.invalid/schema','#/components/schemas/Loop'])assert.throws(()=>normalizeSchema({$ref:ref},{components:{schemas:{Loop:{$ref:ref}}}}));
+ const d=contractDiagnostic({$ref:'https://evil.invalid/schema'},{type:'object'},{});
+ assert.equal(d.state,'unsupported');assert.equal(d.difference,null);assert.doesNotMatch(JSON.stringify(d),/evil\.invalid/);
+ assert.equal(contractDiagnostic(undefined,{type:'object'},{}).actual_sha256,null);
 });
 test('local refs resolve and extra schema constraints are not silently ignored',()=>{
  assert.deepEqual(normalizeSchema({$ref:'#/components/schemas/X'},{components:{schemas:{X:{type:'string'}}}}),{type:'string'});
  assert.equal(contractMatches({type:'string',maxLength:1},{type:'string'},{}),false);
+ const diagnostic=contractDiagnostic({type:'string',pattern:'S'.repeat(1000)},{type:'string',pattern:'x'},{});
+ assert.equal(diagnostic.difference.path,'/pattern');assert.match(diagnostic.difference.actual,/^sha256:[a-f0-9]{64}:bytes=1000$/);assert.doesNotMatch(JSON.stringify(diagnostic),/SSSS/);
 });
 for(const value of [null,false,0,'',[],{},'text']){
  test('invalid challenge is blocked: '+JSON.stringify(value),()=>{
