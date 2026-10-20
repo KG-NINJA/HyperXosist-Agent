@@ -22,6 +22,7 @@ on:
       - service-receipts.mjs
       - scripts/services-readiness.mjs
       - test/service-windows.test.mjs
+      - test/fixtures/visibility-public-contract.json
       - test/service-validator-observation.test.mjs
       - scripts/revenue-monitor.mjs
       - scripts/publish-revenue-monitor.mjs
