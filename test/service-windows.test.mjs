@@ -23,6 +23,8 @@ function fixture(spec){
 }
 test('five fixed mainnet windows and excluded systems are explicit',()=>{
  assert.deepEqual(offers.services.map(x=>x.id),['fix-error','summarize-url','shell-risk-check','agent-visibility-report','hyperxosist-query']);
+ assert.equal(offers.contract_observed_date,'2026-09-07');
+ assert.equal(getOffer('agent-visibility-report').contract_observed_date,'2026-10-20');
  assert.equal(p.automatic_purchase,false);assert.equal(offers.excluded.length,3);assert.throws(()=>getOffer('avu'));
  assert.throws(()=>{offers.payment_policy.amount='1';});
 });
