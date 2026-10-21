@@ -1,6 +1,9 @@
 # Agent visibility response contract correction
 
 Observed 2026-10-20 JST from GET https://api.kgninja.dev/openapi.json (OpenAPI 3.1.0).
+The catalog records this as a service-level observation date for
+`agent-visibility-report`; the global 2026-09-07 date remains provenance for
+the unaffected catalog entries.
 
 ## Cause
 
@@ -54,6 +57,9 @@ No seller Worker deployment is needed for this correction. Main-branch monitors
 consume the pin after merge; published package consumers need their normal release
 before using it. Existing PR CI performs unsigned evidence collection without
 wallets or payment. Merge/CI status is recorded in the PR, not inferred here.
-The next trusted main monitor run must confirm the live unpaid readiness state.
+Trusted main run 39371116217 subsequently confirmed 5/5 routes at
+`unpaid_checks_passed` and 5/5 validator observations accepted. Its
+`revenue-windows-evidence` artifact digest is
+`sha256:79c045bc30ea60666e7cf91f967f0e45ac32ab8bdf1dc69583c0f8d963d410cd`.
 Contract agreement is not proof of paid delivery, settlement, external usage or
 revenue, and does not establish that a seller endpoint was offline.
