@@ -28,6 +28,11 @@ test('five fixed mainnet windows and excluded systems are explicit',()=>{
  assert.equal(p.automatic_purchase,false);assert.equal(offers.excluded.length,3);assert.throws(()=>getOffer('avu'));
  assert.throws(()=>{offers.payment_policy.amount='1';});
 });
+test('visibility contract fixture changes trigger the readiness audit',()=>{
+ const workflow=readFileSync(new URL('../.github/workflows/fix-error-readiness.yml',import.meta.url),'utf8');
+ const pullRequestBlock=workflow.split('\n  pull_request:\n')[1]?.split('\npermissions:\n')[0]??'';
+ assert.match(pullRequestBlock,/^\s+- test\/fixtures\/visibility-public-contract\.json$/m);
+});
 for(const spec of offers.services){
  test(spec.id+': useful explicit input and capped instruction, never executed',()=>{
   assert.equal(matchesPinnedSchema(spec.example_request,spec.request_schema),true);
