@@ -1,0 +1,45 @@
+name: Hyperxosist Bazaar candidate - no deployment
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - seller-integration/hyperxosist-bazaar/**
+      - .github/workflows/hyperxosist-bazaar-candidate.yml
+permissions:
+  contents: read
+jobs:
+  sdk-test:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: seller-integration/hyperxosist-bazaar
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install isolated exact-version SDK test dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund
+      - name: Real SDK local 402 regression tests - no payments
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee sdk-tests.log
+      - name: Observe current production - not deploy or approve
+        if: always()
+        run: node probe.mjs --live
+      - name: Preserve reproducible test and live observation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hyperxosist-bazaar-candidate-evidence
+          path: |
+            seller-integration/hyperxosist-bazaar/package-lock.json
+            seller-integration/hyperxosist-bazaar/sdk-tests.log
+            seller-integration/hyperxosist-bazaar/live-probe.json
+          retention-days: 14
+          if-no-files-found: error
