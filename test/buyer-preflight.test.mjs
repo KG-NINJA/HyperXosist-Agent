@@ -114,3 +114,33 @@ test('P2: unrelated Grok example preserves the original two-argument API',()=>{
  const agents=readFileSync(new URL('../AGENTS.md',import.meta.url),'utf8');
  assert.match(agents,/createGrokBuildSession\(\s*'Grok Build code improvement for <PRODUCT>',\s*\{ product: '<PRODUCT>', targetArea: 'auth' \}/);
 });
+
+test('P2: trailing root dots cannot turn private hosts into paid requests',()=>{
+  const hosts=['localhost','service.local','service.internal','service.lan','service.test','service.invalid','home.arpa','service.home.arpa','127.0.0.1'];
+  for(const host of hosts){
+    for(const suffix of ['', '.', '..']){
+      const url=`http://${host.toUpperCase()}${suffix}/a`;
+      const r=preparePurchase(catalog,'summarize-url',JSON.stringify({url}),{reviewed:true});
+      assert.equal(r.code,'public_url_required',url);
+      assert.equal(r.command,undefined,url);
+      assert.equal(r.plan,undefined,url);
+    }
+  }
+});
+test('P2: public root-dot URLs preserve the request and purchase policy',()=>{
+  for(const url of ['https://example.com/docs?q=hello','https://example.com./docs?q=hello']){
+    const input={url};
+    const r=preparePurchase(catalog,'summarize-url',JSON.stringify(input),{reviewed:true});
+    assert.equal(r.ok,true,url);
+    assert.deepEqual(r.plan.request.body,input);
+    assert.equal(r.plan.request.url,'https://api.kgninja.dev/summarize-url');
+    assert.equal(r.plan.request.method,'POST');
+    assert.deepEqual(r.plan.expected_terms,POLICY);
+    const argv=r.plan.execution.argv;
+    assert.deepEqual(JSON.parse(argv[argv.indexOf('--data')+1]),input);
+    assert.equal(argv[argv.indexOf('--max-amount')+1],'10000');
+    assert.equal(r.plan.authorization.granted,false);
+    assert.equal(r.plan.execution.payment_sent,false);
+    assert.equal(r.plan.retry_policy.automatic_repurchase,false);
+  }
+});
