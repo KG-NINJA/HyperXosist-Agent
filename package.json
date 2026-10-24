@@ -2,18 +2,79 @@
   "name": "hyperxosist-agent",
   "version": "2.6.0",
   "description": "Universal API-free X/Twitter search toolkit for any AI agent (GPT/Claude/Grok/Llama): missions, noise reduction, x402, Signal-to-Fix handoff, tool dispatch, CLI, optional Grok Build mode.",
-  "keywords": ["twitter","x","search","agent","x402","noise-reduction","osint","signal-to-fix","query-builder","openai-tools","anthropic-tools","cli"],
+  "keywords": [
+    "twitter",
+    "x",
+    "search",
+    "agent",
+    "x402",
+    "noise-reduction",
+    "osint",
+    "signal-to-fix",
+    "query-builder",
+    "openai-tools",
+    "anthropic-tools",
+    "cli"
+  ],
   "homepage": "https://kg-ninja.github.io/HyperXosist-Agent/",
-  "repository": {"type":"git","url":"git+https://github.com/KG-NINJA/HyperXosist-Agent.git"},
-  "bugs": {"url":"https://github.com/KG-NINJA/HyperXosist-Agent/issues"},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KG-NINJA/HyperXosist-Agent.git"
+  },
+  "bugs": {
+    "url": "https://github.com/KG-NINJA/HyperXosist-Agent/issues"
+  },
   "license": "MIT",
   "author": "KG-NINJA",
   "main": "agent-api.js",
   "browser": "agent-api.js",
-  "bin": {"hyperxosist":"bin/hyperxosist.js","hyperxosist-marketplace":"bin/hyperxosist-marketplace.mjs"},
-  "files": ["agent-api.js","webmcp.js","payment-endpoints.js","access-policy.json","paid-execution.js","agent-use.json","agent-tools.json","missions.json","signal-to-fix-pipeline.json","x402-payment.json","llms.txt","AGENTS.md","index.html","app.js","style.css","top30_repost_blacklist.json","bin/","examples/","LICENSE","README.md","mcp/","docs/","test/tool-selection-cases.json","avu-buyer.mjs","avu-buyer.json","agent-matchmaker.mjs","agent-marketplace.json","fix-error-quickstart.json","scripts/fix-error-readiness.mjs","fix-error-response.mjs","service-offers.json","service-receipts.mjs","scripts/services-readiness.mjs","services.md","buyer-preflight.mjs","assets/purchase-preparer.mjs","assets/purchase-preparer.css","first-purchase.html"],
+  "bin": {
+    "hyperxosist": "bin/hyperxosist.js",
+    "hyperxosist-marketplace": "bin/hyperxosist-marketplace.mjs"
+  },
+  "files": [
+    "agent-api.js",
+    "webmcp.js",
+    "payment-endpoints.js",
+    "access-policy.json",
+    "paid-execution.js",
+    "agent-use.json",
+    "agent-tools.json",
+    "missions.json",
+    "signal-to-fix-pipeline.json",
+    "x402-payment.json",
+    "llms.txt",
+    "AGENTS.md",
+    "index.html",
+    "app.js",
+    "style.css",
+    "top30_repost_blacklist.json",
+    "bin/",
+    "examples/",
+    "LICENSE",
+    "README.md",
+    "mcp/",
+    "docs/",
+    "test/tool-selection-cases.json",
+    "avu-buyer.mjs",
+    "avu-purchase-journal.mjs",
+    "avu-buyer.json",
+    "agent-matchmaker.mjs",
+    "agent-marketplace.json",
+    "fix-error-quickstart.json",
+    "scripts/fix-error-readiness.mjs",
+    "fix-error-response.mjs",
+    "service-offers.json",
+    "service-receipts.mjs",
+    "scripts/services-readiness.mjs",
+    "services.md",
+    "buyer-preflight.mjs",
+    "assets/purchase-preparer.mjs",
+    "assets/purchase-preparer.css",
+    "first-purchase.html"
+  ],
   "scripts": {
-    "test": "node test/agent-api.test.js && node test/mcp.test.js && node test/mcp-core.test.js && node test/mcp-remote.test.js && node test/mcp-security.test.js && node test/mcp-schema.test.js && node test/mcp-consistency.test.js && node --test test/mcp-cloudflare-worker.test.mjs && node test/payment-endpoints.test.js && node test/access-policy-consistency.test.js && node test/paid-execution.test.js && node test/webmcp.test.js && node --test test/avu-buyer.test.mjs && node --test test/agent-matchmaker.test.mjs && node --test test/fix-error-quickstart.test.mjs && node --test test/fix-error-readiness.test.mjs && node --test test/service-windows.test.mjs && node --test test/buyer-preflight.test.mjs",
+    "test": "node test/agent-api.test.js && node test/mcp.test.js && node test/mcp-core.test.js && node test/mcp-remote.test.js && node test/mcp-security.test.js && node test/mcp-schema.test.js && node test/mcp-consistency.test.js && node --test test/mcp-cloudflare-worker.test.mjs && node test/payment-endpoints.test.js && node test/access-policy-consistency.test.js && node test/paid-execution.test.js && node test/webmcp.test.js && node --test test/avu-buyer.test.mjs test/avu-purchase-journal.test.mjs && node --test test/agent-matchmaker.test.mjs && node --test test/fix-error-quickstart.test.mjs && node --test test/fix-error-readiness.test.mjs && node --test test/service-windows.test.mjs && node --test test/buyer-preflight.test.mjs",
     "test:agent": "node test/agent-api.test.js",
     "test:mcp": "node test/mcp.test.js",
     "quickstart": "node examples/quickstart.mjs",
@@ -39,7 +100,7 @@
     "test:webmcp": "node test/webmcp.test.js",
     "test:paid-execution": "node test/paid-execution.test.js",
     "test:access-policy": "node test/access-policy-consistency.test.js",
-    "test:avu-buyer": "node --test test/avu-buyer.test.mjs",
+    "test:avu-buyer": "node --test test/avu-buyer.test.mjs test/avu-purchase-journal.test.mjs",
     "avu:demo": "node examples/avu-artifact-handoff.mjs",
     "avu:status": "node examples/avu-artifact-handoff.mjs --status",
     "test:marketplace": "node --test test/buyer-preflight.test.mjs test/agent-matchmaker.test.mjs test/fix-error-quickstart.test.mjs test/fix-error-readiness.test.mjs test/service-windows.test.mjs",
@@ -52,7 +113,11 @@
     "test:service-windows": "node --test test/service-windows.test.mjs",
     "audit:services": "node scripts/services-readiness.mjs"
   },
-  "engines": {"node":">=18"},
+  "engines": {
+    "node": ">=18"
+  },
   "private": false,
-  "dependencies": {"@modelcontextprotocol/sdk":"1.29.0"}
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.29.0"
+  }
 }
