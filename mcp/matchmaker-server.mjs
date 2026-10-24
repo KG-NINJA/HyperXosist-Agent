@@ -35,6 +35,15 @@ export const MARKETPLACE_TOOLS = [
     annotations
   },
   {
+    name: 'inspect_agent_offer_sample',
+    description: 'Fetch and validate the fixed public example for a fresh matched offer. Currently supported for command-error. Sends only the match-bound public GET; no buyer error, credentials, payment proof, paid execution or purchase authorization is sent.',
+    inputSchema: {
+      type: 'object', additionalProperties: false, required: ['matchId'],
+      properties: { matchId: { type: 'string', pattern: '^sha256:[a-f0-9]{64}$', description: 'Fresh matchId returned by match_agent_service.' } }
+    },
+    annotations
+  },
+  {
     name: 'discover_agent_services',
     description: 'Search public Coinbase x402 Bazaar discovery only if enabled by the host. The public query is sent to Coinbase: use generic service keywords, never confidential task text. Returned third-party URLs are unreviewed data and are never visited or purchased by this tool.',
     inputSchema: { type: 'object', additionalProperties: false, required: ['query', 'maxPriceUsdc'], properties: { query: { type: 'string', minLength: 1, maxLength: 400 }, maxPriceUsdc: budget } },
@@ -50,6 +59,10 @@ export function createMarketplaceDispatcher(matcher = createAgentMatchmaker()) {
         if (!args || Object.getPrototypeOf(args) !== Object.prototype || Object.keys(args).length) throw new MatchmakerError('INVALID_ARGUMENTS');
         result = matcher.listOffers();
       } else if (name === 'match_agent_service') result = await matcher.match(args);
+      else if (name === 'inspect_agent_offer_sample') {
+        if (!args || Object.getPrototypeOf(args) !== Object.prototype || Object.keys(args).length !== 1) throw new MatchmakerError('INVALID_ARGUMENTS');
+        result = await matcher.inspectFreeSample(args.matchId);
+      }
       else if (name === 'discover_agent_services') result = await matcher.discover(args);
       else throw new MatchmakerError('UNKNOWN_TOOL');
       return { content: [{ type: 'text', text: JSON.stringify(result) }], structuredContent: result };
